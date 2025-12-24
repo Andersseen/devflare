@@ -22,7 +22,10 @@
         "libs/shop/feature-product-detail/src/index.ts"
       ],
       "@org/shop/feature-products": ["libs/shop/feature-products/src/index.ts"],
-      "@org/shop/shared-ui": ["libs/shop/shared-ui/src/index.ts"]
+      "@org/shop/shared-ui": ["libs/shop/shared-ui/src/index.ts"],
+      "@org/ui": ["libs/ui/src/index.ts"],
+      "@ui-components/*": ["libs/ui/src/lib/components/*"],
+      "@core-services/*": ["libs/core/src/lib/services/*"]
     }
   },
   "exclude": ["node_modules", "tmp"]

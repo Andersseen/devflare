@@ -4,6 +4,6 @@
     "outDir": "../../dist/out-tsc",
     "types": []
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "../../libs/ui/src/lib/components/badge.component.ts"],
   "exclude": ["src/**/*.spec.ts", "src/**/*.test.ts"]
 }
