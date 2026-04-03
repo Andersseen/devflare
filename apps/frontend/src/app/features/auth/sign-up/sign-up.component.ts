@@ -1,8 +1,8 @@
 import { Component, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { AuthService } from '@core-services/auth.service';
-import { ButtonComponent } from '@ui-components/button.component';
+import { AuthService } from '@org/core';
+import { ButtonComponent } from '@org/ui';
 
 @Component({
   selector: 'app-sign-up',

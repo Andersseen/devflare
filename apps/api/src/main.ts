@@ -1,35 +1,51 @@
 import express from 'express';
 import { ProductsService } from '@org/api/products';
-import { ApiResponse, Product, ProductFilter, PaginatedResponse } from '@org/models';
-
-const host = process.env.HOST ?? 'localhost';
-const port = process.env.PORT ? Number(process.env.PORT) : 3333;
+import {
+  ApiResponse,
+  Product,
+  ProductFilter,
+  PaginatedResponse,
+} from '@org/models';
+import {
+  errorHandler,
+  notFoundHandler,
+  asyncHandler,
+} from './middleware/error.middleware';
+import {
+  validateProductFilter,
+  validateProductId,
+} from './middleware/validation.middleware';
+import { configureCors } from './config/cors.config';
+import { config } from './config/config';
 
 const app = express();
 const productsService = new ProductsService();
 
 // Middleware
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// CORS configuration for Angular app
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-  if (req.method === 'OPTIONS') {
-    res.sendStatus(200);
-  } else {
-    next();
-  }
-});
+// CORS configuration
+configureCors(app);
 
-app.get('/', (req, res) => {
-  res.send({ message: 'Hello API' });
+// Health check
+app.get('/health', (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      version: process.env.npm_package_version || '0.0.0',
+      environment: config.server.nodeEnv,
+    },
+  });
 });
 
 // Products endpoints
-app.get('/api/products', (req, res) => {
-  try {
+app.get(
+  '/api/products',
+  validateProductFilter,
+  asyncHandler(async (req, res) => {
     const filter: ProductFilter = {};
 
     if (req.query.category) {
@@ -59,18 +75,13 @@ app.get('/api/products', (req, res) => {
     };
 
     res.json(response);
-  } catch (error) {
-    const response: ApiResponse<null> = {
-      data: null,
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
-    res.status(500).json(response);
-  }
-});
+  }),
+);
 
-app.get('/api/products/:id', (req, res) => {
-  try {
+app.get(
+  '/api/products/:id',
+  validateProductId,
+  asyncHandler(async (req, res) => {
     const product = productsService.getProductById(req.params.id);
 
     if (!product) {
@@ -88,52 +99,43 @@ app.get('/api/products/:id', (req, res) => {
     };
 
     res.json(response);
-  } catch (error) {
-    const response: ApiResponse<null> = {
-      data: null,
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
-    res.status(500).json(response);
-  }
-});
+  }),
+);
 
-app.get('/api/products-metadata/categories', (req, res) => {
-  try {
+app.get(
+  '/api/products-metadata/categories',
+  asyncHandler(async (req, res) => {
     const categories = productsService.getCategories();
     const response: ApiResponse<string[]> = {
       data: categories,
       success: true,
     };
     res.json(response);
-  } catch (error) {
-    const response: ApiResponse<null> = {
-      data: null,
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
-    res.status(500).json(response);
-  }
-});
+  }),
+);
 
-app.get('/api/products-metadata/price-range', (req, res) => {
-  try {
+app.get(
+  '/api/products-metadata/price-range',
+  asyncHandler(async (req, res) => {
     const priceRange = productsService.getPriceRange();
     const response: ApiResponse<{ min: number; max: number }> = {
       data: priceRange,
       success: true,
     };
     res.json(response);
-  } catch (error) {
-    const response: ApiResponse<null> = {
-      data: null,
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
-    res.status(500).json(response);
-  }
-});
+  }),
+);
 
-app.listen(port, host, () => {
-  console.log(`[ ready ] http://${host}:${port}`);
+// 404 handler
+app.use(notFoundHandler);
+
+// Error handler (must be last)
+app.use(errorHandler);
+
+// Start server
+app.listen(config.server.port, config.server.host, () => {
+  console.log(
+    `[ ready ] API server running at http://${config.server.host}:${config.server.port}`,
+  );
+  console.log(`[ env   ] Environment: ${config.server.nodeEnv}`);
 });

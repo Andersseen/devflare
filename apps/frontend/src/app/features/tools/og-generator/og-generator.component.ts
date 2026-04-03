@@ -2,8 +2,8 @@ import { CommonModule } from '@angular/common';
 import { Component, ElementRef, signal, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { toPng } from 'html-to-image';
-import { ButtonComponent } from '@ui-components/button.component';
-import { CardComponent } from '@ui-components/card.component';
+import { ButtonComponent } from '@org/ui';
+import { CardComponent } from '@org/ui';
 
 @Component({
     selector: 'app-og-generator',

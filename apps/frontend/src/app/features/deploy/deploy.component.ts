@@ -1,8 +1,8 @@
 import { Component, OnInit, signal, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ButtonComponent } from '@ui-components/button.component';
-import { CardComponent } from '@ui-components/card.component';
-import { WebContainerService } from '@core-services/webcontainer.service';
+import { ButtonComponent } from '@org/ui';
+import { CardComponent } from '@org/ui';
+import { WebContainerService } from '@org/core';
 import { DeployStepperComponent } from './components/deploy-stepper.component';
 import { DeployTerminalComponent } from './components/deploy-terminal.component';
 

@@ -1,10 +1,10 @@
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { DrawerComponent } from '@ui-components/drawer.component';
-import { SidebarNavComponent } from '@ui-components/sidebar-nav.component';
-import { SidebarComponent } from '@ui-components/sidebar.component';
-import { AuthService } from '@core-services/auth.service';
-import { NavbarComponent, NavSection } from '@ui-components/navbar.component';
+import { DrawerComponent } from '@org/ui';
+import { SidebarNavComponent } from '@org/ui';
+import { SidebarComponent } from '@org/ui';
+import { AuthService } from '@org/core';
+import { NavbarComponent, NavSection } from '@org/ui';
 import { LucideAngularModule } from 'lucide-angular';
 
 @Component({
@@ -20,7 +20,9 @@ import { LucideAngularModule } from 'lucide-angular';
     LucideAngularModule,
   ],
   template: `
-    <div class="h-screen flex flex-col bg-background text-text font-sans overflow-hidden">
+    <div
+      class="h-screen flex flex-col bg-background text-text font-sans overflow-hidden"
+    >
       <!-- Navbar -->
       <ui-navbar
         [currentUser]="currentUser()"
@@ -50,7 +52,10 @@ import { LucideAngularModule } from 'lucide-angular';
                 [size]="20"
                 class="min-w-[1.25rem] group-hover/link:text-primary"
               ></lucide-icon>
-              <span class="group-[.collapsed]:hidden transition-all duration-300">Settings</span>
+              <span
+                class="group-[.collapsed]:hidden transition-all duration-300"
+                >Settings</span
+              >
             </a>
             <p
               class="text-xs text-text-muted text-center group-[.collapsed]:opacity-0 transition-opacity"
@@ -61,7 +66,10 @@ import { LucideAngularModule } from 'lucide-angular';
         </ui-sidebar>
 
         <!-- Mobile Drawer -->
-        <ui-drawer [isOpen]="mobileMenuOpen()" (close)="mobileMenuOpen.set(false)">
+        <ui-drawer
+          [isOpen]="mobileMenuOpen()"
+          (close)="mobileMenuOpen.set(false)"
+        >
           <div class="flex flex-col h-full">
             <div class="flex-1 overflow-y-auto">
               <ui-sidebar-nav
@@ -84,7 +92,9 @@ import { LucideAngularModule } from 'lucide-angular';
         </ui-drawer>
 
         <!-- Main Content -->
-        <main class="flex-1 overflow-y-auto relative w-full bg-background custom-scrollbar">
+        <main
+          class="flex-1 overflow-y-auto relative w-full bg-background custom-scrollbar"
+        >
           <router-outlet></router-outlet>
         </main>
       </div>

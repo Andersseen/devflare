@@ -6,7 +6,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { UploaderComponent } from '../../../components/uploader/uploader.component';
 import { ControlPanelComponent, ProcessingConfig } from '../../../components/control-panel/control-panel.component';
 import { PreviewComponent } from '../../../components/preview/preview.component';
-import { ImageProcessingService } from '@core-services/image-processing.service';
+import { ImageProcessingService } from '@org/core';
 
 @Component({
     selector: 'app-tools-compressor',

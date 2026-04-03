@@ -1,9 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { BadgeComponent } from '@ui-components/badge.component';
-import { ButtonComponent } from '@ui-components/button.component';
-import { CardComponent } from '@ui-components/card.component';
+import { BadgeComponent } from '@org/ui';
+import { ButtonComponent } from '@org/ui';
+import { CardComponent } from '@org/ui';
 
 @Component({
     selector: 'app-svg-optimizer',

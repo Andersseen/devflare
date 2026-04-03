@@ -15,17 +15,18 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@org/api/products": ["libs/api/products/src/index.ts"],
       "@org/models": ["libs/shared/models/src/index.ts"],
+      "@org/api/products": ["libs/api/products/src/index.ts"],
+      "@org/core": ["libs/core/src/index.ts"],
+      "@org/core/*": ["libs/core/src/lib/*"],
+      "@org/ui": ["libs/ui/src/index.ts"],
+      "@org/ui/*": ["libs/ui/src/lib/*"],
       "@org/shop/data": ["libs/shop/data/src/index.ts"],
       "@org/shop/feature-product-detail": [
         "libs/shop/feature-product-detail/src/index.ts"
       ],
       "@org/shop/feature-products": ["libs/shop/feature-products/src/index.ts"],
-      "@org/shop/shared-ui": ["libs/shop/shared-ui/src/index.ts"],
-      "@org/ui": ["libs/ui/src/index.ts"],
-      "@ui-components/*": ["libs/ui/src/lib/components/*"],
-      "@core-services/*": ["libs/core/src/lib/services/*"]
+      "@org/shop/shared-ui": ["libs/shop/shared-ui/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

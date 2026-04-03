@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
-import { ButtonComponent } from '@ui-components/button.component';
-import { CardComponent } from '@ui-components/card.component';
+import { ButtonComponent } from '@org/ui';
+import { CardComponent } from '@org/ui';
 import { LucideAngularModule } from 'lucide-angular';
 
 @Component({
