@@ -1,0 +1,67 @@
+{
+  "name": "devflare",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "prefix": "app",
+  "sourceRoot": "apps/devflare/src",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@analogjs/platform:vite",
+      "options": {
+        "configFile": "apps/devflare/vite.config.ts",
+        "main": "apps/devflare/src/main.ts",
+        "outputPath": "dist/apps/devflare/client",
+        "tsConfig": "apps/devflare/tsconfig.app.json"
+      },
+      "defaultConfiguration": "production",
+      "configurations": {
+        "development": {
+          "mode": "development"
+        },
+        "production": {
+          "sourcemap": false,
+          "mode": "production"
+        }
+      },
+      "outputs": ["{workspaceRoot}/dist/apps/devflare"]
+    },
+    "serve": {
+      "executor": "@analogjs/platform:vite-dev-server",
+      "continuous": true,
+      "defaultConfiguration": "development",
+      "options": {
+        "buildTarget": "devflare:build",
+        "port": 4200
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "devflare:build:development",
+          "hmr": true
+        },
+        "production": {
+          "buildTarget": "devflare:build:production"
+        }
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "serve-static": {
+      "continuous": true,
+      "executor": "@nx/web:file-server",
+      "options": {
+        "buildTarget": "devflare:build",
+        "port": 4200,
+        "staticFilePath": "dist/apps/devflare/browser",
+        "spa": true
+      }
+    },
+    "test": {
+      "executor": "@analogjs/vitest-angular:test",
+      "options": {
+        "config": "vite.config.ts"
+      }
+    }
+  }
+}
