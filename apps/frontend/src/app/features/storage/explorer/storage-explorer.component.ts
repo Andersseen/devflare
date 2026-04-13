@@ -1,8 +1,8 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { ButtonComponent } from '@ui-components/button.component';
-import { CardComponent } from '@ui-components/card.component';
-import { StorageItem, StorageService } from '@core-services/storage.service';
+import { ButtonComponent } from '@org/ui';
+import { CardComponent } from '@org/ui';
+import { StorageItem, StorageService } from '@org/core';
 
 @Component({
     selector: 'app-storage-explorer',

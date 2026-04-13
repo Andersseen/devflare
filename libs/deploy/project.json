@@ -1,0 +1,12 @@
+{
+  "name": "deploy",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/deploy/src",
+  "projectType": "library",
+  "tags": ["scope:frontend", "type:feature"],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    }
+  }
+}

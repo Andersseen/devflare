@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { CardComponent } from '@ui-components/card.component';
+import { CardComponent } from '@org/ui';
 import { CommonModule } from '@angular/common';
 
 interface Tool {

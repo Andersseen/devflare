@@ -2,9 +2,10 @@ import {
   ApplicationConfig,
   provideBrowserGlobalErrorListeners,
   importProvidersFrom,
+  ErrorHandler,
 } from '@angular/core';
-import { provideRouter } from '@angular/router';
-import { provideHttpClient } from '@angular/common/http';
+import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import {
   Activity,
   ChevronLeft,
@@ -32,12 +33,18 @@ import {
 } from 'lucide-angular';
 
 import { routes } from './app.routes';
+import {
+  GlobalErrorHandler,
+  authInterceptor,
+  errorInterceptor,
+} from '@org/core';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideRouter(routes),
-    provideHttpClient(),
+    provideRouter(routes, withComponentInputBinding()),
+    provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
+    { provide: ErrorHandler, useClass: GlobalErrorHandler },
     importProvidersFrom(
       LucideAngularModule.pick({
         LayoutDashboard,
@@ -62,7 +69,7 @@ export const appConfig: ApplicationConfig = {
         Upload,
         X,
         Github,
-      })
+      }),
     ),
   ],
 };

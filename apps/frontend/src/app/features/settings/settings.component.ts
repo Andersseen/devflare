@@ -1,8 +1,8 @@
 import { Component, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { CardComponent } from '@ui-components/card.component';
-import { ButtonComponent } from '@ui-components/button.component';
+import { CardComponent } from '@org/ui';
+import { ButtonComponent } from '@org/ui';
 import { LucideAngularModule } from 'lucide-angular';
 
 @Component({

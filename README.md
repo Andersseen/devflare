@@ -1,282 +1,129 @@
-# Nx Angular Repository
+# DevFlare
 
-<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+> A modern developer tools platform built with AnalogJS, Angular 21, and an Nx monorepo.
 
-✨ A repository showcasing key [Nx](https://nx.dev) features for Angular monorepos ✨
+## Tech Stack
 
-## 📦 Project Overview
+| Layer | Technology |
+|---|---|
+| Framework | [AnalogJS 2.4](https://analogjs.org) (file-based routing, SSR) |
+| UI Library | [Angular 21](https://angular.dev) · Standalone Components |
+| Components | [@voltui/components](https://volt-ui.andersseen.dev) |
+| Styling | [Tailwind CSS 4](https://tailwindcss.com) |
+| Monorepo | [Nx 22](https://nx.dev) |
+| Auth | [better-auth](https://better-auth.com) |
+| Database | [Drizzle ORM](https://orm.drizzle.team) + SQLite |
+| Build | [Vite 7](https://vite.dev) |
+| Testing | [Vitest](https://vitest.dev) + [Playwright](https://playwright.dev) |
+| Package Manager | [pnpm](https://pnpm.io) |
 
-This repository demonstrates a production-ready Angular monorepo with:
-
-- **2 Applications**
-
-  - `shop` - Angular e-commerce application with product listings and detail views
-  - `api` - Backend API with Docker support serving product data
-
-- **6 Libraries**
-
-  - `@org/feature-products` - Product listing feature (Angular)
-  - `@org/feature-product-detail` - Product detail feature (Angular)
-  - `@org/data` - Data access layer for shop features
-  - `@org/shared-ui` - Shared UI components
-  - `@org/models` - Shared data models
-  - `@org/products` - API product service library
-
-- **E2E Testing**
-  - `shop-e2e` - Playwright tests for the shop application
-
-## 🚀 Quick Start
-
-```bash
-# Clone the repository
-git clone <your-fork-url>
-cd <your-repository-name>
-
-# Install dependencies
-# (Note: You may need --legacy-peer-deps)
-npm install
-
-# Serve the Angular shop application (this will simultaneously serve the API backend)
-npx nx serve shop
-
-# ...or you can serve the API separately
-npx nx serve api
-
-# Build all projects
-npx nx run-many -t build
-
-# Run tests
-npx nx run-many -t test
-
-# Lint all projects
-npx nx run-many -t lint
-
-# Run e2e tests
-npx nx e2e shop-e2e
-
-# Run tasks in parallel
-
-npx nx run-many -t lint test build e2e --parallel=3
-
-# Visualize the project graph
-npx nx graph
-```
-
-## ⭐ Featured Nx Capabilities
-
-This repository showcases several powerful Nx features:
-
-### 1. 🔒 Module Boundaries
-
-Enforces architectural constraints using tags. Each project has specific dependencies it can use:
-
-- `scope:shared` - Can be used by all projects
-- `scope:shop` - Shop-specific libraries
-- `scope:api` - API-specific libraries
-- `type:feature` - Feature libraries
-- `type:data` - Data access libraries
-- `type:ui` - UI component libraries
-
-**Try it out:**
-
-```bash
-# See the current project graph and boundaries
-npx nx graph
-
-# View a specific project's details
-npx nx show project shop --web
-```
-
-[Learn more about module boundaries →](https://nx.dev/features/enforce-module-boundaries)
-
-### 2. 🐳 Docker Integration
-
-The API project includes Docker support with automated targets and release management:
-
-```bash
-# Build Docker image
-npx nx docker:build api
-
-# Run Docker container
-npx nx docker:run api
-
-# Release with automatic Docker image versioning
-npx nx release
-```
-
-**Nx Release for Docker:** The repository is configured to use Nx Release for managing Docker image versioning and publishing. When running `nx release`, Docker images for the API project are automatically versioned and published based on the release configuration in `nx.json`. This integrates seamlessly with semantic versioning and changelog generation.
-
-[Learn more about Docker integration →](https://nx.dev/recipes/nx-release/release-docker-images)
-
-### 3. 🎭 Playwright E2E Testing
-
-End-to-end testing with Playwright is pre-configured:
-
-```bash
-# Run e2e tests
-npx nx e2e shop-e2e
-
-# Run e2e tests in CI mode
-npx nx e2e-ci shop-e2e
-```
-
-[Learn more about E2E testing →](https://nx.dev/technologies/test-tools/playwright/introduction#e2e-testing)
-
-### 4. ⚡ Vitest for Unit Testing
-
-Fast unit testing with Vite for Angular libraries:
-
-```bash
-# Test a specific library
-npx nx test data
-
-# Test all projects
-npx nx run-many -t test
-```
-
-[Learn more about Vite testing →](https://nx.dev/recipes/vite)
-
-### 5. 🔧 Self-Healing CI
-
-The CI pipeline includes `nx fix-ci` which automatically identifies and suggests fixes for common issues:
-
-```bash
-# In CI, this command provides automated fixes
-npx nx fix-ci
-```
-
-This feature helps maintain a healthy CI pipeline by automatically detecting and suggesting solutions for:
-
-- Missing dependencies
-- Incorrect task configurations
-- Cache invalidation issues
-- Common build failures
-
-[Learn more about self-healing CI →](https://nx.dev/ci/features/self-healing-ci)
-
-## 📁 Project Structure
+## Project Structure
 
 ```
+devflare/
 ├── apps/
-│   ├── shop/           [scope:shop]    - Angular e-commerce app
-│   ├── shop-e2e/                       - E2E tests for shop
-│   └── api/            [scope:api]     - Backend API with Docker
+│   ├── devflare/          # Main AnalogJS application
+│   │   └── src/app/
+│   │       ├── pages/     # File-based routes (AnalogJS)
+│   │       ├── components/ # Layout, sidebar
+│   │       └── app.config.ts
+│   ├── devflare-e2e/      # Playwright E2E tests
+│   └── frontend/          # Secondary Angular app
 ├── libs/
-│   ├── shop/
-│   │   ├── feature-products/        [scope:shop,type:feature] - Product listing
-│   │   ├── feature-product-detail/  [scope:shop,type:feature] - Product details
-│   │   ├── data/                    [scope:shop,type:data]    - Data access
-│   │   └── shared-ui/               [scope:shop,type:ui]      - UI components
-│   ├── api/
-│   │   └── products/    [scope:api]    - Product service
+│   ├── deploy/            # Deployment library
 │   └── shared/
-│       └── models/      [scope:shared,type:data] - Shared models
-├── nx.json             - Nx configuration
-├── tsconfig.json       - TypeScript configuration
-└── eslint.config.mjs   - ESLint with module boundary rules
+│       ├── auth/          # Auth service (better-auth)
+│       ├── core/          # Guards, interceptors, services
+│       └── ui/            # Shared UI components
+├── package.json
+├── nx.json
+└── tsconfig.base.json
 ```
 
-## 🏷️ Understanding Tags
+## Prerequisites
 
-This repository uses tags to enforce module boundaries:
-
-| Project            | Tags                         | Can Import From              |
-| ------------------ | ---------------------------- | ---------------------------- |
-| `shop`             | `scope:shop`                 | `scope:shop`, `scope:shared` |
-| `api`              | `scope:api`                  | `scope:api`, `scope:shared`  |
-| `feature-products` | `scope:shop`, `type:feature` | `scope:shop`, `scope:shared` |
-| `data`             | `scope:shop`, `type:data`    | `scope:shared`               |
-| `models`           | `scope:shared`, `type:data`  | Nothing (base library)       |
-
-## 📚 Useful Commands
+- Node.js 20+
+- pnpm 9+
 
 ```bash
-# Project exploration
-npx nx graph                                    # Interactive dependency graph
-npx nx list                                     # List installed plugins
-npx nx show project shop --web                 # View project details
-
-# Development
-npx nx serve shop                              # Serve Angular app
-npx nx serve api                               # Serve backend API
-npx nx build shop                              # Build Angular app
-npx nx test data                               # Test a specific library
-npx nx lint feature-products                   # Lint a specific library
-
-# Running multiple tasks
-npx nx run-many -t build                       # Build all projects
-npx nx run-many -t test --parallel=3          # Test in parallel
-npx nx run-many -t lint test build            # Run multiple targets
-
-# Affected commands (great for CI)
-npx nx affected -t build                       # Build only affected projects
-npx nx affected -t test                        # Test only affected projects
-
-# Docker operations
-npx nx docker:build api                        # Build Docker image
-npx nx docker:run api                          # Run Docker container
+npm install -g pnpm
 ```
 
-## 🎯 Adding New Features
-
-### Generate a new Angular application:
+## Getting Started
 
 ```bash
-npx nx g @nx/angular:app my-app
+# Install dependencies
+pnpm install
+
+# Start dev server
+pnpm start
+# → http://localhost:5173
 ```
 
-### Generate a new Angular library:
+## Scripts
 
 ```bash
-npx nx g @nx/angular:lib my-lib
+pnpm start                # Dev server (devflare app)
+pnpm build                # Build for development
+pnpm build:prod           # Build for production
+pnpm test                 # Run all unit tests
+pnpm lint                 # Lint all projects
+pnpm typecheck            # Type check all projects
+pnpm graph                # View Nx dependency graph
+pnpm affected:test        # Test only affected projects
+pnpm affected:lint        # Lint only affected projects
+pnpm affected:build       # Build only affected projects
 ```
 
-### Generate a new Angular component:
+### Individual project commands
 
 ```bash
-npx nx g @nx/angular:component my-component --project=my-lib
+npx nx serve devflare           # Dev server
+npx nx build devflare           # Build
+npx nx test devflare            # Unit tests
+npx nx e2e devflare-e2e         # E2E tests
+npx nx lint devflare            # Lint
+npx nx typecheck devflare       # Type check
 ```
 
-### Generate a new API library:
+## Path Aliases
 
-```bash
-npx nx g @nx/node:lib my-api-lib
-```
+Configured in `tsconfig.base.json`:
 
-You can use `npx nx list` to see all available plugins and `npx nx list <plugin-name>` to see all generators for a specific plugin.
+| Alias | Source |
+|---|---|
+| `@org/ui` | `libs/shared/ui` |
+| `@org/core` | `libs/shared/core` |
+| `@org/auth` | `libs/shared/auth` |
+| `@org/deploy` | `libs/deploy` |
 
-## Nx Cloud
+## Features
 
-Nx Cloud ensures a [fast and scalable CI](https://nx.dev/ci/intro/why-nx-cloud?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) pipeline. It includes features such as:
+- **Image tools** — compression, background removal, palette generation
+- **Web utilities** — OG image generator, QR code generator
+- **Deploy** — project deployment management
+- **Auth** — sign in / sign up via better-auth
+- **Responsive sidebar** — collapsible on desktop, slide-over on mobile (volt-ui)
 
-- [Remote caching](https://nx.dev/ci/features/remote-cache?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task distribution across multiple machines](https://nx.dev/ci/features/distribute-task-execution?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Automated e2e test splitting](https://nx.dev/ci/features/split-e2e-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task flakiness detection and rerunning](https://nx.dev/ci/features/flaky-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+## Architecture
 
-## Install Nx Console
+- **File-based routing** via AnalogJS — pages live in `src/app/pages/`
+- **Standalone components** — no NgModules
+- **Nx module boundaries** — ESLint rules enforce clean dependency graph
+- **Signals** — Angular 21 reactive primitives throughout
+- **Compound UI** — `@voltui/components` replaces custom shared/ui components
 
-Nx Console is an editor extension that enriches your developer experience. It lets you run tasks, generate code, and improves code autocompletion in your IDE. It is available for VSCode and IntelliJ.
+## Contributing
 
-[Install Nx Console &raquo;](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+1. Branch off `main`: `git checkout -b feature/my-feature`
+2. Make changes and run quality checks:
+   ```bash
+   pnpm affected:lint
+   pnpm affected:test
+   pnpm affected:build
+   ```
+3. Open a pull request
 
-## 🔗 Learn More
+## License
 
-- [Nx Documentation](https://nx.dev)
-- [Angular Monorepo Tutorial](https://nx.dev/getting-started/tutorials/angular-monorepo-tutorial)
-- [Module Boundaries](https://nx.dev/features/enforce-module-boundaries)
-- [Docker Integration](https://nx.dev/recipes/nx-release/release-docker-images)
-- [Playwright Testing](https://nx.dev/technologies/test-tools/playwright/introduction#e2e-testing)
-- [Vite with Angular](https://nx.dev/recipes/vite)
-- [Nx Cloud](https://nx.dev/ci/intro/why-nx-cloud)
-- [Releasing Packages](https://nx.dev/features/manage-releases)
-
-## 💬 Community
-
-Join the Nx community:
-
-- [Discord](https://go.nx.dev/community)
-- [X (Twitter)](https://twitter.com/nxdevtools)
-- [LinkedIn](https://www.linkedin.com/company/nrwl)
-- [YouTube](https://www.youtube.com/@nxdevtools)
-- [Blog](https://nx.dev/blog)
+[MIT](LICENSE) © [andersseen](https://github.com/andersseen)

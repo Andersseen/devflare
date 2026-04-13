@@ -1,6 +1,6 @@
 import { Component, computed, effect, input, OnDestroy, signal } from '@angular/core';
-import { BadgeComponent } from '@ui-components/badge.component';
-import { ButtonComponent } from '@ui-components/button.component';
+import { BadgeComponent } from '@org/ui';
+import { ButtonComponent } from '@org/ui';
 
 @Component({
     selector: 'app-preview',

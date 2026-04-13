@@ -1,8 +1,8 @@
 import { Component, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { CardComponent } from '@ui-components/card.component';
-import { ButtonComponent } from '@ui-components/button.component';
-import { SliderComponent } from '@ui-components/slider.component';
+import { CardComponent } from '@org/ui';
+import { ButtonComponent } from '@org/ui';
+import { SliderComponent } from '@org/ui';
 
 export interface ProcessingConfig {
   quality: number; // 0-100
