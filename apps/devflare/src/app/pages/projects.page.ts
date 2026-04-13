@@ -3,7 +3,6 @@ import { CardComponent, ButtonComponent } from '@org/ui';
 
 @Component({
   selector: 'app-projects-page',
-  standalone: true,
   imports: [CardComponent, ButtonComponent],
   template: `
     <div class="space-y-6">

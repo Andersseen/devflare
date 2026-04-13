@@ -4,7 +4,6 @@ import { SidebarComponent } from './sidebar.component';
 
 @Component({
   selector: 'app-layout',
-  standalone: true,
   imports: [RouterOutlet, SidebarComponent],
   template: `
     <div class="flex min-h-screen bg-background">

@@ -4,7 +4,6 @@ import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-sidebar',
-  standalone: true,
   imports: [CommonModule, RouterLink, RouterLinkActive],
   template: `
     <aside class="w-64 h-screen bg-card border-r border-border flex flex-col">

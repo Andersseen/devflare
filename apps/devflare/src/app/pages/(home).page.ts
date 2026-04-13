@@ -1,10 +1,9 @@
 import { Component } from '@angular/core';
-import { CardComponent, ButtonComponent } from '@org/ui';
+import { CardComponent } from '@org/ui';
 
 @Component({
   selector: 'app-home-page',
-  standalone: true,
-  imports: [CardComponent, ButtonComponent],
+  imports: [CardComponent],
   template: `
     <div class="space-y-8">
       <!-- Header -->

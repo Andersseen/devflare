@@ -6,7 +6,6 @@ import { AuthService } from '@org/core';
 
 @Component({
   selector: 'app-login-page',
-  standalone: true,
   imports: [FormsModule, CardComponent, ButtonComponent, InputComponent],
   template: `
     <div class="min-h-screen flex items-center justify-center bg-muted/50 p-4">

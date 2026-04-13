@@ -3,7 +3,6 @@ import { CardComponent, ButtonComponent, BadgeComponent } from '@org/ui';
 
 @Component({
   selector: 'app-image-compressor-page',
-  standalone: true,
   imports: [CardComponent, ButtonComponent, BadgeComponent],
   template: `
     <div class="space-y-6">

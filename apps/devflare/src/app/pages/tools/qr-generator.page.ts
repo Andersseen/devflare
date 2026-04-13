@@ -5,7 +5,6 @@ import { CardComponent, ButtonComponent, InputComponent } from '@org/ui';
 
 @Component({
   selector: 'app-qr-generator-page',
-  standalone: true,
   imports: [FormsModule, CardComponent, ButtonComponent, InputComponent],
   template: `
     <div class="space-y-6">

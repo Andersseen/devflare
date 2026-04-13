@@ -7,7 +7,6 @@ type DeployStep = 'idle' | 'boot' | 'clone' | 'install' | 'build' | 'upload' | '
 
 @Component({
   selector: 'app-deploy-page',
-  standalone: true,
   imports: [FormsModule, CardComponent, ButtonComponent, InputComponent],
   template: `
     <div class="max-w-4xl mx-auto space-y-8">
