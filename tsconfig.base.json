@@ -17,7 +17,8 @@
     "paths": {
       "@org/core": ["libs/shared/core/src/index.ts"],
       "@org/ui": ["libs/shared/ui/src/index.ts"],
-      "@org/deploy": ["libs/deploy/src/index.ts"]
+      "@org/deploy": ["libs/deploy/src/index.ts"],
+      "@org/auth": ["libs/shared/auth/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]
