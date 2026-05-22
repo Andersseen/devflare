@@ -16,7 +16,7 @@ import {
 import { Auth } from '@org/auth';
 
 @Component({
-  selector: 'app-login-page',
+  selector: 'app-sign-up-page',
   imports: [
     RouterLink,
     LucideAngularModule,
@@ -44,11 +44,21 @@ import { Auth } from '@org/auth';
 
         <volt-card>
           <volt-card-header>
-            <volt-card-title>Welcome back</volt-card-title>
-            <volt-card-description>Sign in to your account</volt-card-description>
+            <volt-card-title>Create an account</volt-card-title>
+            <volt-card-description>Get started with DevFlare</volt-card-description>
           </volt-card-header>
           <volt-card-content>
             <form class="space-y-4" (submit)="onSubmit($event)">
+              <volt-form-field>
+                <volt-label>Name</volt-label>
+                <volt-input
+                  type="text"
+                  placeholder="John Doe"
+                  [(value)]="name"
+                  autocomplete="name"
+                />
+              </volt-form-field>
+
               <volt-form-field>
                 <volt-label>Email</volt-label>
                 <volt-input
@@ -65,7 +75,7 @@ import { Auth } from '@org/auth';
                   type="password"
                   placeholder="••••••••"
                   [(value)]="password"
-                  autocomplete="current-password"
+                  autocomplete="new-password"
                 />
               </volt-form-field>
 
@@ -82,17 +92,17 @@ import { Auth } from '@org/auth';
                 @if (isLoading()) {
                   <span class="flex items-center justify-center gap-2">
                     <lucide-icon name="loader" class="animate-spin w-4 h-4" />
-                    Signing in...
+                    Creating account...
                   </span>
                 } @else {
-                  Sign In
+                  Sign Up
                 }
               </volt-button>
             </form>
 
             <div class="mt-4 text-center text-sm text-muted-foreground">
-              Don't have an account?
-              <a routerLink="/sign-up" class="text-primary hover:underline">Sign up</a>
+              Already have an account?
+              <a routerLink="/login" class="text-primary hover:underline">Sign in</a>
             </div>
           </volt-card-content>
         </volt-card>
@@ -100,10 +110,11 @@ import { Auth } from '@org/auth';
     </div>
   `,
 })
-export default class LoginPage {
+export default class SignUpPage {
   #auth = inject(Auth);
   #router = inject(Router);
 
+  name = signal('');
   email = signal('');
   password = signal('');
   isLoading = signal(false);
@@ -115,10 +126,10 @@ export default class LoginPage {
     this.error.set('');
 
     try {
-      await this.#auth.login(this.email(), this.password());
+      await this.#auth.register(this.email(), this.password(), this.name());
       this.#router.navigate(['/']);
-    } catch {
-      this.error.set('Invalid email or password');
+    } catch (err: unknown) {
+      this.error.set(err instanceof Error ? err.message : 'Failed to create account');
     } finally {
       this.isLoading.set(false);
     }

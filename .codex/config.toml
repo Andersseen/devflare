@@ -1,0 +1,14 @@
+[mcp_servers.angular]
+args = [
+    "-y",
+    "@angular/cli",
+    "mcp",
+]
+command = "npx"
+
+[mcp_servers.nx-mcp]
+args = [
+    "nx",
+    "mcp",
+]
+command = "npx"

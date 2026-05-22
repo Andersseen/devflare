@@ -2,7 +2,7 @@ import { Component, OnInit, signal, inject, ChangeDetectionStrategy } from '@ang
 import { FormsModule } from '@angular/forms';
 import { ButtonComponent } from '@org/ui';
 import { CardComponent } from '@org/ui';
-import { WebContainerService } from '@org/core';
+import { WebContainer } from '@org/core';
 import { DeployStepperComponent } from './components/deploy-stepper.component';
 import { DeployTerminalComponent } from './components/deploy-terminal.component';
 
@@ -90,7 +90,7 @@ export class DeployComponent implements OnInit {
     logs = signal<string[]>([]);
     isCOOP = true;
 
-    private webContainer = inject(WebContainerService);
+    private webContainer = inject(WebContainer);
 
     steps: { id: DeployStep, label: string, description: string, stepNumber: number }[] = [
         { id: 'boot', label: 'Boot System', description: 'Initializing WebContainer core...', stepNumber: 1 },

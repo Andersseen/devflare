@@ -3,7 +3,7 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { DrawerComponent } from '@org/ui';
 import { SidebarNavComponent } from '@org/ui';
 import { SidebarComponent } from '@org/ui';
-import { AuthService } from '@org/core';
+import { Auth } from '@org/core';
 import { NavbarComponent, NavSection } from '@org/ui';
 import { LucideAngularModule } from 'lucide-angular';
 
@@ -102,7 +102,7 @@ import { LucideAngularModule } from 'lucide-angular';
   `,
 })
 export class DashboardLayoutComponent {
-  authService = inject(AuthService);
+  authService = inject(Auth);
   currentUser = this.authService.currentUser;
   mobileMenuOpen = signal(false);
   activeSection = signal<NavSection>('deployment');

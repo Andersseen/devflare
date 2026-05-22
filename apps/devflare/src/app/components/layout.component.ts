@@ -1,11 +1,12 @@
 import { Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { LucideAngularModule } from 'lucide-angular';
 import { VoltSidebarService } from '@voltui/components';
 import { SidebarComponent } from './sidebar.component';
 
 @Component({
   selector: 'app-layout',
-  imports: [RouterOutlet, SidebarComponent],
+  imports: [RouterOutlet, SidebarComponent, LucideAngularModule],
   template: `
     <div class="flex min-h-screen bg-background">
       <app-sidebar />
@@ -18,9 +19,7 @@ import { SidebarComponent } from './sidebar.component';
             class="flex items-center justify-center rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
             aria-label="Open sidebar"
           >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
+            <lucide-icon name="menu" class="w-5 h-5" />
           </button>
           <span class="font-semibold">DevFlare</span>
         </header>

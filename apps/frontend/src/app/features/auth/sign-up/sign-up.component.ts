@@ -1,7 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { AuthService } from '@org/core';
+import { Auth } from '@org/core';
 import { ButtonComponent } from '@org/ui';
 
 @Component({
@@ -80,7 +80,7 @@ import { ButtonComponent } from '@org/ui';
   `
 })
 export class SignUpComponent {
-  authService = inject(AuthService);
+  authService = inject(Auth);
   router = inject(Router);
 
   name = '';

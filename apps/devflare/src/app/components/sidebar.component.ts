@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { LucideAngularModule } from 'lucide-angular';
 import {
   VoltSidebar,
   VoltSidebarHeader,
@@ -9,11 +10,13 @@ import {
   VoltSidebarFooter,
   VoltSidebarService,
 } from '@voltui/components';
+import { Auth } from '@org/auth';
 
 @Component({
   selector: 'app-sidebar',
   imports: [
     RouterLink,
+    LucideAngularModule,
     VoltSidebar,
     VoltSidebarHeader,
     VoltSidebarContent,
@@ -39,58 +42,96 @@ import {
       <volt-sidebar-content>
         <volt-sidebar-group label="Platform">
           <volt-sidebar-item routerLink="/" label="Dashboard" [exact]="true">
-            <svg slot="icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
+            <lucide-icon slot="icon" name="layout-dashboard" class="w-5 h-5" />
           </volt-sidebar-item>
 
           <volt-sidebar-item routerLink="/deploy" label="Deploy">
-            <svg slot="icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
+            <lucide-icon slot="icon" name="zap" class="w-5 h-5" />
           </volt-sidebar-item>
 
           <volt-sidebar-item routerLink="/projects" label="Projects">
-            <svg slot="icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-            </svg>
+            <lucide-icon slot="icon" name="folder-open" class="w-5 h-5" />
           </volt-sidebar-item>
         </volt-sidebar-group>
 
         <volt-sidebar-group label="Tools">
           <volt-sidebar-item routerLink="/tools/image-compressor" label="Image Compressor">
-            <svg slot="icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
+            <lucide-icon slot="icon" name="image" class="w-5 h-5" />
           </volt-sidebar-item>
 
           <volt-sidebar-item routerLink="/tools/qr-generator" label="QR Generator">
-            <svg slot="icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-            </svg>
+            <lucide-icon slot="icon" name="qr-code" class="w-5 h-5" />
+          </volt-sidebar-item>
+
+          <volt-sidebar-item routerLink="/tools/svg-optimizer" label="SVG Optimizer">
+            <lucide-icon slot="icon" name="scissors" class="w-5 h-5" />
+          </volt-sidebar-item>
+
+          <volt-sidebar-item routerLink="/tools/seo-simulator" label="SEO Simulator">
+            <lucide-icon slot="icon" name="search" class="w-5 h-5" />
+          </volt-sidebar-item>
+
+          <volt-sidebar-item routerLink="/tools/converter" label="Data Converter">
+            <lucide-icon slot="icon" name="arrow-right-left" class="w-5 h-5" />
+          </volt-sidebar-item>
+
+          <volt-sidebar-item routerLink="/tools/recorder" label="Screen Recorder">
+            <lucide-icon slot="icon" name="video" class="w-5 h-5" />
+          </volt-sidebar-item>
+
+          <volt-sidebar-item routerLink="/tools/og-generator" label="Social Card Designer">
+            <lucide-icon slot="icon" name="globe" class="w-5 h-5" />
+          </volt-sidebar-item>
+
+          <volt-sidebar-item routerLink="/tools/palette" label="Cinematic Palette">
+            <lucide-icon slot="icon" name="brush" class="w-5 h-5" />
+          </volt-sidebar-item>
+
+          <volt-sidebar-item routerLink="/tools/bg-remover" label="Background Remover">
+            <lucide-icon slot="icon" name="paint-bucket" class="w-5 h-5" />
+          </volt-sidebar-item>
+
+          <volt-sidebar-item routerLink="/tools/shortener" label="URL Shortener">
+            <lucide-icon slot="icon" name="link" class="w-5 h-5" />
+          </volt-sidebar-item>
+        </volt-sidebar-group>
+
+        <volt-sidebar-group label="Account">
+          <volt-sidebar-item routerLink="/settings" label="Settings">
+            <lucide-icon slot="icon" name="settings" class="w-5 h-5" />
           </volt-sidebar-item>
         </volt-sidebar-group>
       </volt-sidebar-content>
 
-      <!-- Footer: collapse toggle -->
+      <!-- Footer: user + collapse toggle -->
       <volt-sidebar-footer>
+        @if (auth.isAuthenticated()) {
+          <div class="px-3 py-2 mb-2">
+            <div class="flex items-center gap-2 text-sm text-muted-foreground">
+              <lucide-icon name="user" class="w-4 h-4 shrink-0" />
+              @if (!sidebarService.isCollapsed()) {
+                <span class="truncate">{{ auth.user()?.name || auth.user()?.email }}</span>
+              }
+            </div>
+          </div>
+          <button
+            (click)="logout()"
+            class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground mb-2"
+          >
+            <lucide-icon name="log-out" class="w-4 h-4 shrink-0" />
+            @if (!sidebarService.isCollapsed()) {
+              <span>Logout</span>
+            }
+          </button>
+        }
         <button
           (click)="sidebarService.toggleCollapse()"
           class="hidden md:flex w-full items-center justify-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         >
           @if (sidebarService.isCollapsed()) {
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-            </svg>
+            <lucide-icon name="panel-left-open" class="w-5 h-5" />
           } @else {
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-            </svg>
+            <lucide-icon name="panel-left-close" class="w-5 h-5" />
             <span class="text-sm">Collapse</span>
           }
         </button>
@@ -99,5 +140,10 @@ import {
   `,
 })
 export class SidebarComponent {
-  protected readonly sidebarService = inject(VoltSidebarService);
+  sidebarService = inject(VoltSidebarService);
+  auth = inject(Auth);
+
+  logout() {
+    this.auth.logout();
+  }
 }

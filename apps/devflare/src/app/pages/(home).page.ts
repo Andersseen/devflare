@@ -1,111 +1,176 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { LucideAngularModule } from 'lucide-angular';
 import {
   VoltCard,
-  VoltCardHeader,
-  VoltCardTitle,
-  VoltCardDescription,
   VoltCardContent,
+  VoltBadge,
 } from '@voltui/components';
+import { Auth } from '@org/auth';
+
+interface Tool {
+  title: string;
+  description: string;
+  link: string;
+  icon: string;
+  colorClass: string;
+  bgClass: string;
+}
 
 @Component({
   selector: 'app-home-page',
-  imports: [RouterLink, VoltCard, VoltCardHeader, VoltCardTitle, VoltCardDescription, VoltCardContent],
+  imports: [
+    RouterLink,
+    LucideAngularModule,
+    VoltCard,
+    VoltCardContent,
+    VoltBadge,
+  ],
   template: `
-    <div class="space-y-8">
-      <!-- Header -->
-      <div>
-        <h1 class="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p class="text-muted-foreground mt-1">Welcome to your DevFlare dashboard</p>
+    <div class="space-y-10">
+      <!-- Hero -->
+      <div class="text-center space-y-4 py-4">
+        <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-indigo-500 pb-2">
+          Developer Tools, Reimagined.
+        </h1>
+        <p class="text-xl text-muted-foreground max-w-2xl mx-auto">
+          A suite of powerful, client-side tools to help you build, optimize, and deploy faster. No server required.
+        </p>
+        @if (auth.user(); as user) {
+          <p class="text-sm text-muted-foreground">Welcome back, <span class="font-medium text-foreground">{{ user.name || user.email }}</span></p>
+        }
       </div>
 
-      <!-- Stats -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <volt-card>
-          <volt-card-content>
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-sm font-medium text-muted-foreground">Total Projects</p>
-                <p class="text-3xl font-bold mt-1">0</p>
-              </div>
-              <div class="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
-              </div>
-            </div>
-          </volt-card-content>
-        </volt-card>
-
-        <volt-card>
-          <volt-card-content>
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-sm font-medium text-muted-foreground">Deployments</p>
-                <p class="text-3xl font-bold mt-1">0</p>
-              </div>
-              <div class="w-12 h-12 bg-green-500/10 rounded-lg flex items-center justify-center">
-                <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-            </div>
-          </volt-card-content>
-        </volt-card>
-
-        <volt-card>
-          <volt-card-content>
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-sm font-medium text-muted-foreground">Tools Used</p>
-                <p class="text-3xl font-bold mt-1">0</p>
-              </div>
-              <div class="w-12 h-12 bg-blue-500/10 rounded-lg flex items-center justify-center">
-                <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </div>
-            </div>
-          </volt-card-content>
-        </volt-card>
+      <!-- Tools Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        @for (tool of tools; track tool.title) {
+          <a
+            [routerLink]="tool.link"
+            class="group cursor-pointer"
+          >
+            <volt-card class="h-full transition-all duration-300 hover:-translate-y-1 hover:shadow-lg border-border hover:border-primary/30">
+              <volt-card-content>
+                <div class="p-2 space-y-4 flex-1">
+                  <div
+                    class="w-12 h-12 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110"
+                    [class]="tool.bgClass"
+                  >
+                    <lucide-icon [name]="tool.icon" class="w-6 h-6" [class]="tool.colorClass" />
+                  </div>
+                  <div>
+                    <h3 class="text-xl font-bold transition-colors group-hover:text-primary">
+                      {{ tool.title }}
+                    </h3>
+                    <p class="text-muted-foreground mt-2 text-sm">{{ tool.description }}</p>
+                  </div>
+                </div>
+              </volt-card-content>
+            </volt-card>
+          </a>
+        }
       </div>
-
-      <!-- Quick Actions -->
-      <volt-card>
-        <volt-card-header>
-          <volt-card-title>Quick Actions</volt-card-title>
-          <volt-card-description>Get started with these common tasks</volt-card-description>
-        </volt-card-header>
-        <volt-card-content>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <a routerLink="/deploy" class="flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-accent transition-colors">
-              <div class="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-              <div>
-                <p class="font-medium">Deploy New Project</p>
-                <p class="text-sm text-muted-foreground">Deploy from GitHub</p>
-              </div>
-            </a>
-
-            <a routerLink="/tools/image-compressor" class="flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-accent transition-colors">
-              <div class="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center">
-                <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <div>
-                <p class="font-medium">Compress Images</p>
-                <p class="text-sm text-muted-foreground">Optimize your assets</p>
-              </div>
-            </a>
-          </div>
-        </volt-card-content>
-      </volt-card>
     </div>
   `,
 })
-export default class HomePageComponent {}
+export default class HomePage {
+  auth = inject(Auth);
+
+  tools: Tool[] = [
+    {
+      title: 'Image Compressor',
+      description: 'Optimize PNG, JPEG, and WEBP images locally with WebWorkers.',
+      link: '/tools/image-compressor',
+      icon: 'image',
+      colorClass: 'text-blue-500',
+      bgClass: 'bg-blue-500/10',
+    },
+    {
+      title: 'QR Code Studio',
+      description: 'Generate customizable QR codes for URLs, text, and Wi-Fi networks.',
+      link: '/tools/qr-generator',
+      icon: 'qr-code',
+      colorClass: 'text-pink-500',
+      bgClass: 'bg-pink-500/10',
+    },
+    {
+      title: 'SVG Optimizer',
+      description: 'Minify and clean up SVG code directly in your browser.',
+      link: '/tools/svg-optimizer',
+      icon: 'scissors',
+      colorClass: 'text-orange-500',
+      bgClass: 'bg-orange-500/10',
+    },
+    {
+      title: 'SEO Simulator',
+      description: 'Preview how your pages appear on Google, Twitter, and Facebook.',
+      link: '/tools/seo-simulator',
+      icon: 'search',
+      colorClass: 'text-sky-500',
+      bgClass: 'bg-sky-500/10',
+    },
+    {
+      title: 'Data Converter',
+      description: 'Convert between JSON and CSV formats instantly.',
+      link: '/tools/converter',
+      icon: 'arrow-right-left',
+      colorClass: 'text-cyan-500',
+      bgClass: 'bg-cyan-500/10',
+    },
+    {
+      title: 'Screen Recorder',
+      description: 'Record your screen directly from the browser without plugins.',
+      link: '/tools/recorder',
+      icon: 'video',
+      colorClass: 'text-red-500',
+      bgClass: 'bg-red-500/10',
+    },
+    {
+      title: 'Social Card Designer',
+      description: 'Create beautiful Open Graph images for your social media posts.',
+      link: '/tools/og-generator',
+      icon: 'globe',
+      colorClass: 'text-purple-500',
+      bgClass: 'bg-purple-500/10',
+    },
+    {
+      title: 'Cinematic Palette',
+      description: 'Extract dominant colors and create cinematic compositions.',
+      link: '/tools/palette',
+      icon: 'brush',
+      colorClass: 'text-fuchsia-500',
+      bgClass: 'bg-fuchsia-500/10',
+    },
+    {
+      title: 'Background Remover',
+      description: 'Remove image backgrounds using AI completely client-side.',
+      link: '/tools/bg-remover',
+      icon: 'paint-bucket',
+      colorClass: 'text-emerald-600',
+      bgClass: 'bg-emerald-600/10',
+    },
+    {
+      title: 'URL Shortener',
+      description: 'Shorten long links and keep track of them with custom aliases.',
+      link: '/tools/shortener',
+      icon: 'link',
+      colorClass: 'text-indigo-500',
+      bgClass: 'bg-indigo-500/10',
+    },
+    {
+      title: 'Deploy',
+      description: 'Build and deploy Node.js applications using WebContainers.',
+      link: '/deploy',
+      icon: 'zap',
+      colorClass: 'text-green-500',
+      bgClass: 'bg-green-500/10',
+    },
+    {
+      title: 'Projects',
+      description: 'Manage your deployed projects and view deployment history.',
+      link: '/projects',
+      icon: 'folder-open',
+      colorClass: 'text-primary',
+      bgClass: 'bg-primary/10',
+    },
+  ];
+}

@@ -1,24 +1,24 @@
 import { Injectable, signal } from '@angular/core';
-import { WebContainer } from '@webcontainer/api';
+import { WebContainer as WebContainerApi } from '@webcontainer/api';
 
 @Injectable({
   providedIn: 'root',
 })
-export class WebContainerService {
-  private webcontainerInstance: WebContainer | null = null;
+export class WebContainer {
+  #instance: WebContainerApi | null = null;
 
   isInitialized = signal<boolean>(false);
   isBooting = signal<boolean>(false);
   bootError = signal<string | null>(null);
 
   async boot(): Promise<void> {
-    if (this.webcontainerInstance) return;
+    if (this.#instance) return;
 
     this.isBooting.set(true);
     this.bootError.set(null);
 
     try {
-      this.webcontainerInstance = await WebContainer.boot();
+      this.#instance = await WebContainerApi.boot();
       this.isInitialized.set(true);
       console.log('[WebContainer] Booted successfully');
     } catch (error) {
@@ -31,11 +31,11 @@ export class WebContainerService {
     }
   }
 
-  async mount(files: Record<string, any>): Promise<void> {
-    if (!this.webcontainerInstance) {
+  async mount(files: unknown): Promise<void> {
+    if (!this.#instance) {
       throw new Error('WebContainer not initialized');
     }
-    await this.webcontainerInstance.mount(files);
+    await this.#instance.mount(files as Parameters<WebContainerApi['mount']>[0]);
   }
 
   async run(
@@ -43,11 +43,11 @@ export class WebContainerService {
     args: string[],
     onOutput?: (data: string) => void
   ): Promise<number> {
-    if (!this.webcontainerInstance) {
+    if (!this.#instance) {
       throw new Error('WebContainer not initialized');
     }
 
-    const process = await this.webcontainerInstance.spawn(command, args);
+    const process = await this.#instance.spawn(command, args);
 
     if (onOutput) {
       process.output.pipeTo(
@@ -63,20 +63,20 @@ export class WebContainerService {
   }
 
   async readFile(filePath: string): Promise<Uint8Array> {
-    if (!this.webcontainerInstance) {
+    if (!this.#instance) {
       throw new Error('WebContainer not initialized');
     }
-    return this.webcontainerInstance.fs.readFile(filePath);
+    return this.#instance.fs.readFile(filePath);
   }
 
   async writeFile(filePath: string, content: string | Uint8Array): Promise<void> {
-    if (!this.webcontainerInstance) {
+    if (!this.#instance) {
       throw new Error('WebContainer not initialized');
     }
-    await this.webcontainerInstance.fs.writeFile(filePath, content);
+    await this.#instance.fs.writeFile(filePath, content);
   }
 
-  getMockFiles(): Record<string, any> {
+  getMockFiles(): unknown {
     return {
       'package.json': {
         file: {

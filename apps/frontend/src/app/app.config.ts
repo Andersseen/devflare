@@ -33,18 +33,13 @@ import {
 } from 'lucide-angular';
 
 import { routes } from './app.routes';
-import {
-  GlobalErrorHandler,
-  authInterceptor,
-  errorInterceptor,
-} from '@org/core';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes, withComponentInputBinding()),
     provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
-    { provide: ErrorHandler, useClass: GlobalErrorHandler },
+    { provide: ErrorHandler, useClass:  },
     importProvidersFrom(
       LucideAngularModule.pick({
         LayoutDashboard,

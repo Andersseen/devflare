@@ -8,7 +8,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { UrlShortenerService, ShortenResponse } from '@org/core';
+import { UrlShortener, ShortenResponse } from '@org/core';
 import QRCode from 'qrcode';
 
 interface HistoryItem {
@@ -379,7 +379,7 @@ export class ShortenerComponent {
 
   @ViewChild('qrCanvas') qrCanvas!: ElementRef<HTMLCanvasElement>;
 
-  constructor(private shortenerService: UrlShortenerService) {
+  constructor(private shortenerService: UrlShortener) {
     afterNextRender(() => {
       if (this.result()) {
         this.generateQR(this.result()!.shortUrl);

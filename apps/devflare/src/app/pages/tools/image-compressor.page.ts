@@ -1,95 +1,158 @@
-import { Component, signal, computed } from '@angular/core';
-import { CardComponent, ButtonComponent, BadgeComponent } from '@org/ui';
+import { Component, signal, computed, inject } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { ImageCompressor } from '@org/core';
+import { LucideAngularModule } from 'lucide-angular';
+import {
+  VoltCard,
+  VoltCardHeader,
+  VoltCardTitle,
+  VoltCardContent,
+  VoltButton,
+  VoltBadge,
+  VoltSlider,
+} from '@voltui/components';
 
 @Component({
   selector: 'app-image-compressor-page',
-  imports: [CardComponent, ButtonComponent, BadgeComponent],
+  imports: [
+    FormsModule,
+    LucideAngularModule,
+    VoltCard,
+    VoltCardHeader,
+    VoltCardTitle,
+    VoltCardContent,
+    VoltButton,
+    VoltBadge,
+    VoltSlider,
+  ],
   template: `
     <div class="space-y-6">
       <div>
         <h1 class="text-3xl font-bold tracking-tight">Image Compressor</h1>
-        <p class="text-muted-foreground mt-1">Optimize your images for the web</p>
+        <p class="text-muted-foreground mt-1">Smart compression with WebWorkers. Reduce file size without compromising quality.</p>
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Upload -->
-        <ui-card title="Upload Image">
-          <div 
-            class="mt-4 border-2 border-dashed border-border rounded-lg p-8 text-center hover:bg-accent/50 transition-colors cursor-pointer"
-            (dragover)="onDragOver($event)"
-            (drop)="onDrop($event)"
-            (click)="fileInput.click()"
-          >
-            <input 
-              #fileInput 
-              type="file" 
-              accept="image/*" 
-              class="hidden" 
-              (change)="onFileSelected($event)"
-            />
-            <svg class="w-12 h-12 text-muted-foreground mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-            </svg>
-            <p class="font-medium">Drop your image here</p>
-            <p class="text-sm text-muted-foreground mt-1">or click to browse</p>
+      @if (!originalFile()) {
+        <div
+          class="border-2 border-dashed border-border rounded-xl p-12 text-center cursor-pointer hover:border-primary hover:bg-accent/50 transition-all"
+          tabindex="0"
+          role="button"
+          (dragover)="onDragOver($event)"
+          (drop)="onDrop($event)"
+          (click)="fileInput.click()"
+          (keydown.enter)="fileInput.click()"
+          (keydown.space)="fileInput.click()"
+        >
+          <input #fileInput type="file" accept="image/*" class="hidden" (change)="onFileSelected($event)">
+          <lucide-icon name="upload" class="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+          <p class="text-lg font-medium">Drop your image here</p>
+          <p class="text-sm text-muted-foreground mt-1">or click to browse — supports PNG, JPG, WEBP</p>
+        </div>
+      } @else {
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <volt-button size="sm" variant="ghost" (click)="reset()">
+              <lucide-icon name="arrow-left" class="w-4 h-4 mr-1" />
+              Upload new
+            </volt-button>
+            @if (isProcessing()) {
+              <volt-badge variant="secondary">
+                <lucide-icon name="loader" class="animate-spin w-3 h-3 mr-1" />
+                Processing...
+              </volt-badge>
+            }
           </div>
-        </ui-card>
 
-        <!-- Preview -->
-        @if (originalFile()) {
-          <ui-card title="Preview">
-            <div class="mt-4 space-y-4">
-              <!-- Stats -->
-              <div class="grid grid-cols-2 gap-4">
-                <div class="p-4 bg-muted rounded-lg">
-                  <p class="text-sm text-muted-foreground">Original</p>
-                  <p class="text-xl font-bold">{{ formatSize(originalSize()) }}</p>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Original -->
+            <volt-card>
+              <volt-card-header>
+                <volt-card-title>Original</volt-card-title>
+              </volt-card-header>
+              <volt-card-content>
+                <img [src]="originalPreview()" class="max-h-64 mx-auto rounded-lg object-contain" alt="Original">
+                <div class="mt-4 text-center">
+                  <p class="text-sm text-muted-foreground">{{ formatSize(originalSize()) }}</p>
+                  <p class="text-xs text-muted-foreground">{{ originalDimensions() }}</p>
                 </div>
-                @if (compressedFile()) {
-                  <div class="p-4 bg-green-500/10 rounded-lg">
-                    <p class="text-sm text-green-600">Compressed</p>
-                    <div class="flex items-center gap-2">
-                      <p class="text-xl font-bold text-green-600">{{ formatSize(compressedSize()) }}</p>
-                      <ui-badge variant="success">-{{ savings() }}%</ui-badge>
-                    </div>
-                  </div>
-                }
-              </div>
+              </volt-card-content>
+            </volt-card>
 
-              <!-- Image Preview -->
-              <div class="aspect-video bg-muted rounded-lg overflow-hidden flex items-center justify-center">
-                @if (previewUrl()) {
-                  <img [src]="previewUrl()" class="max-h-full max-w-full object-contain" alt="Preview" />
+            <!-- Compressed -->
+            <volt-card>
+              <volt-card-header class="flex flex-row items-center justify-between">
+                <volt-card-title>Compressed</volt-card-title>
+                @if (savings() > 0) {
+                  <volt-badge variant="solid">-{{ savings() }}%</volt-badge>
                 }
-              </div>
+              </volt-card-header>
+              <volt-card-content>
+                <img [src]="compressedPreview()" class="max-h-64 mx-auto rounded-lg object-contain" alt="Compressed">
+                <div class="mt-4 text-center">
+                  <p class="text-sm font-medium">{{ formatSize(compressedSize()) }}</p>
+                  <p class="text-xs text-green-600">Saved {{ formatSize(originalSize() - compressedSize()) }}</p>
+                </div>
+              </volt-card-content>
+            </volt-card>
+          </div>
 
-              <!-- Actions -->
-              @if (compressedFile()) {
-                <ui-button (click)="download()" [fullWidth]="true">
-                  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
-                  Download Compressed
-                </ui-button>
-              }
-            </div>
-          </ui-card>
-        }
-      </div>
+          <!-- Controls -->
+          <volt-card>
+            <volt-card-header>
+              <volt-card-title>Settings</volt-card-title>
+            </volt-card-header>
+            <volt-card-content class="space-y-4">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label for="quality" class="text-sm font-medium block mb-2">Quality: {{ quality() }}%</label>
+                  <input id="quality" type="range" min="10" max="100" [value]="quality()" (change)="quality.set(+$any($event).target.value); processImage()" class="w-full">
+                </div>
+                <div>
+                  <label for="maxWidth" class="text-sm font-medium block mb-2">Max Width: {{ maxWidth() > 0 ? maxWidth() + 'px' : 'Original' }}</label>
+                  <input id="maxWidth" type="range" min="0" max="3000" step="100" [value]="maxWidth()" (change)="maxWidth.set(+$any($event).target.value); processImage()" class="w-full">
+                </div>
+                <div>
+                  <label for="format" class="text-sm font-medium block mb-2">Format</label>
+                  <select id="format" [(ngModel)]="format" (change)="processImage()" class="w-full h-10 rounded-md border border-border bg-background px-3 text-sm">
+                    <option value="image/jpeg">JPEG</option>
+                    <option value="image/png">PNG</option>
+                    <option value="image/webp">WebP</option>
+                  </select>
+                </div>
+              </div>
+              <volt-button variant="solid" class="w-full" (click)="download()" [disabled]="!compressedFile() || isProcessing()">
+                <lucide-icon name="download" class="w-4 h-4 mr-2" />
+                Download Compressed
+              </volt-button>
+            </volt-card-content>
+          </volt-card>
+        </div>
+      }
     </div>
   `,
 })
-export default class ImageCompressorPageComponent {
+export default class ImageCompressorPage {
   originalFile = signal<File | null>(null);
   compressedFile = signal<File | null>(null);
-  previewUrl = signal<string>('');
+  originalPreview = signal<string>('');
+  compressedPreview = signal<string>('');
+  isProcessing = signal(false);
+
+  quality = signal(80);
+  maxWidth = signal(0);
+  format = signal('image/jpeg');
 
   originalSize = computed(() => this.originalFile()?.size || 0);
   compressedSize = computed(() => this.compressedFile()?.size || 0);
-  savings = computed(() => {
-    if (!this.originalSize() || !this.compressedSize()) return 0;
-    return Math.round((1 - this.compressedSize() / this.originalSize()) * 100);
+  savings = computed(() =>
+    this.#imageCompressorService.getSavingsPercent(this.originalSize(), this.compressedSize())
+  );
+  originalDimensions = computed(() => {
+    // This would need an actual image load, keeping simple for now
+    return '';
   });
+
+  #imageCompressorService = inject(ImageCompressor);
 
   onDragOver(event: DragEvent) {
     event.preventDefault();
@@ -112,69 +175,49 @@ export default class ImageCompressorPageComponent {
 
   async handleFile(file: File) {
     if (!file.type.startsWith('image/')) return;
-
     this.originalFile.set(file);
-    this.previewUrl.set(URL.createObjectURL(file));
-
-    // Simple compression using canvas
-    const compressed = await this.compressImage(file);
-    this.compressedFile.set(compressed);
+    this.originalPreview.set(URL.createObjectURL(file));
+    await this.processImage();
   }
 
-  compressImage(file: File): Promise<File> {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d')!;
+  async processImage() {
+    const file = this.originalFile();
+    if (!file) return;
 
-        // Scale down if too large
-        let { width, height } = img;
-        const maxSize = 1200;
-        if (width > maxSize || height > maxSize) {
-          if (width > height) {
-            height = (height / width) * maxSize;
-            width = maxSize;
-          } else {
-            width = (width / height) * maxSize;
-            height = maxSize;
-          }
-        }
+    this.isProcessing.set(true);
+    try {
+      const compressed = await this.#imageCompressorService.compress(file, {
+        quality: this.quality(),
+        maxWidth: this.maxWidth(),
+        format: this.format(),
+      });
+      this.compressedFile.set(compressed);
+      this.compressedPreview.set(URL.createObjectURL(compressed));
+    } catch (err) {
+      console.error('Compression error:', err);
+    } finally {
+      this.isProcessing.set(false);
+    }
+  }
 
-        canvas.width = width;
-        canvas.height = height;
-        ctx.drawImage(img, 0, 0, width, height);
-
-        canvas.toBlob(
-          (blob) => {
-            if (blob) {
-              resolve(new File([blob], file.name, { type: 'image/jpeg' }));
-            }
-          },
-          'image/jpeg',
-          0.8
-        );
-      };
-      img.src = URL.createObjectURL(file);
-    });
+  reset() {
+    this.originalFile.set(null);
+    this.compressedFile.set(null);
+    this.originalPreview.set('');
+    this.compressedPreview.set('');
   }
 
   formatSize(bytes: number): string {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return this.#imageCompressorService.formatSize(bytes);
   }
 
   download() {
     const file = this.compressedFile();
     if (!file) return;
-
     const url = URL.createObjectURL(file);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'compressed-' + file.name;
+    a.download = 'compressed-' + file.name.replace(/\.[^/.]+$/, '') + '.' + this.format().split('/')[1];
     a.click();
     URL.revokeObjectURL(url);
   }
