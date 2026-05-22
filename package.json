@@ -4,7 +4,7 @@
   "description": "A modern developer tools platform built with AnalogJS, Angular 21 and Nx monorepo.",
   "author": "andersseen",
   "license": "MIT",
-  "private": true,
+  "private": false,
   "engines": {
     "node": ">=20.0.0",
     "pnpm": ">=9.0.0"

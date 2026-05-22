@@ -48,6 +48,14 @@ export class AuthService {
     this._user.set((data?.user as AuthUser) ?? null);
   }
 
+  async updateName(name: string): Promise<void> {
+    const { error } = await this.client.updateUser({ name });
+    if (error) throw new Error(error.message);
+    // Refresh session to get updated user data
+    const { data: sessionData } = await this.client.getSession();
+    this._user.set((sessionData?.user as AuthUser) ?? null);
+  }
+
   async logout(): Promise<void> {
     await this.client.signOut();
     this._user.set(null);

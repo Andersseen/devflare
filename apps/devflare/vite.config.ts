@@ -19,7 +19,16 @@ export default defineConfig(({ mode }) => {
         allow: ['.'],
       },
     },
-    plugins: [analog(), nxViteTsPaths()],
+    plugins: [
+      analog({
+        nitro: {
+          externals: {
+            external: ['better-sqlite3'],
+          },
+        },
+      }),
+      nxViteTsPaths(),
+    ],
     test: {
       globals: true,
       environment: 'jsdom',
