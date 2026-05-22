@@ -1,6 +1,6 @@
-import { Component, signal, computed } from '@angular/core';
+import { Component, signal, computed, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import imageCompression from 'browser-image-compression';
+import { ImageCompressorService } from '@org/core';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   VoltCard,
@@ -140,14 +140,15 @@ export default class ImageCompressorPageComponent {
 
   originalSize = computed(() => this.originalFile()?.size || 0);
   compressedSize = computed(() => this.compressedFile()?.size || 0);
-  savings = computed(() => {
-    if (!this.originalSize() || !this.compressedSize()) return 0;
-    return Math.round((1 - this.compressedSize() / this.originalSize()) * 100);
-  });
+  savings = computed(() =>
+    this.imageCompressorService.getSavingsPercent(this.originalSize(), this.compressedSize())
+  );
   originalDimensions = computed(() => {
     // This would need an actual image load, keeping simple for now
     return '';
   });
+
+  private imageCompressorService = inject(ImageCompressorService);
 
   onDragOver(event: DragEvent) {
     event.preventDefault();
@@ -181,15 +182,11 @@ export default class ImageCompressorPageComponent {
 
     this.isProcessing.set(true);
     try {
-      const options = {
-        maxSizeMB: 100,
-        useWebWorker: true,
-        fileType: this.format(),
-        initialQuality: this.quality() / 100,
-        ...(this.maxWidth() > 0 ? { maxWidthOrHeight: this.maxWidth() } : {}),
-      };
-
-      const compressed = await imageCompression(file, options);
+      const compressed = await this.imageCompressorService.compress(file, {
+        quality: this.quality(),
+        maxWidth: this.maxWidth(),
+        format: this.format(),
+      });
       this.compressedFile.set(compressed);
       this.compressedPreview.set(URL.createObjectURL(compressed));
     } catch (err) {
@@ -207,11 +204,7 @@ export default class ImageCompressorPageComponent {
   }
 
   formatSize(bytes: number): string {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return this.imageCompressorService.formatSize(bytes);
   }
 
   download() {

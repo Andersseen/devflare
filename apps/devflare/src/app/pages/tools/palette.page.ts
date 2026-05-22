@@ -1,14 +1,6 @@
-import { Component, ElementRef, signal, ViewChild } from '@angular/core';
+import { Component, ElementRef, signal, ViewChild, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import ColorThief from 'colorthief';
-
-declare module 'colorthief' {
-  export default class ColorThief {
-    constructor();
-    getColor(img: HTMLImageElement): [number, number, number];
-    getPalette(img: HTMLImageElement, colorCount?: number): [number, number, number][];
-  }
-}
+import { PaletteService, ExtractedColor } from '@org/core';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   VoltCard,
@@ -19,11 +11,6 @@ import {
   VoltSlider,
   VoltBadge,
 } from '@voltui/components';
-
-interface ExtractedColor {
-  hex: string;
-  rgb: [number, number, number];
-}
 
 @Component({
   selector: 'app-palette-page',
@@ -131,7 +118,7 @@ export default class PalettePageComponent {
   extractedColors = signal<ExtractedColor[]>([]);
   paletteCount = signal<number>(5);
 
-  private colorThief = new ColorThief();
+  private paletteService = inject(PaletteService);
 
   onDrop(e: DragEvent) {
     e.preventDefault();
@@ -162,11 +149,7 @@ export default class PalettePageComponent {
     if (!img.complete) return;
 
     try {
-      const palette = this.colorThief.getPalette(img, this.paletteCount() || 5);
-      const colors: ExtractedColor[] = palette.map((rgb: number[]) => ({
-        rgb: [rgb[0], rgb[1], rgb[2]] as [number, number, number],
-        hex: this.rgbToHex(rgb[0], rgb[1], rgb[2]),
-      }));
+      const colors = this.paletteService.extractColors(img, this.paletteCount() || 5);
       this.extractedColors.set(colors);
     } catch (e) {
       console.error('Error extracting colors', e);
@@ -187,37 +170,15 @@ export default class PalettePageComponent {
     navigator.clipboard.writeText(hex);
   }
 
-  rgbToHex(r: number, g: number, b: number) {
-    return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
-  }
-
   downloadCinematicImage() {
     if (!this.imageSrc() || this.extractedColors().length === 0) return;
-
     const img = this.sourceImageRef.nativeElement;
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const stripHeight = Math.round(img.naturalHeight * 0.2);
-    const totalHeight = img.naturalHeight + stripHeight;
-
-    canvas.width = img.naturalWidth;
-    canvas.height = totalHeight;
-
-    ctx.drawImage(img, 0, 0);
-
-    const colors = this.extractedColors();
-    const swatchWidth = canvas.width / colors.length;
-
-    colors.forEach((color, index) => {
-      ctx.fillStyle = color.hex;
-      ctx.fillRect(index * swatchWidth, img.naturalHeight, swatchWidth, stripHeight);
-    });
-
-    const link = document.createElement('a');
-    link.download = `cinematic-palette-${Date.now()}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
+    const dataUrl = this.paletteService.createCinematicImage(img, this.extractedColors());
+    if (dataUrl) {
+      const link = document.createElement('a');
+      link.download = `cinematic-palette-${Date.now()}.png`;
+      link.href = dataUrl;
+      link.click();
+    }
   }
 }

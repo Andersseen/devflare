@@ -1,5 +1,6 @@
-import { Component, signal, computed } from '@angular/core';
+import { Component, signal, computed, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { SvgOptimizerService } from '@org/core';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   VoltCard,
@@ -131,10 +132,11 @@ export default class SvgOptimizerPageComponent {
   inputSize = computed(() => this.getByteLength(this.rawSvg()));
   outputSize = computed(() => this.getByteLength(this.optimizedSvg()));
   savingsBytes = computed(() => this.inputSize() - this.outputSize());
-  savings = computed(() => {
-    if (this.inputSize() === 0) return 0;
-    return Math.round(((this.inputSize() - this.outputSize()) / this.inputSize()) * 100);
-  });
+  savings = computed(() =>
+    this.svgOptimizerService.getSavingsPercent(this.inputSize(), this.outputSize())
+  );
+
+  private svgOptimizerService = inject(SvgOptimizerService);
 
   onInputChange(val: string) {
     this.rawSvg.set(val);
@@ -142,40 +144,7 @@ export default class SvgOptimizerPageComponent {
   }
 
   optimize(svg: string) {
-    if (!svg) {
-      this.optimizedSvg.set('');
-      return;
-    }
-
-    let res = svg;
-
-    // 1. Remove XML instruction
-    res = res.replace(/<\?xml.*?>/gi, '');
-
-    // 2. Remove comments
-    res = res.replace(/<!--[\s\S]*?-->/g, '');
-
-    // 3. Remove DOCTYPE
-    res = res.replace(/<!DOCTYPE.*?>/gi, '');
-
-    // 4. Collapse whitespace
-    res = res.replace(/\s+/g, ' ');
-
-    // 5. Remove spaces between tags
-    res = res.replace(/>\s+</g, '><');
-
-    // 6. Remove empty definitions
-    res = res.replace(/<defs><\/defs>/g, '');
-
-    // 7. Remove metadata
-    res = res.replace(/<metadata>[\s\S]*?<\/metadata>/g, '');
-    res = res.replace(/<title>[\s\S]*?<\/title>/g, '');
-    res = res.replace(/<desc>[\s\S]*?<\/desc>/g, '');
-
-    // 8. Trim
-    res = res.trim();
-
-    this.optimizedSvg.set(res);
+    this.optimizedSvg.set(this.svgOptimizerService.optimize(svg));
   }
 
   async pasteFromClipboard() {
@@ -195,13 +164,10 @@ export default class SvgOptimizerPageComponent {
   }
 
   formatSize(bytes: number): string {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + ['B', 'KB', 'MB'][i];
+    return this.svgOptimizerService.formatSize(bytes);
   }
 
   private getByteLength(str: string) {
-    return new TextEncoder().encode(str).length;
+    return this.svgOptimizerService.getByteLength(str);
   }
 }

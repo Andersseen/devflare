@@ -1,5 +1,6 @@
-import { Component, signal, computed } from '@angular/core';
+import { Component, signal, computed, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { SeoSimulatorService } from '@org/core';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   VoltCard,
@@ -227,12 +228,10 @@ export default class SeoSimulatorPageComponent {
     return 'text-red-500 font-bold';
   });
 
+  private seoSimulatorService = inject(SeoSimulatorService);
+
   getDomain() {
-    try {
-      return new URL(this.url()).hostname;
-    } catch {
-      return 'example.com';
-    }
+    return this.seoSimulatorService.getDomain(this.url());
   }
 
   onFileSelected(event: Event) {
@@ -262,25 +261,12 @@ export default class SeoSimulatorPageComponent {
   }
 
   copyHtml() {
-    const tags = `
-<title>${this.title()}</title>
-<meta name="description" content="${this.description()}">
-<link rel="canonical" href="${this.url()}">
-
-<!-- Open Graph / Facebook -->
-<meta property="og:type" content="website">
-<meta property="og:url" content="${this.url()}">
-<meta property="og:title" content="${this.title()}">
-<meta property="og:description" content="${this.description()}">
-<meta property="og:image" content="${this.imageSrc() ? 'YOUR_IMAGE_URL' : ''}">
-
-<!-- Twitter -->
-<meta property="twitter:card" content="summary_large_image">
-<meta property="twitter:url" content="${this.url()}">
-<meta property="twitter:title" content="${this.title()}">
-<meta property="twitter:description" content="${this.description()}">
-<meta property="twitter:image" content="${this.imageSrc() ? 'YOUR_IMAGE_URL' : ''}">
-    `.trim();
+    const tags = this.seoSimulatorService.generateMetaTags(
+      this.title(),
+      this.description(),
+      this.url(),
+      this.imageSrc()
+    );
 
     navigator.clipboard.writeText(tags);
   }

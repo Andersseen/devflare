@@ -1,6 +1,6 @@
-import { Component, effect, ElementRef, signal, ViewChild } from '@angular/core';
+import { Component, effect, ElementRef, signal, ViewChild, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import * as QRCode from 'qrcode';
+import { QrGeneratorService } from '@org/core';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   VoltCard,
@@ -160,6 +160,8 @@ export default class QrGeneratorPageComponent {
   bgColor = signal('#ffffff');
   margin = signal(4);
 
+  private qrGeneratorService = inject(QrGeneratorService);
+
   constructor() {
     effect(() => {
       // Track all dependencies
@@ -177,41 +179,32 @@ export default class QrGeneratorPageComponent {
     });
   }
 
-  generateQR() {
+  async generateQR() {
     if (!this.canvas?.nativeElement) return;
 
     let content = '';
     if (this.mode() === 'text') {
       content = this.text() || ' ';
     } else {
-      const s = this.escapeWifi(this.wifiSSID());
-      const p = this.escapeWifi(this.wifiPassword());
-      const t = this.wifiEncryption();
-      const h = this.wifiHidden();
-      content = `WIFI:T:${t};S:${s};P:${p};H:${h};;`;
+      content = this.qrGeneratorService.buildWifiContent(
+        this.wifiSSID(),
+        this.wifiPassword(),
+        this.wifiEncryption(),
+        this.wifiHidden()
+      );
     }
 
-    QRCode.toCanvas(this.canvas.nativeElement, content, {
-      color: {
-        dark: this.fgColor(),
-        light: this.bgColor(),
-      },
+    await this.qrGeneratorService.generateQR(this.canvas.nativeElement, {
+      content,
+      fgColor: this.fgColor(),
+      bgColor: this.bgColor(),
       margin: this.margin(),
       width: 256,
-    }, (error: any) => {
-      if (error) console.error(error);
     });
   }
 
   downloadQR() {
     if (!this.canvas?.nativeElement) return;
-    const link = document.createElement('a');
-    link.download = 'qrcode.png';
-    link.href = this.canvas.nativeElement.toDataURL('image/png');
-    link.click();
-  }
-
-  private escapeWifi(str: string): string {
-    return str.replace(/([\\;,:])/g, '\\$1');
+    this.qrGeneratorService.downloadQR(this.canvas.nativeElement);
   }
 }

@@ -1,6 +1,6 @@
-import { Component, ElementRef, signal, ViewChild } from '@angular/core';
+import { Component, ElementRef, signal, ViewChild, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { toPng } from 'html-to-image';
+import { OgGeneratorService } from '@org/core';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   VoltCard,
@@ -189,6 +189,8 @@ export default class OgGeneratorPageComponent {
 
   @ViewChild('cardRef') cardRef!: ElementRef<HTMLElement>;
 
+  private ogGeneratorService = inject(OgGeneratorService);
+
   onAvatarUpload(event: Event) {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files[0]) {
@@ -209,14 +211,8 @@ export default class OgGeneratorPageComponent {
     if (!this.cardRef) return;
     this.isGenerating.set(true);
     try {
-      const dataUrl = await toPng(this.cardRef.nativeElement, {
-        pixelRatio: 1,
-        cacheBust: true,
-      });
-      const link = document.createElement('a');
-      link.download = 'og-image.png';
-      link.href = dataUrl;
-      link.click();
+      const dataUrl = await this.ogGeneratorService.generatePng(this.cardRef.nativeElement);
+      this.ogGeneratorService.downloadImage(dataUrl);
     } catch (err) {
       console.error('Failed to generate image', err);
     } finally {

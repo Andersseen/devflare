@@ -1,6 +1,6 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import * as Papa from 'papaparse';
+import { DataConverterService } from '@org/core';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   VoltCard,
@@ -100,20 +100,22 @@ export default class DataConverterPageComponent {
   jsonError = signal<string | null>(null);
   csvError = signal<string | null>(null);
 
+  private dataConverterService = inject(DataConverterService);
+
   onJsonChange(value: string) {
     this.jsonInput.set(value);
     if (this.jsonError()) this.jsonError.set(null);
   }
 
   prettifyJson() {
-    try {
-      const raw = this.jsonInput();
-      if (!raw.trim()) return;
-      const parsed = JSON.parse(raw);
-      this.jsonInput.set(JSON.stringify(parsed, null, 2));
+    const raw = this.jsonInput();
+    if (!raw.trim()) return;
+    const result = this.dataConverterService.prettifyJson(raw);
+    if (result.error) {
+      this.jsonError.set(result.error);
+    } else {
+      this.jsonInput.set(result.pretty);
       this.jsonError.set(null);
-    } catch (e: any) {
-      this.jsonError.set('Invalid JSON: ' + e.message);
     }
   }
 
@@ -132,19 +134,11 @@ export default class DataConverterPageComponent {
     const raw = this.jsonInput();
     if (!raw.trim()) return;
 
-    try {
-      const parsed = JSON.parse(raw);
-      const csv = Papa.unparse(parsed, {
-        quotes: false,
-        quoteChar: '"',
-        escapeChar: '"',
-        delimiter: ',',
-        header: true,
-        newline: '\n',
-      });
-      this.csvInput.set(csv);
-    } catch (e: any) {
-      this.jsonError.set('Invalid JSON: ' + e.message);
+    const result = this.dataConverterService.jsonToCsv(raw);
+    if (result.error) {
+      this.jsonError.set(result.error);
+    } else {
+      this.csvInput.set(result.csv);
     }
   }
 
@@ -153,17 +147,11 @@ export default class DataConverterPageComponent {
     const raw = this.csvInput();
     if (!raw.trim()) return;
 
-    const result = Papa.parse(raw, {
-      header: true,
-      skipEmptyLines: true,
-      dynamicTyping: true,
-    });
-
-    if (result.errors && result.errors.length > 0) {
-      this.csvError.set('CSV Error: ' + result.errors[0].message);
-      return;
+    const result = this.dataConverterService.csvToJson(raw);
+    if (result.error) {
+      this.csvError.set(result.error);
+    } else {
+      this.jsonInput.set(result.json);
     }
-
-    this.jsonInput.set(JSON.stringify(result.data, null, 2));
   }
 }

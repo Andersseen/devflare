@@ -1,6 +1,6 @@
-import { Component, effect, ElementRef, signal, ViewChild } from '@angular/core';
+import { Component, effect, ElementRef, signal, ViewChild, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import * as QRCode from 'qrcode';
+import { UrlShortenerService, HistoryItem } from '@org/core';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   VoltCard,
@@ -11,13 +11,6 @@ import {
   VoltButton,
   VoltBadge,
 } from '@voltui/components';
-
-interface HistoryItem {
-  originalUrl: string;
-  shortUrl: string;
-  slug: string;
-  createdAt: number;
-}
 
 @Component({
   selector: 'app-url-shortener-page',
@@ -154,32 +147,20 @@ export default class UrlShortenerPageComponent {
   customSlug = signal('');
   isLoading = signal(false);
   error = signal<string | null>(null);
+  private urlShortenerService = inject(UrlShortenerService);
+
   result = signal<{ shortUrl: string; slug: string } | null>(null);
   copied = signal(false);
-  history = signal<HistoryItem[]>(this.loadHistory());
+  history = signal<HistoryItem[]>(this.urlShortenerService.loadHistory());
 
   constructor() {
     effect(() => {
-      localStorage.setItem('shortener_history', JSON.stringify(this.history()));
+      this.urlShortenerService.saveHistory(this.history());
     });
   }
 
-  loadHistory(): HistoryItem[] {
-    try {
-      const stored = localStorage.getItem('shortener_history');
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  }
-
   isValidUrl(): boolean {
-    try {
-      new URL(this.url());
-      return true;
-    } catch {
-      return false;
-    }
+    return this.urlShortenerService.isValidUrl(this.url());
   }
 
   async shorten() {
@@ -188,9 +169,7 @@ export default class UrlShortenerPageComponent {
     this.error.set(null);
 
     try {
-      // For now, generate a local short URL
-      const slug = this.customSlug() || this.generateSlug();
-      const shortUrl = `${window.location.origin}/s/${slug}`;
+      const { shortUrl, slug } = this.urlShortenerService.shorten(this.url(), this.customSlug());
 
       this.result.set({ shortUrl, slug });
       this.addToHistory(shortUrl, slug);
@@ -201,10 +180,6 @@ export default class UrlShortenerPageComponent {
     } finally {
       this.isLoading.set(false);
     }
-  }
-
-  generateSlug(): string {
-    return Math.random().toString(36).substring(2, 8);
   }
 
   addToHistory(shortUrl: string, slug: string) {
@@ -221,13 +196,7 @@ export default class UrlShortenerPageComponent {
 
   generateQR(text: string) {
     if (!this.qrCanvas?.nativeElement) return;
-    QRCode.toCanvas(this.qrCanvas.nativeElement, text, {
-      width: 120,
-      margin: 1,
-      color: { dark: '#4F46E5', light: '#FFFFFF' },
-    }, (err) => {
-      if (err) console.error(err);
-    });
+    this.urlShortenerService.generateQR(this.qrCanvas.nativeElement, text);
   }
 
   copy(text: string) {

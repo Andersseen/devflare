@@ -1,5 +1,5 @@
-import { Component, signal } from '@angular/core';
-import { removeBackground } from '@imgly/background-removal';
+import { Component, signal, inject } from '@angular/core';
+import { BgRemoverService } from '@org/core';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   VoltCard,
@@ -111,6 +111,10 @@ export default class BgRemoverPageComponent {
   resultUrl = signal<string | null>(null);
   errorMsg = signal<string | null>(null);
 
+  private resultBlob: Blob | null = null;
+
+  private bgRemoverService = inject(BgRemoverService);
+
   onDrop(e: DragEvent) {
     e.preventDefault();
     if (e.dataTransfer?.files.length) {
@@ -138,26 +142,22 @@ export default class BgRemoverPageComponent {
     this.originalUrl.set(objectUrl);
 
     try {
-      const blob = await removeBackground(file);
-      const resultUrl = URL.createObjectURL(blob);
+      this.resultBlob = await this.bgRemoverService.removeBackground(file);
+      const resultUrl = URL.createObjectURL(this.resultBlob);
       this.resultUrl.set(resultUrl);
     } catch (err: any) {
       console.error('Background removal failed', err);
       this.errorMsg.set('Failed to process image. Please try another one.');
+      this.resultBlob = null;
     } finally {
       this.isProcessing.set(false);
     }
   }
 
   download() {
-    const url = this.resultUrl();
-    if (!url) return;
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'removed-bg-' + Date.now() + '.png';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => document.body.removeChild(a), 100);
+    if (this.resultBlob) {
+      this.bgRemoverService.downloadResult(this.resultBlob);
+    }
   }
 
   reset() {
@@ -165,5 +165,6 @@ export default class BgRemoverPageComponent {
     this.originalUrl.set(null);
     this.resultUrl.set(null);
     this.errorMsg.set(null);
+    this.resultBlob = null;
   }
 }
