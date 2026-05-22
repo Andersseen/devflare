@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import * as Papa from 'papaparse';
 
-export interface CsvParseResult<T = any> {
+export interface CsvParseResult<T = unknown> {
   data: T[];
   errors: Papa.ParseError[];
 }
@@ -9,7 +9,7 @@ export interface CsvParseResult<T = any> {
 @Injectable({
   providedIn: 'root',
 })
-export class DataConverterService {
+export class DataConverter {
   jsonToCsv(json: string): { csv: string; error?: string } {
     try {
       const parsed = JSON.parse(json);
@@ -22,8 +22,9 @@ export class DataConverterService {
         newline: '\n',
       });
       return { csv };
-    } catch (e: any) {
-      return { csv: '', error: 'Invalid JSON: ' + e.message };
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Unknown error';
+      return { csv: '', error: 'Invalid JSON: ' + message };
     }
   }
 
@@ -45,8 +46,9 @@ export class DataConverterService {
     try {
       const parsed = JSON.parse(json);
       return { pretty: JSON.stringify(parsed, null, 2) };
-    } catch (e: any) {
-      return { pretty: '', error: 'Invalid JSON: ' + e.message };
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Unknown error';
+      return { pretty: '', error: 'Invalid JSON: ' + message };
     }
   }
 }

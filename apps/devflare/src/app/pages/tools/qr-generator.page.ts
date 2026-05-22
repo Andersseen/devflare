@@ -1,6 +1,6 @@
 import { Component, effect, ElementRef, signal, ViewChild, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { QrGeneratorService } from '@org/core';
+import { QrGenerator } from '@org/core';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   VoltCard,
@@ -77,8 +77,9 @@ import {
                   <volt-input label="Password" [(value)]="wifiPassword" placeholder="SecretKey123" />
 
                   <div>
-                    <label class="text-sm font-medium block mb-1">Encryption</label>
+                    <label for="wifiEncryption" class="text-sm font-medium block mb-1">Encryption</label>
                     <select
+                      id="wifiEncryption"
                       [(ngModel)]="wifiEncryption"
                       class="w-full h-10 rounded-md border border-border bg-background px-3 text-sm"
                     >
@@ -110,16 +111,16 @@ import {
             <volt-card-content>
               <div class="grid grid-cols-3 gap-4">
                 <div>
-                  <label class="text-sm font-medium block mb-1">Foreground</label>
-                  <input type="color" [(ngModel)]="fgColor" class="w-full h-10 rounded cursor-pointer">
+                  <label for="fgColor" class="text-sm font-medium block mb-1">Foreground</label>
+                  <input id="fgColor" type="color" [(ngModel)]="fgColor" class="w-full h-10 rounded cursor-pointer">
                 </div>
                 <div>
-                  <label class="text-sm font-medium block mb-1">Background</label>
-                  <input type="color" [(ngModel)]="bgColor" class="w-full h-10 rounded cursor-pointer">
+                  <label for="bgColor" class="text-sm font-medium block mb-1">Background</label>
+                  <input id="bgColor" type="color" [(ngModel)]="bgColor" class="w-full h-10 rounded cursor-pointer">
                 </div>
                 <div>
-                  <label class="text-sm font-medium block mb-1">Margin: {{ margin() }}</label>
-                  <input type="range" min="0" max="10" step="1" [value]="margin()" (change)="margin.set(+$any($event).target.value)" class="w-full">
+                  <label for="margin" class="text-sm font-medium block mb-1">Margin: {{ margin() }}</label>
+                  <input id="margin" type="range" min="0" max="10" step="1" [value]="margin()" (change)="margin.set(+$any($event).target.value)" class="w-full">
                 </div>
               </div>
             </volt-card-content>
@@ -147,7 +148,7 @@ import {
     </div>
   `,
 })
-export default class QrGeneratorPageComponent {
+export default class QrGeneratorPage {
   @ViewChild('qrCanvas') canvas!: ElementRef<HTMLCanvasElement>;
 
   mode = signal<'text' | 'wifi'>('text');
@@ -160,7 +161,7 @@ export default class QrGeneratorPageComponent {
   bgColor = signal('#ffffff');
   margin = signal(4);
 
-  private qrGeneratorService = inject(QrGeneratorService);
+  #qrGeneratorService = inject(QrGenerator);
 
   constructor() {
     effect(() => {
@@ -186,7 +187,7 @@ export default class QrGeneratorPageComponent {
     if (this.mode() === 'text') {
       content = this.text() || ' ';
     } else {
-      content = this.qrGeneratorService.buildWifiContent(
+      content = this.#qrGeneratorService.buildWifiContent(
         this.wifiSSID(),
         this.wifiPassword(),
         this.wifiEncryption(),
@@ -194,7 +195,7 @@ export default class QrGeneratorPageComponent {
       );
     }
 
-    await this.qrGeneratorService.generateQR(this.canvas.nativeElement, {
+    await this.#qrGeneratorService.generateQR(this.canvas.nativeElement, {
       content,
       fgColor: this.fgColor(),
       bgColor: this.bgColor(),
@@ -205,6 +206,6 @@ export default class QrGeneratorPageComponent {
 
   downloadQR() {
     if (!this.canvas?.nativeElement) return;
-    this.qrGeneratorService.downloadQR(this.canvas.nativeElement);
+    this.#qrGeneratorService.downloadQR(this.canvas.nativeElement);
   }
 }

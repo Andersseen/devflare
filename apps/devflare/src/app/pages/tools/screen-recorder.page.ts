@@ -1,6 +1,6 @@
 import { Component, ElementRef, ViewChild, signal, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ScreenRecorderService } from '@org/core';
+import { ScreenRecorder } from '@org/core';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   VoltCard,
@@ -38,8 +38,8 @@ import {
           <div class="flex flex-col md:flex-row items-center justify-between gap-4">
             <div class="flex items-center gap-4">
               <div class="flex items-center gap-2">
-                <volt-switch [(checked)]="includeMic" [disabled]="isRecording()" />
-                <label class="text-sm font-medium select-none">Include Microphone</label>
+                <volt-switch id="includeMic" [(checked)]="includeMic" [disabled]="isRecording()" />
+                <label for="includeMic" class="text-sm font-medium select-none">Include Microphone</label>
               </div>
               @if (isRecording()) {
                 <volt-badge variant="destructive" class="animate-pulse">
@@ -103,7 +103,7 @@ import {
     </div>
   `,
 })
-export default class ScreenRecorderPageComponent {
+export default class ScreenRecorderPage {
   @ViewChild('previewVideo') videoElement!: ElementRef<HTMLVideoElement>;
 
   isRecording = signal(false);
@@ -112,17 +112,17 @@ export default class ScreenRecorderPageComponent {
   downloadUrl = signal<string | null>(null);
   errorMsg = signal<string | null>(null);
 
-  private recordedBlob: Blob | null = null;
+  #recordedBlob: Blob | null = null;
 
-  private screenRecorderService = inject(ScreenRecorderService);
+  #screenRecorderService = inject(ScreenRecorder);
 
   async startRecording() {
     this.errorMsg.set(null);
     this.downloadUrl.set(null);
-    this.recordedBlob = null;
+    this.#recordedBlob = null;
 
     try {
-      const stream = await this.screenRecorderService.startRecording(this.includeMic());
+      const stream = await this.#screenRecorderService.startRecording(this.includeMic());
 
       if (this.videoElement?.nativeElement) {
         this.videoElement.nativeElement.srcObject = stream;
@@ -140,18 +140,18 @@ export default class ScreenRecorderPageComponent {
       if (this.includeMic() && !stream.getAudioTracks().length) {
         this.errorMsg.set('Could not access microphone. Recording video only.');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error starting recording:', err);
-      this.errorMsg.set('Failed to start recording: ' + err.message);
+      this.errorMsg.set('Failed to start recording: ' + (err instanceof Error ? err.message : 'Unknown error'));
     }
   }
 
   stopRecording() {
-    this.recordedBlob = this.screenRecorderService.stopRecording();
+    this.#recordedBlob = this.#screenRecorderService.stopRecording();
     this.isRecording.set(false);
 
-    if (this.recordedBlob) {
-      const url = URL.createObjectURL(this.recordedBlob);
+    if (this.#recordedBlob) {
+      const url = URL.createObjectURL(this.#recordedBlob);
       this.downloadUrl.set(url);
       this.streamActive.set(false);
 
@@ -164,15 +164,15 @@ export default class ScreenRecorderPageComponent {
   }
 
   downloadVideo() {
-    if (this.recordedBlob) {
-      this.screenRecorderService.downloadVideo(this.recordedBlob);
+    if (this.#recordedBlob) {
+      this.#screenRecorderService.downloadVideo(this.#recordedBlob);
     }
   }
 
   reset() {
     this.downloadUrl.set(null);
     this.streamActive.set(false);
-    this.recordedBlob = null;
+    this.#recordedBlob = null;
     if (this.videoElement?.nativeElement) {
       this.videoElement.nativeElement.src = '';
     }

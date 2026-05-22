@@ -10,7 +10,7 @@ export interface CompressionOptions {
 @Injectable({
   providedIn: 'root',
 })
-export class ImageCompressorService {
+export class ImageCompressor {
   async compress(file: File, options: CompressionOptions): Promise<File> {
     const compressOptions = {
       maxSizeMB: 100,

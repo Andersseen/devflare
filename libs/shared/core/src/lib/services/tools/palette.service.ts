@@ -17,11 +17,11 @@ export interface ExtractedColor {
 @Injectable({
   providedIn: 'root',
 })
-export class PaletteService {
-  private colorThief = new ColorThief();
+export class Palette {
+  #colorThief = new ColorThief();
 
   extractColors(img: HTMLImageElement, count = 5): ExtractedColor[] {
-    const palette = this.colorThief.getPalette(img, count || 5);
+    const palette = this.#colorThief.getPalette(img, count || 5);
     return palette.map((rgb: number[]) => ({
       rgb: [rgb[0], rgb[1], rgb[2]] as [number, number, number],
       hex: this.rgbToHex(rgb[0], rgb[1], rgb[2]),

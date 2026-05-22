@@ -13,7 +13,7 @@ const STORAGE_KEY = 'shortener_history';
 @Injectable({
   providedIn: 'root',
 })
-export class UrlShortenerService {
+export class UrlShortener {
   generateSlug(): string {
     return Math.random().toString(36).substring(2, 8);
   }

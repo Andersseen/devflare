@@ -6,7 +6,7 @@ import {
   VoltCardContent,
   VoltBadge,
 } from '@voltui/components';
-import { AuthService } from '@org/auth';
+import { Auth } from '@org/auth';
 
 interface Tool {
   title: string;
@@ -72,8 +72,8 @@ interface Tool {
     </div>
   `,
 })
-export default class HomePageComponent {
-  protected readonly auth = inject(AuthService);
+export default class HomePage {
+  auth = inject(Auth);
 
   tools: Tool[] = [
     {

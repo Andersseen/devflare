@@ -1,5 +1,5 @@
 import { Component, signal, inject } from '@angular/core';
-import { BgRemoverService } from '@org/core';
+import { BgRemover } from '@org/core';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   VoltCard,
@@ -27,9 +27,13 @@ import {
       @if (!originalUrl() && !isProcessing()) {
         <div
           class="border-2 border-dashed border-border rounded-xl p-12 text-center cursor-pointer hover:border-primary hover:bg-accent/50 transition-all"
+          tabindex="0"
+          role="button"
           (dragover)="$event.preventDefault()"
           (drop)="onDrop($event)"
           (click)="fileInput.click()"
+          (keydown.enter)="fileInput.click()"
+          (keydown.space)="fileInput.click()"
         >
           <input #fileInput type="file" accept="image/*" class="hidden" (change)="onFileSelected($event)">
           <lucide-icon name="image" class="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -105,15 +109,15 @@ import {
     }
   `],
 })
-export default class BgRemoverPageComponent {
+export default class BgRemoverPage {
   isProcessing = signal(false);
   originalUrl = signal<string | null>(null);
   resultUrl = signal<string | null>(null);
   errorMsg = signal<string | null>(null);
 
-  private resultBlob: Blob | null = null;
+  #resultBlob: Blob | null = null;
 
-  private bgRemoverService = inject(BgRemoverService);
+  #bgRemoverService = inject(BgRemover);
 
   onDrop(e: DragEvent) {
     e.preventDefault();
@@ -142,21 +146,21 @@ export default class BgRemoverPageComponent {
     this.originalUrl.set(objectUrl);
 
     try {
-      this.resultBlob = await this.bgRemoverService.removeBackground(file);
-      const resultUrl = URL.createObjectURL(this.resultBlob);
+      this.#resultBlob = await this.#bgRemoverService.removeBackground(file);
+      const resultUrl = URL.createObjectURL(this.#resultBlob);
       this.resultUrl.set(resultUrl);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Background removal failed', err);
       this.errorMsg.set('Failed to process image. Please try another one.');
-      this.resultBlob = null;
+      this.#resultBlob = null;
     } finally {
       this.isProcessing.set(false);
     }
   }
 
   download() {
-    if (this.resultBlob) {
-      this.bgRemoverService.downloadResult(this.resultBlob);
+    if (this.#resultBlob) {
+      this.#bgRemoverService.downloadResult(this.#resultBlob);
     }
   }
 
@@ -165,6 +169,6 @@ export default class BgRemoverPageComponent {
     this.originalUrl.set(null);
     this.resultUrl.set(null);
     this.errorMsg.set(null);
-    this.resultBlob = null;
+    this.#resultBlob = null;
   }
 }

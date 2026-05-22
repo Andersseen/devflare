@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 @Injectable({
   providedIn: 'root',
 })
-export class SeoSimulatorService {
+export class SeoSimulator {
   getDomain(url: string): string {
     try {
       return new URL(url).hostname;

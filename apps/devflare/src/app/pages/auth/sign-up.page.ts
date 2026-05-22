@@ -13,7 +13,7 @@ import {
   VoltLabel,
   VoltError,
 } from '@voltui/components';
-import { AuthService } from '@org/auth';
+import { Auth } from '@org/auth';
 
 @Component({
   selector: 'app-sign-up-page',
@@ -110,9 +110,9 @@ import { AuthService } from '@org/auth';
     </div>
   `,
 })
-export default class SignUpPageComponent {
-  private auth = inject(AuthService);
-  private router = inject(Router);
+export default class SignUpPage {
+  #auth = inject(Auth);
+  #router = inject(Router);
 
   name = signal('');
   email = signal('');
@@ -126,10 +126,10 @@ export default class SignUpPageComponent {
     this.error.set('');
 
     try {
-      await this.auth.register(this.email(), this.password(), this.name());
-      this.router.navigate(['/']);
-    } catch (err: any) {
-      this.error.set(err.message || 'Failed to create account');
+      await this.#auth.register(this.email(), this.password(), this.name());
+      this.#router.navigate(['/']);
+    } catch (err: unknown) {
+      this.error.set(err instanceof Error ? err.message : 'Failed to create account');
     } finally {
       this.isLoading.set(false);
     }

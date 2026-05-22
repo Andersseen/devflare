@@ -1,6 +1,6 @@
 import { Component, ElementRef, signal, ViewChild, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { PaletteService, ExtractedColor } from '@org/core';
+import { Palette, ExtractedColor } from '@org/core';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   VoltCard,
@@ -35,9 +35,13 @@ import {
       @if (!imageSrc()) {
         <div
           class="border-2 border-dashed border-border rounded-xl p-12 text-center cursor-pointer hover:border-primary hover:bg-accent/50 transition-all"
+          tabindex="0"
+          role="button"
           (dragover)="$event.preventDefault()"
           (drop)="onDrop($event)"
           (click)="fileInput.click()"
+          (keydown.enter)="fileInput.click()"
+          (keydown.space)="fileInput.click()"
         >
           <input #fileInput type="file" accept="image/*" class="hidden" (change)="onFileSelected($event)">
           <lucide-icon name="palette" class="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -71,8 +75,12 @@ import {
                   @for (color of extractedColors(); track color.hex) {
                     <div
                       class="w-16 h-16 rounded-lg shadow cursor-pointer hover:scale-110 transition-transform"
+                      tabindex="0"
+                      role="button"
                       [style.background-color]="color.hex"
                       (click)="copyColor(color.hex)"
+                      (keydown.enter)="copyColor(color.hex)"
+                      (keydown.space)="copyColor(color.hex)"
                       [title]="'Click to copy: ' + color.hex"
                     ></div>
                   }
@@ -89,8 +97,9 @@ import {
           <!-- Controls -->
           <volt-card>
             <volt-card-content class="flex flex-col sm:flex-row gap-4 items-center">
-              <label class="text-sm font-medium whitespace-nowrap">Colors to extract:</label>
+              <label for="paletteCount" class="text-sm font-medium whitespace-nowrap">Colors to extract:</label>
               <input
+                id="paletteCount"
                 type="range"
                 min="3"
                 max="10"
@@ -111,14 +120,14 @@ import {
     </div>
   `,
 })
-export default class PalettePageComponent {
+export default class PalettePage {
   @ViewChild('sourceImage') sourceImageRef!: ElementRef<HTMLImageElement>;
 
   imageSrc = signal<string | null>(null);
   extractedColors = signal<ExtractedColor[]>([]);
   paletteCount = signal<number>(5);
 
-  private paletteService = inject(PaletteService);
+  #paletteService = inject(Palette);
 
   onDrop(e: DragEvent) {
     e.preventDefault();
@@ -149,7 +158,7 @@ export default class PalettePageComponent {
     if (!img.complete) return;
 
     try {
-      const colors = this.paletteService.extractColors(img, this.paletteCount() || 5);
+      const colors = this.#paletteService.extractColors(img, this.paletteCount() || 5);
       this.extractedColors.set(colors);
     } catch (e) {
       console.error('Error extracting colors', e);
@@ -173,7 +182,7 @@ export default class PalettePageComponent {
   downloadCinematicImage() {
     if (!this.imageSrc() || this.extractedColors().length === 0) return;
     const img = this.sourceImageRef.nativeElement;
-    const dataUrl = this.paletteService.createCinematicImage(img, this.extractedColors());
+    const dataUrl = this.#paletteService.createCinematicImage(img, this.extractedColors());
     if (dataUrl) {
       const link = document.createElement('a');
       link.download = `cinematic-palette-${Date.now()}.png`;

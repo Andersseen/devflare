@@ -4,7 +4,7 @@ import { toPng } from 'html-to-image';
 @Injectable({
   providedIn: 'root',
 })
-export class OgGeneratorService {
+export class OgGenerator {
   async generatePng(element: HTMLElement): Promise<string> {
     return toPng(element, {
       pixelRatio: 1,

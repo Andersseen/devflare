@@ -1,6 +1,6 @@
 import { Component, effect, ElementRef, signal, ViewChild, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { UrlShortenerService, HistoryItem } from '@org/core';
+import { UrlShortener, HistoryItem } from '@org/core';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   VoltCard,
@@ -140,27 +140,27 @@ import {
     </div>
   `,
 })
-export default class UrlShortenerPageComponent {
+export default class UrlShortenerPage {
   @ViewChild('qrCanvas') qrCanvas!: ElementRef<HTMLCanvasElement>;
 
   url = signal('');
   customSlug = signal('');
   isLoading = signal(false);
   error = signal<string | null>(null);
-  private urlShortenerService = inject(UrlShortenerService);
+  #urlShortenerService = inject(UrlShortener);
 
   result = signal<{ shortUrl: string; slug: string } | null>(null);
   copied = signal(false);
-  history = signal<HistoryItem[]>(this.urlShortenerService.loadHistory());
+  history = signal<HistoryItem[]>(this.#urlShortenerService.loadHistory());
 
   constructor() {
     effect(() => {
-      this.urlShortenerService.saveHistory(this.history());
+      this.#urlShortenerService.saveHistory(this.history());
     });
   }
 
   isValidUrl(): boolean {
-    return this.urlShortenerService.isValidUrl(this.url());
+    return this.#urlShortenerService.isValidUrl(this.url());
   }
 
   async shorten() {
@@ -169,13 +169,13 @@ export default class UrlShortenerPageComponent {
     this.error.set(null);
 
     try {
-      const { shortUrl, slug } = this.urlShortenerService.shorten(this.url(), this.customSlug());
+      const { shortUrl, slug } = this.#urlShortenerService.shorten(this.url(), this.customSlug());
 
       this.result.set({ shortUrl, slug });
       this.addToHistory(shortUrl, slug);
 
       setTimeout(() => this.generateQR(shortUrl), 0);
-    } catch (err) {
+    } catch {
       this.error.set('Failed to shorten URL. Please try again.');
     } finally {
       this.isLoading.set(false);
@@ -196,7 +196,7 @@ export default class UrlShortenerPageComponent {
 
   generateQR(text: string) {
     if (!this.qrCanvas?.nativeElement) return;
-    this.urlShortenerService.generateQR(this.qrCanvas.nativeElement, text);
+    this.#urlShortenerService.generateQR(this.qrCanvas.nativeElement, text);
   }
 
   copy(text: string) {

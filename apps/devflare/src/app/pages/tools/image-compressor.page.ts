@@ -1,6 +1,6 @@
 import { Component, signal, computed, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ImageCompressorService } from '@org/core';
+import { ImageCompressor } from '@org/core';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   VoltCard,
@@ -35,9 +35,13 @@ import {
       @if (!originalFile()) {
         <div
           class="border-2 border-dashed border-border rounded-xl p-12 text-center cursor-pointer hover:border-primary hover:bg-accent/50 transition-all"
+          tabindex="0"
+          role="button"
           (dragover)="onDragOver($event)"
           (drop)="onDrop($event)"
           (click)="fileInput.click()"
+          (keydown.enter)="fileInput.click()"
+          (keydown.space)="fileInput.click()"
         >
           <input #fileInput type="file" accept="image/*" class="hidden" (change)="onFileSelected($event)">
           <lucide-icon name="upload" class="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -100,16 +104,16 @@ import {
             <volt-card-content class="space-y-4">
               <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                  <label class="text-sm font-medium block mb-2">Quality: {{ quality() }}%</label>
-                  <input type="range" min="10" max="100" [value]="quality()" (change)="quality.set(+$any($event).target.value); processImage()" class="w-full">
+                  <label for="quality" class="text-sm font-medium block mb-2">Quality: {{ quality() }}%</label>
+                  <input id="quality" type="range" min="10" max="100" [value]="quality()" (change)="quality.set(+$any($event).target.value); processImage()" class="w-full">
                 </div>
                 <div>
-                  <label class="text-sm font-medium block mb-2">Max Width: {{ maxWidth() > 0 ? maxWidth() + 'px' : 'Original' }}</label>
-                  <input type="range" min="0" max="3000" step="100" [value]="maxWidth()" (change)="maxWidth.set(+$any($event).target.value); processImage()" class="w-full">
+                  <label for="maxWidth" class="text-sm font-medium block mb-2">Max Width: {{ maxWidth() > 0 ? maxWidth() + 'px' : 'Original' }}</label>
+                  <input id="maxWidth" type="range" min="0" max="3000" step="100" [value]="maxWidth()" (change)="maxWidth.set(+$any($event).target.value); processImage()" class="w-full">
                 </div>
                 <div>
-                  <label class="text-sm font-medium block mb-2">Format</label>
-                  <select [(ngModel)]="format" (change)="processImage()" class="w-full h-10 rounded-md border border-border bg-background px-3 text-sm">
+                  <label for="format" class="text-sm font-medium block mb-2">Format</label>
+                  <select id="format" [(ngModel)]="format" (change)="processImage()" class="w-full h-10 rounded-md border border-border bg-background px-3 text-sm">
                     <option value="image/jpeg">JPEG</option>
                     <option value="image/png">PNG</option>
                     <option value="image/webp">WebP</option>
@@ -127,7 +131,7 @@ import {
     </div>
   `,
 })
-export default class ImageCompressorPageComponent {
+export default class ImageCompressorPage {
   originalFile = signal<File | null>(null);
   compressedFile = signal<File | null>(null);
   originalPreview = signal<string>('');
@@ -141,14 +145,14 @@ export default class ImageCompressorPageComponent {
   originalSize = computed(() => this.originalFile()?.size || 0);
   compressedSize = computed(() => this.compressedFile()?.size || 0);
   savings = computed(() =>
-    this.imageCompressorService.getSavingsPercent(this.originalSize(), this.compressedSize())
+    this.#imageCompressorService.getSavingsPercent(this.originalSize(), this.compressedSize())
   );
   originalDimensions = computed(() => {
     // This would need an actual image load, keeping simple for now
     return '';
   });
 
-  private imageCompressorService = inject(ImageCompressorService);
+  #imageCompressorService = inject(ImageCompressor);
 
   onDragOver(event: DragEvent) {
     event.preventDefault();
@@ -182,7 +186,7 @@ export default class ImageCompressorPageComponent {
 
     this.isProcessing.set(true);
     try {
-      const compressed = await this.imageCompressorService.compress(file, {
+      const compressed = await this.#imageCompressorService.compress(file, {
         quality: this.quality(),
         maxWidth: this.maxWidth(),
         format: this.format(),
@@ -204,7 +208,7 @@ export default class ImageCompressorPageComponent {
   }
 
   formatSize(bytes: number): string {
-    return this.imageCompressorService.formatSize(bytes);
+    return this.#imageCompressorService.formatSize(bytes);
   }
 
   download() {

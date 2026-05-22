@@ -13,7 +13,7 @@ import {
   VoltError,
   VoltBadge,
 } from '@voltui/components';
-import { ProjectsService, type Project } from '@org/core';
+import { Projects, type Project } from '@org/core';
 
 @Component({
   selector: 'app-projects-page',
@@ -139,8 +139,8 @@ import { ProjectsService, type Project } from '@org/core';
     </div>
   `,
 })
-export default class ProjectsPageComponent {
-  private projectsService = inject(ProjectsService);
+export default class ProjectsPage {
+  #projectsService = inject(Projects);
 
   projects = signal<Project[]>([]);
   isLoading = signal(true);
@@ -156,9 +156,9 @@ export default class ProjectsPageComponent {
   async loadProjects() {
     this.isLoading.set(true);
     try {
-      const list = await this.projectsService.getProjects();
+      const list = await this.#projectsService.getProjects();
       this.projects.set(list);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to load projects', err);
     } finally {
       this.isLoading.set(false);
@@ -171,15 +171,15 @@ export default class ProjectsPageComponent {
     this.createError.set('');
 
     try {
-      const project = await this.projectsService.createProject(
+      const project = await this.#projectsService.createProject(
         this.newName(),
         this.newRepoUrl() || undefined
       );
       this.projects.update((list) => [project, ...list]);
       this.newName.set('');
       this.newRepoUrl.set('');
-    } catch (err: any) {
-      this.createError.set(err.message || 'Failed to create project');
+    } catch (err: unknown) {
+      this.createError.set(err instanceof Error ? err.message : 'Failed to create project');
     } finally {
       this.isCreating.set(false);
     }
@@ -187,9 +187,9 @@ export default class ProjectsPageComponent {
 
   async onDelete(id: string) {
     try {
-      await this.projectsService.deleteProject(id);
+      await this.#projectsService.deleteProject(id);
       this.projects.update((list) => list.filter((p) => p.id !== id));
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to delete project', err);
     }
   }

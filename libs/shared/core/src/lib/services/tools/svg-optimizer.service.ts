@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 @Injectable({
   providedIn: 'root',
 })
-export class SvgOptimizerService {
+export class SvgOptimizer {
   optimize(svg: string): string {
     if (!svg) return '';
 

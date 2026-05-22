@@ -18,7 +18,7 @@ import {
   VoltTabsContent,
   VoltError,
 } from '@voltui/components';
-import { AuthService } from '@org/auth';
+import { Auth } from '@org/auth';
 
 const BIO_STORAGE_KEY = 'devflare_user_bio';
 
@@ -66,7 +66,7 @@ const BIO_STORAGE_KEY = 'devflare_user_bio';
                 <div class="relative group cursor-pointer">
                   <volt-avatar class="w-20 h-20 text-2xl">
                     @if (auth.user()?.image) {
-                      <img [src]="auth.user()?.image" class="w-full h-full object-cover" />
+                      <img [src]="auth.user()?.image" class="w-full h-full object-cover" alt="Profile picture" />
                     } @else {
                       <volt-avatar-fallback>{{ (auth.user()?.name || auth.user()?.email || '?').charAt(0) }}</volt-avatar-fallback>
                     }
@@ -146,8 +146,8 @@ const BIO_STORAGE_KEY = 'devflare_user_bio';
     </div>
   `,
 })
-export default class SettingsPageComponent {
-  protected auth = inject(AuthService);
+export default class SettingsPage {
+  auth = inject(Auth);
   activeTab = signal('profile');
   saved = signal(false);
   isSaving = signal(false);
@@ -188,8 +188,8 @@ export default class SettingsPageComponent {
 
       this.saved.set(true);
       setTimeout(() => this.saved.set(false), 2000);
-    } catch (err: any) {
-      this.saveError.set(err.message || 'Failed to save profile');
+    } catch (err: unknown) {
+      this.saveError.set(err instanceof Error ? err.message : 'Failed to save profile');
     } finally {
       this.isSaving.set(false);
     }

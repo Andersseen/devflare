@@ -1,6 +1,6 @@
 import { Component, signal, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { DataConverterService } from '@org/core';
+import { DataConverter } from '@org/core';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   VoltCard,
@@ -94,13 +94,13 @@ import {
     </div>
   `,
 })
-export default class DataConverterPageComponent {
+export default class DataConverterPage {
   jsonInput = signal('');
   csvInput = signal('');
   jsonError = signal<string | null>(null);
   csvError = signal<string | null>(null);
 
-  private dataConverterService = inject(DataConverterService);
+  #dataConverterService = inject(DataConverter);
 
   onJsonChange(value: string) {
     this.jsonInput.set(value);
@@ -110,7 +110,7 @@ export default class DataConverterPageComponent {
   prettifyJson() {
     const raw = this.jsonInput();
     if (!raw.trim()) return;
-    const result = this.dataConverterService.prettifyJson(raw);
+    const result = this.#dataConverterService.prettifyJson(raw);
     if (result.error) {
       this.jsonError.set(result.error);
     } else {
@@ -134,7 +134,7 @@ export default class DataConverterPageComponent {
     const raw = this.jsonInput();
     if (!raw.trim()) return;
 
-    const result = this.dataConverterService.jsonToCsv(raw);
+    const result = this.#dataConverterService.jsonToCsv(raw);
     if (result.error) {
       this.jsonError.set(result.error);
     } else {
@@ -147,7 +147,7 @@ export default class DataConverterPageComponent {
     const raw = this.csvInput();
     if (!raw.trim()) return;
 
-    const result = this.dataConverterService.csvToJson(raw);
+    const result = this.#dataConverterService.csvToJson(raw);
     if (result.error) {
       this.csvError.set(result.error);
     } else {

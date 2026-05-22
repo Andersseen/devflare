@@ -10,7 +10,7 @@ import {
   VoltSidebarFooter,
   VoltSidebarService,
 } from '@voltui/components';
-import { AuthService } from '@org/auth';
+import { Auth } from '@org/auth';
 
 @Component({
   selector: 'app-sidebar',
@@ -140,8 +140,8 @@ import { AuthService } from '@org/auth';
   `,
 })
 export class SidebarComponent {
-  protected readonly sidebarService = inject(VoltSidebarService);
-  protected readonly auth = inject(AuthService);
+  sidebarService = inject(VoltSidebarService);
+  auth = inject(Auth);
 
   logout() {
     this.auth.logout();

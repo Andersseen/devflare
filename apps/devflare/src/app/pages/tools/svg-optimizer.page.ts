@@ -1,6 +1,6 @@
 import { Component, signal, computed, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { SvgOptimizerService } from '@org/core';
+import { SvgOptimizer } from '@org/core';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   VoltCard,
@@ -124,7 +124,7 @@ import {
     </div>
   `,
 })
-export default class SvgOptimizerPageComponent {
+export default class SvgOptimizerPage {
   rawSvg = signal('');
   optimizedSvg = signal('');
   activeTab = signal('code');
@@ -133,10 +133,10 @@ export default class SvgOptimizerPageComponent {
   outputSize = computed(() => this.getByteLength(this.optimizedSvg()));
   savingsBytes = computed(() => this.inputSize() - this.outputSize());
   savings = computed(() =>
-    this.svgOptimizerService.getSavingsPercent(this.inputSize(), this.outputSize())
+    this.#svgOptimizerService.getSavingsPercent(this.inputSize(), this.outputSize())
   );
 
-  private svgOptimizerService = inject(SvgOptimizerService);
+  #svgOptimizerService = inject(SvgOptimizer);
 
   onInputChange(val: string) {
     this.rawSvg.set(val);
@@ -144,7 +144,7 @@ export default class SvgOptimizerPageComponent {
   }
 
   optimize(svg: string) {
-    this.optimizedSvg.set(this.svgOptimizerService.optimize(svg));
+    this.optimizedSvg.set(this.#svgOptimizerService.optimize(svg));
   }
 
   async pasteFromClipboard() {
@@ -164,10 +164,10 @@ export default class SvgOptimizerPageComponent {
   }
 
   formatSize(bytes: number): string {
-    return this.svgOptimizerService.formatSize(bytes);
+    return this.#svgOptimizerService.formatSize(bytes);
   }
 
   private getByteLength(str: string) {
-    return this.svgOptimizerService.getByteLength(str);
+    return this.#svgOptimizerService.getByteLength(str);
   }
 }

@@ -13,7 +13,7 @@ import {
   VoltLabel,
   VoltError,
 } from '@voltui/components';
-import { AuthService } from '@org/auth';
+import { Auth } from '@org/auth';
 
 @Component({
   selector: 'app-login-page',
@@ -100,9 +100,9 @@ import { AuthService } from '@org/auth';
     </div>
   `,
 })
-export default class LoginPageComponent {
-  private auth = inject(AuthService);
-  private router = inject(Router);
+export default class LoginPage {
+  #auth = inject(Auth);
+  #router = inject(Router);
 
   email = signal('');
   password = signal('');
@@ -115,9 +115,9 @@ export default class LoginPageComponent {
     this.error.set('');
 
     try {
-      await this.auth.login(this.email(), this.password());
-      this.router.navigate(['/']);
-    } catch (err) {
+      await this.#auth.login(this.email(), this.password());
+      this.#router.navigate(['/']);
+    } catch {
       this.error.set('Invalid email or password');
     } finally {
       this.isLoading.set(false);

@@ -1,8 +1,8 @@
-import { defineEventHandler, getRouterParam, readBody, createError } from 'h3';
+import { defineEventHandler, readBody, createError } from 'h3';
 import { auth } from '../../../../auth';
 import { db } from '../../../../db';
 
-function requireAuth(session: any) {
+function requireAuth(session: { user?: { id: string } } | null) {
   if (!session?.user) {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
   }

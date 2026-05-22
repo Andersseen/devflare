@@ -1,22 +1,27 @@
 import { Injectable, signal } from '@angular/core';
 
+interface DisplayMediaOptions {
+  video: { mediaSource: 'screen' };
+  audio: boolean;
+}
+
 @Injectable({
   providedIn: 'root',
 })
-export class ScreenRecorderService {
-  private mediaRecorder: MediaRecorder | null = null;
-  private recordedChunks: Blob[] = [];
-  private stream: MediaStream | null = null;
+export class ScreenRecorder {
+  #mediaRecorder: MediaRecorder | null = null;
+  #recordedChunks: Blob[] = [];
+  #stream: MediaStream | null = null;
 
   isRecording = signal(false);
   streamActive = signal(false);
 
   async startRecording(includeMic: boolean): Promise<MediaStream> {
     this.isRecording.set(false);
-    this.recordedChunks = [];
+    this.#recordedChunks = [];
 
     const displayStream = await navigator.mediaDevices.getDisplayMedia({
-      video: { mediaSource: 'screen' } as any,
+      video: { mediaSource: 'screen' } as unknown as MediaTrackConstraints,
       audio: false,
     });
 
@@ -31,7 +36,7 @@ export class ScreenRecorderService {
       }
     }
 
-    this.stream = new MediaStream(tracks);
+    this.#stream = new MediaStream(tracks);
     this.streamActive.set(true);
 
     // Auto-stop when user stops sharing
@@ -41,31 +46,31 @@ export class ScreenRecorderService {
       }
     };
 
-    this.mediaRecorder = new MediaRecorder(this.stream, { mimeType: 'video/webm' });
+    this.#mediaRecorder = new MediaRecorder(this.#stream, { mimeType: 'video/webm' });
 
-    this.mediaRecorder.ondataavailable = (event) => {
+    this.#mediaRecorder.ondataavailable = (event) => {
       if (event.data.size > 0) {
-        this.recordedChunks.push(event.data);
+        this.#recordedChunks.push(event.data);
       }
     };
 
-    this.mediaRecorder.start();
+    this.#mediaRecorder.start();
     this.isRecording.set(true);
 
-    return this.stream;
+    return this.#stream;
   }
 
   stopRecording(): Blob | null {
-    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-      this.mediaRecorder.stop();
+    if (this.#mediaRecorder && this.#mediaRecorder.state !== 'inactive') {
+      this.#mediaRecorder.stop();
       this.isRecording.set(false);
     }
 
-    this.stopStream();
+    this.#stopStream();
     this.streamActive.set(false);
 
-    if (this.recordedChunks.length === 0) return null;
-    return new Blob(this.recordedChunks, { type: 'video/webm' });
+    if (this.#recordedChunks.length === 0) return null;
+    return new Blob(this.#recordedChunks, { type: 'video/webm' });
   }
 
   downloadVideo(blob: Blob, filename?: string): void {
@@ -82,10 +87,10 @@ export class ScreenRecorderService {
     }, 100);
   }
 
-  private stopStream() {
-    if (this.stream) {
-      this.stream.getTracks().forEach((track) => track.stop());
-      this.stream = null;
+  #stopStream() {
+    if (this.#stream) {
+      this.#stream.getTracks().forEach((track) => track.stop());
+      this.#stream = null;
     }
   }
 }

@@ -1,6 +1,6 @@
 import { Component, ElementRef, signal, ViewChild, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { OgGeneratorService } from '@org/core';
+import { OgGenerator } from '@org/core';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   VoltCard,
@@ -48,11 +48,18 @@ import {
               <volt-input label="Author Name" [(value)]="authorName" />
 
               <div>
-                <label class="text-sm font-medium block mb-1">Author Avatar</label>
+                <label for="avatarInput" class="text-sm font-medium block mb-1">Author Avatar</label>
                 <div class="flex items-center gap-4">
                   @if (authorAvatar()) {
-                    <div class="relative w-12 h-12 rounded-full overflow-hidden border border-border group cursor-pointer" (click)="removeAvatar()">
-                      <img [src]="authorAvatar()" class="w-full h-full object-cover">
+                    <div
+                      class="relative w-12 h-12 rounded-full overflow-hidden border border-border group cursor-pointer"
+                      tabindex="0"
+                      role="button"
+                      (click)="removeAvatar()"
+                      (keydown.enter)="removeAvatar()"
+                      (keydown.space)="removeAvatar()"
+                    >
+                      <img [src]="authorAvatar()" class="w-full h-full object-cover" alt="Author avatar">
                       <div class="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <lucide-icon name="x" class="w-5 h-5 text-white" />
                       </div>
@@ -77,21 +84,21 @@ import {
             <volt-card-content class="space-y-4">
               <div class="grid grid-cols-2 gap-4">
                 <div>
-                  <label class="text-sm font-medium block mb-1">Background</label>
-                  <input type="color" [(ngModel)]="backgroundColor" class="w-full h-10 rounded cursor-pointer">
+                  <label for="backgroundColor" class="text-sm font-medium block mb-1">Background</label>
+                  <input id="backgroundColor" type="color" [(ngModel)]="backgroundColor" class="w-full h-10 rounded cursor-pointer">
                 </div>
                 <div>
-                  <label class="text-sm font-medium block mb-1">Theme Color</label>
-                  <input type="color" [(ngModel)]="themeColor" class="w-full h-10 rounded cursor-pointer">
+                  <label for="themeColor" class="text-sm font-medium block mb-1">Theme Color</label>
+                  <input id="themeColor" type="color" [(ngModel)]="themeColor" class="w-full h-10 rounded cursor-pointer">
                 </div>
               </div>
               <div class="flex items-center gap-4">
-                <volt-switch [(checked)]="showLogo" />
-                <label class="text-sm font-medium select-none">Show Brand Logo</label>
+                <volt-switch id="showLogo" [(checked)]="showLogo" />
+                <label for="showLogo" class="text-sm font-medium select-none">Show Brand Logo</label>
               </div>
               <div class="flex items-center gap-4">
-                <volt-switch [(checked)]="darkText" />
-                <label class="text-sm font-medium select-none">Dark Text Mode</label>
+                <volt-switch id="darkText" [(checked)]="darkText" />
+                <label for="darkText" class="text-sm font-medium select-none">Dark Text Mode</label>
               </div>
               <volt-button variant="solid" class="w-full" (click)="downloadImage()" [disabled]="isGenerating()">
                 @if (isGenerating()) {
@@ -160,7 +167,8 @@ import {
                 @if (authorAvatar()) {
                   <img [src]="authorAvatar()" class="w-24 h-24 rounded-full border-4 object-cover shadow-sm"
                        [class.border-slate-900]="darkText()"
-                       [class.border-white]="!darkText()">
+                       [class.border-white]="!darkText()"
+                       alt="Author avatar">
                 }
                 <div>
                   <p class="text-2xl font-bold">{{ authorName() }}</p>
@@ -175,7 +183,7 @@ import {
     </div>
   `,
 })
-export default class OgGeneratorPageComponent {
+export default class OgGeneratorPage {
   title = signal('Designing Beautiful Social Cards');
   description = signal('Learn how to create engaging Open Graph images for your blog posts using Angular and Tailwind CSS.');
   category = signal('Blog Post');
@@ -189,7 +197,7 @@ export default class OgGeneratorPageComponent {
 
   @ViewChild('cardRef') cardRef!: ElementRef<HTMLElement>;
 
-  private ogGeneratorService = inject(OgGeneratorService);
+  #ogGeneratorService = inject(OgGenerator);
 
   onAvatarUpload(event: Event) {
     const input = event.target as HTMLInputElement;
@@ -211,8 +219,8 @@ export default class OgGeneratorPageComponent {
     if (!this.cardRef) return;
     this.isGenerating.set(true);
     try {
-      const dataUrl = await this.ogGeneratorService.generatePng(this.cardRef.nativeElement);
-      this.ogGeneratorService.downloadImage(dataUrl);
+      const dataUrl = await this.#ogGeneratorService.generatePng(this.cardRef.nativeElement);
+      this.#ogGeneratorService.downloadImage(dataUrl);
     } catch (err) {
       console.error('Failed to generate image', err);
     } finally {

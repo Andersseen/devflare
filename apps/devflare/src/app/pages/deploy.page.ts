@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import {
@@ -9,7 +9,7 @@ import {
   VoltInput,
   VoltButton,
 } from '@voltui/components';
-import { WebContainerService } from '@org/core';
+import { WebContainer } from '@org/core';
 
 type DeployStep = 'idle' | 'boot' | 'clone' | 'install' | 'build' | 'upload' | 'done' | 'error';
 
@@ -126,8 +126,8 @@ type DeployStep = 'idle' | 'boot' | 'clone' | 'install' | 'build' | 'upload' | '
     </div>
   `,
 })
-export default class DeployPageComponent {
-  private webContainer = inject(WebContainerService);
+export default class DeployPage implements OnInit {
+  #webContainer = inject(WebContainer);
 
   repoUrl = signal('');
   currentStep = signal<DeployStep>('idle');
@@ -176,20 +176,20 @@ export default class DeployPageComponent {
     try {
       // Step 1: Boot
       this.addLog('Booting WebContainer...');
-      await this.webContainer.boot();
+      await this.#webContainer.boot();
       this.addLog('✓ WebContainer ready');
 
       // Step 2: Clone (Mock)
       this.currentStep.set('clone');
       this.addLog(`Cloning ${this.repoUrl()}...`);
-      const files = this.webContainer.getMockFiles();
-      await this.webContainer.mount(files);
+      const files = this.#webContainer.getMockFiles();
+      await this.#webContainer.mount(files);
       this.addLog('✓ Repository cloned');
 
       // Step 3: Install
       this.currentStep.set('install');
       this.addLog('Running npm install...');
-      const exitCode = await this.webContainer.run('npm', ['install'], (data) => {
+      const exitCode = await this.#webContainer.run('npm', ['install'], (data) => {
         this.addLog(data.trimEnd());
       });
 

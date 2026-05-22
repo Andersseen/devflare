@@ -4,7 +4,7 @@
   "projectType": "application",
   "prefix": "app",
   "sourceRoot": "apps/devflare/src",
-  "tags": [],
+  "tags": ["scope:frontend", "type:app"],
   "targets": {
     "build": {
       "executor": "@analogjs/platform:vite",

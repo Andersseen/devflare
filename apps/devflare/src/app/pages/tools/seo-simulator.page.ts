@@ -1,6 +1,6 @@
 import { Component, signal, computed, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { SeoSimulatorService } from '@org/core';
+import { SeoSimulator } from '@org/core';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   VoltCard,
@@ -47,10 +47,11 @@ import {
             <volt-card-content class="space-y-4">
               <div>
                 <div class="flex justify-between mb-1">
-                  <label class="text-sm font-medium">Meta Title</label>
+                  <label for="metaTitle" class="text-sm font-medium">Meta Title</label>
                   <span class="text-xs font-mono" [class]="titleColor()">{{ title().length }} / 60</span>
                 </div>
                 <volt-input
+                  id="metaTitle"
                   type="text"
                   placeholder="Enter page title..."
                   [(value)]="title"
@@ -62,10 +63,11 @@ import {
 
               <div>
                 <div class="flex justify-between mb-1">
-                  <label class="text-sm font-medium">Meta Description</label>
+                  <label for="metaDesc" class="text-sm font-medium">Meta Description</label>
                   <span class="text-xs font-mono" [class]="descColor()">{{ description().length }} / 160</span>
                 </div>
                 <volt-textarea
+                  id="metaDesc"
                   [(value)]="description"
                   placeholder="Enter page description..."
                   [rows]="3"
@@ -74,8 +76,9 @@ import {
               </div>
 
               <div>
-                <label class="text-sm font-medium block mb-1">Canonical URL</label>
+                <label for="canonicalUrl" class="text-sm font-medium block mb-1">Canonical URL</label>
                 <volt-input
+                  id="canonicalUrl"
                   type="url"
                   placeholder="https://example.com/page"
                   [(value)]="url"
@@ -83,10 +86,10 @@ import {
               </div>
 
               <div>
-                <label class="text-sm font-medium block mb-1">Social Image</label>
+                <label for="seoFileInput" class="text-sm font-medium block mb-1">Social Image</label>
                 @if (imageSrc()) {
                   <div class="relative group rounded-lg overflow-hidden border border-border mb-2">
-                    <img [src]="imageSrc()" class="w-full h-40 object-cover bg-muted">
+                    <img [src]="imageSrc()" class="w-full h-40 object-cover bg-muted" alt="Social preview image">
                     <button
                       (click)="removeImage()"
                       class="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black/80 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
@@ -97,13 +100,17 @@ import {
                 }
                 <div
                   class="border-2 border-dashed border-border rounded-lg p-6 flex flex-col items-center justify-center text-muted-foreground hover:border-primary hover:bg-accent/50 transition-colors cursor-pointer"
+                  tabindex="0"
+                  role="button"
                   (dragover)="$event.preventDefault()"
                   (drop)="onDrop($event)"
                   (click)="fileInput.click()"
+                  (keydown.enter)="fileInput.click()"
+                  (keydown.space)="fileInput.click()"
                 >
                   <lucide-icon name="upload" class="w-6 h-6 mb-2" />
                   <span class="text-sm">Click to upload or drag & drop</span>
-                  <input #fileInput type="file" class="hidden" accept="image/*" (change)="onFileSelected($event)">
+                  <input #fileInput id="seoFileInput" type="file" class="hidden" accept="image/*" (change)="onFileSelected($event)">
                 </div>
               </div>
 
@@ -129,7 +136,7 @@ import {
                 <div class="flex items-center gap-3 mb-1">
                   <div class="w-7 h-7 bg-muted rounded-full flex items-center justify-center overflow-hidden">
                     @if (imageSrc()) {
-                      <img [src]="imageSrc()" class="w-full h-full object-cover">
+                      <img [src]="imageSrc()" class="w-full h-full object-cover" alt="Site avatar">
                     } @else {
                       <div class="w-3 h-3 bg-primary rounded-full"></div>
                     }
@@ -152,7 +159,7 @@ import {
               <div class="bg-white dark:bg-card rounded-xl border border-border overflow-hidden font-sans cursor-pointer hover:bg-accent/30 transition-colors">
                 <div class="aspect-[2/1] bg-muted flex items-center justify-center overflow-hidden border-b border-border">
                   @if (imageSrc()) {
-                    <img [src]="imageSrc()" class="w-full h-full object-cover">
+                    <img [src]="imageSrc()" class="w-full h-full object-cover" alt="Twitter card image">
                   } @else {
                     <span class="text-muted-foreground text-sm">Large Image Preview</span>
                   }
@@ -170,7 +177,7 @@ import {
                 <div class="bg-white dark:bg-card border border-border overflow-hidden">
                   <div class="aspect-[1.91/1] bg-muted flex items-center justify-center overflow-hidden">
                     @if (imageSrc()) {
-                      <img [src]="imageSrc()" class="w-full h-full object-cover">
+                      <img [src]="imageSrc()" class="w-full h-full object-cover" alt="Facebook card image">
                     } @else {
                       <span class="text-muted-foreground text-sm">1200 x 630</span>
                     }
@@ -195,7 +202,7 @@ import {
                   <div class="text-blue-600 font-bold mb-1 hover:underline cursor-pointer">{{ title() }}</div>
                   <div class="text-foreground text-sm mb-2">{{ description() }}</div>
                   @if (imageSrc()) {
-                    <img [src]="imageSrc()" class="w-[300px] h-auto rounded-lg border border-border block">
+                    <img [src]="imageSrc()" class="w-[300px] h-auto rounded-lg border border-border block" alt="Slack link preview">
                   }
                 </div>
               </div>
@@ -206,7 +213,7 @@ import {
     </div>
   `,
 })
-export default class SeoSimulatorPageComponent {
+export default class SeoSimulatorPage {
   title = signal('');
   description = signal('');
   url = signal('https://example.com/blog/my-post');
@@ -228,10 +235,10 @@ export default class SeoSimulatorPageComponent {
     return 'text-red-500 font-bold';
   });
 
-  private seoSimulatorService = inject(SeoSimulatorService);
+  #seoSimulatorService = inject(SeoSimulator);
 
   getDomain() {
-    return this.seoSimulatorService.getDomain(this.url());
+    return this.#seoSimulatorService.getDomain(this.url());
   }
 
   onFileSelected(event: Event) {
@@ -261,7 +268,7 @@ export default class SeoSimulatorPageComponent {
   }
 
   copyHtml() {
-    const tags = this.seoSimulatorService.generateMetaTags(
+    const tags = this.#seoSimulatorService.generateMetaTags(
       this.title(),
       this.description(),
       this.url(),

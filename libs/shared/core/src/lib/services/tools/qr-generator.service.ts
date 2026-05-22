@@ -12,7 +12,7 @@ export interface QROptions {
 @Injectable({
   providedIn: 'root',
 })
-export class QrGeneratorService {
+export class QrGenerator {
   generateQR(canvas: HTMLCanvasElement, options: QROptions): Promise<void> {
     return new Promise((resolve, reject) => {
       QRCode.toCanvas(
@@ -26,7 +26,7 @@ export class QrGeneratorService {
           margin: options.margin,
           width: options.width,
         },
-        (error: any) => {
+        (error: Error | null | undefined) => {
           if (error) reject(error);
           else resolve();
         }
@@ -47,12 +47,12 @@ export class QrGeneratorService {
     encryption: 'WPA' | 'WEP' | 'nopass',
     hidden: boolean
   ): string {
-    const s = this.escapeWifi(ssid);
-    const p = this.escapeWifi(password);
+    const s = this.#escapeWifi(ssid);
+    const p = this.#escapeWifi(password);
     return `WIFI:T:${encryption};S:${s};P:${p};H:${hidden};;`;
   }
 
-  private escapeWifi(str: string): string {
+  #escapeWifi(str: string): string {
     return str.replace(/([\\;,:])/g, '\\$1');
   }
 }

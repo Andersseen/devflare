@@ -4,7 +4,7 @@ import { removeBackground } from '@imgly/background-removal';
 @Injectable({
   providedIn: 'root',
 })
-export class BgRemoverService {
+export class BgRemover {
   async removeBackground(file: File): Promise<Blob> {
     return removeBackground(file);
   }
