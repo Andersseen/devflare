@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { withSentry } from './instrument';
 import { createCorsMiddleware } from './middleware/cors';
 import { createRateLimitMiddleware } from './middleware/rate-limit';
 import { securityHeaders } from './middleware/security-headers';
@@ -18,9 +19,24 @@ export interface Env {
   DEV_AUTH_CORS_ORIGINS?: string;
   RATE_LIMIT_KV?: KVNamespace;
   ENVIRONMENT?: string;
+  SENTRY_DSN?: string;
 }
 
 const app = new Hono<{ Bindings: Env }>();
+
+// Global error handler
+app.onError((err, c) => {
+  console.error('[Error]', err);
+  return c.json(
+    {
+      error:
+        c.env.ENVIRONMENT === 'production'
+          ? 'Internal server error'
+          : err.message,
+    },
+    500,
+  );
+});
 
 // Security headers on all responses
 app.use(securityHeaders);
@@ -74,4 +90,12 @@ app.notFound((c) => {
   return c.html(renderNotFoundPage(), 404);
 });
 
-export default app;
+export default {
+  async fetch(
+    request: Request,
+    env: Env,
+    ctx: ExecutionContext,
+  ): Promise<Response> {
+    return withSentry(request, env, ctx, () => app.fetch(request, env, ctx));
+  },
+};

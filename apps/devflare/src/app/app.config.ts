@@ -1,10 +1,12 @@
 import {
   ApplicationConfig,
   provideZonelessChangeDetection,
+  ErrorHandler,
 } from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { importProvidersFrom } from '@angular/core';
+import * as Sentry from '@sentry/angular';
 import {
   LucideAngularModule,
   LayoutDashboard,
@@ -48,11 +50,29 @@ import {
 } from 'lucide-angular';
 import { appRoutes } from './app.routes';
 
+// Initialize Sentry in browser
+if (typeof window !== 'undefined') {
+  const dsn = (import.meta as unknown as { env?: { VITE_SENTRY_DSN?: string } })
+    .env?.VITE_SENTRY_DSN;
+  if (dsn) {
+    Sentry.init({
+      dsn,
+      environment: import.meta.env.PROD ? 'production' : 'development',
+      tracesSampleRate: import.meta.env.PROD ? 0.1 : 1.0,
+      integrations: [Sentry.browserTracingIntegration()],
+    });
+  }
+}
+
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZonelessChangeDetection(),
     provideRouter(appRoutes, withComponentInputBinding()),
     provideHttpClient(),
+    {
+      provide: ErrorHandler,
+      useValue: Sentry.createErrorHandler({ showDialog: false }),
+    },
     importProvidersFrom(
       LucideAngularModule.pick({
         LayoutDashboard,

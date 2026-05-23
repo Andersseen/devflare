@@ -50,3 +50,22 @@ binding = "RATE_LIMIT_KV"
 
 [env.production.vars]
 BETTER_AUTH_URL = "https://auth.yourdomain.com"
+
+# Staging environment
+[env.staging]
+name = "dev-auth-staging"
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "dev-auth-db-staging"
+# Replace with your real staging D1 database ID
+# database_id = "your-staging-d1-database-id"
+
+[[env.staging.kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+# Replace with your real staging KV namespace ID
+# id = "your-staging-kv-namespace-id"
+
+[env.staging.vars]
+BETTER_AUTH_URL = "https://auth-staging.yourdomain.com"
+ENVIRONMENT = "staging"
