@@ -37,6 +37,12 @@
         "command": "tsc --noEmit -p tsconfig.app.json",
         "cwd": "apps/dev-auth"
       }
+    },
+    "test": {
+      "executor": "@nx/vite:test",
+      "options": {
+        "config": "apps/dev-auth/vitest.config.ts"
+      }
     }
   }
 }
