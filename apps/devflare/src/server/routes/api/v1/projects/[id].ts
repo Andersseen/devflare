@@ -1,16 +1,9 @@
 import { defineEventHandler, getRouterParam, createError } from 'h3';
-import { auth } from '../../../../auth';
+import { getRemoteSession, requireAuth } from '../../../../lib/auth-remote';
 import { db } from '../../../../db';
 
-function requireAuth(session: { user?: { id: string } } | null) {
-  if (!session?.user) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
-  }
-  return session.user;
-}
-
 export default defineEventHandler(async (event) => {
-  const session = await auth.api.getSession({ headers: event.headers });
+  const session = await getRemoteSession(event);
   const user = requireAuth(session);
   const id = getRouterParam(event, 'id');
 

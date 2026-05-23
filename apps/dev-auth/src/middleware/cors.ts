@@ -11,7 +11,14 @@ export function createCorsMiddleware() {
       const ctx = c as unknown as { env: Env };
       const allowedOrigins = ctx.env.DEV_AUTH_CORS_ORIGINS
         ? ctx.env.DEV_AUTH_CORS_ORIGINS.split(',').map((o: string) => o.trim())
-        : ['http://localhost:4200', 'http://localhost:5173', 'http://localhost:3000'];
+        : [
+            'http://localhost:4200',
+            'http://localhost:5173',
+            'http://localhost:3000',
+            'http://127.0.0.1:4200',
+            'http://127.0.0.1:5173',
+            'http://127.0.0.1:3000',
+          ];
 
       if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
         return origin;

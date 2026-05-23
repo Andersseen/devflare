@@ -18,6 +18,14 @@ export default defineConfig(() => {
       fs: {
         allow: ['.'],
       },
+      proxy: {
+        // Proxy auth requests to the dev-auth service in development
+        '/api/auth': {
+          target: process.env['DEV_AUTH_URL'] ?? 'http://localhost:8787',
+          changeOrigin: true,
+          secure: false,
+        },
+      },
     },
     plugins: [
       analog({

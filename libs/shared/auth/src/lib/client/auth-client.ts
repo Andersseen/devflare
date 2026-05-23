@@ -2,21 +2,34 @@ import { createAuthClient } from 'better-auth/client';
 
 function getBaseURL(): string {
   if (typeof window !== 'undefined') {
-    // Browser: necesita URL absoluta para que better-auth construya URLs válidas
+    // Browser: check for configured external auth service
+    const configured = (import.meta as any).env?.['VITE_DEV_AUTH_URL']
+      || (window as any).__DEV_AUTH_URL__
+      || '';
+
+    if (configured) {
+      return configured;
+    }
+
+    // Default: same origin (Vite dev proxy handles /api/auth in development)
     return window.location.origin;
   }
-  // SSR/Node: necesita URL absoluta para prerender
-  return process.env['BETTER_AUTH_URL'] ?? 'http://localhost:4200';
+
+  // SSR/Node: use env var or fallback
+  return process.env['DEV_AUTH_URL'] ?? process.env['BETTER_AUTH_URL'] ?? 'http://localhost:4200';
 }
 
 /**
  * Factory para el cliente de better-auth.
- * baseURL apunta al servidor Nitro de cada app.
- * En SSR se resuelve a una URL absoluta para evitar errores de prerender.
+ * - In development (with Vite proxy): baseURL is same-origin, proxy forwards to dev-auth
+ * - In production: baseURL points to the external auth service (DEV_AUTH_URL)
  */
 export function createClient() {
+  const baseURL = getBaseURL();
+  const authBase = baseURL.endsWith('/api/auth') ? baseURL : `${baseURL}/api/auth`;
+
   return createAuthClient({
-    baseURL: `${getBaseURL()}/api/auth`,
+    baseURL: authBase,
   });
 }
 
