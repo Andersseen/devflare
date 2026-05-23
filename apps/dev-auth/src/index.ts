@@ -1,9 +1,11 @@
 import { Hono } from 'hono';
 import { createCorsMiddleware } from './middleware/cors';
 import authRoutes from './routes/auth';
+import setupRoutes from './routes/setup';
 import { renderLoginPage } from './pages/login';
 import { renderSignupPage } from './pages/signup';
 import { renderForgotPage } from './pages/forgot';
+import { renderSetupPage } from './pages/setup';
 
 export interface Env {
   DB: D1Database;
@@ -30,6 +32,9 @@ app.get('/health', (c) => {
 // Auth API — mounts better-auth at /api/auth/*
 app.route('/api/auth', authRoutes);
 
+// Setup API — Cloudflare setup helpers
+app.route('/api/setup', setupRoutes);
+
 // Auth pages
 app.get('/login', (c) => {
   return c.html(renderLoginPage());
@@ -41,6 +46,11 @@ app.get('/signup', (c) => {
 
 app.get('/forgot', (c) => {
   return c.html(renderForgotPage());
+});
+
+// Setup page
+app.get('/setup', (c) => {
+  return c.html(renderSetupPage());
 });
 
 // Root — redirect to login
