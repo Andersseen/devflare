@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { createCorsMiddleware } from './middleware/cors';
 import { createRateLimitMiddleware } from './middleware/rate-limit';
+import { securityHeaders } from './middleware/security-headers';
 import authRoutes from './routes/auth';
 import setupRoutes from './routes/setup';
 import { renderLoginPage } from './pages/login';
@@ -13,12 +14,18 @@ export interface Env {
   DB: D1Database;
   BETTER_AUTH_URL: string;
   BETTER_AUTH_SECRET: string;
+  COOKIE_DOMAIN?: string;
   DEV_AUTH_CORS_ORIGINS?: string;
+  RATE_LIMIT_KV?: KVNamespace;
+  ENVIRONMENT?: string;
 }
 
 const app = new Hono<{ Bindings: Env }>();
 
-// Global middleware
+// Security headers on all responses
+app.use(securityHeaders);
+
+// CORS
 app.use(createCorsMiddleware());
 
 // Health check
@@ -27,6 +34,7 @@ app.get('/health', (c) => {
     status: 'ok',
     service: 'dev-auth',
     version: '0.1.0',
+    environment: c.env.ENVIRONMENT || 'development',
     timestamp: new Date().toISOString(),
   });
 });
@@ -35,7 +43,7 @@ app.get('/health', (c) => {
 app.use('/api/auth/*', createRateLimitMiddleware(10, 60 * 1000));
 app.route('/api/auth', authRoutes);
 
-// Setup API — Cloudflare setup helpers
+// Setup API — disabled in production
 app.route('/api/setup', setupRoutes);
 
 // Auth pages

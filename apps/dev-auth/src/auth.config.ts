@@ -24,7 +24,12 @@ export function createAuth(env: Env) {
         maxAge: 60 * 5, // 5 minutos de cache
       },
     },
+    // Cross-subdomain cookies for multi-app setup
     advanced: {
+      crossSubDomainCookie: {
+        enabled: !!env.COOKIE_DOMAIN,
+        domain: env.COOKIE_DOMAIN,
+      },
       database: {
         generateId: () => crypto.randomUUID(),
       },

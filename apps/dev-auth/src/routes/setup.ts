@@ -1,7 +1,24 @@
 import { Hono } from 'hono';
+import { createMiddleware } from 'hono/factory';
 import type { Env } from '../index';
 
 const setupRoutes = new Hono<{ Bindings: Env }>();
+
+/**
+ * Middleware: disable setup endpoints in production.
+ */
+setupRoutes.use(
+  '*',
+  createMiddleware<{ Bindings: Env }>(async (c, next) => {
+    if (c.env.ENVIRONMENT === 'production') {
+      return c.json(
+        { error: 'Setup endpoints are disabled in production' },
+        403,
+      );
+    }
+    await next();
+  }),
+);
 
 /**
  * POST /api/setup/d1
