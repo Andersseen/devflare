@@ -1,12 +1,18 @@
 import { Hono } from 'hono';
+import { createCorsMiddleware } from './middleware/cors';
+import authRoutes from './routes/auth';
 
 export interface Env {
   DB: D1Database;
   BETTER_AUTH_URL: string;
   BETTER_AUTH_SECRET: string;
+  DEV_AUTH_CORS_ORIGINS?: string;
 }
 
 const app = new Hono<{ Bindings: Env }>();
+
+// Global middleware
+app.use(createCorsMiddleware());
 
 // Health check
 app.get('/health', (c) => {
@@ -18,12 +24,15 @@ app.get('/health', (c) => {
   });
 });
 
-// Root - redirect to login
+// Auth API — mounts better-auth at /api/auth/*
+app.route('/api/auth', authRoutes);
+
+// Root — redirect to login
 app.get('/', (c) => {
   return c.redirect('/login');
 });
 
-// Placeholder login page
+// Placeholder login page (Phase 2 will enhance this)
 app.get('/login', (c) => {
   return c.html(`
     <!DOCTYPE html>
@@ -63,7 +72,7 @@ app.get('/login', (c) => {
         <and-card style="width: 380px; padding: 2rem;">
           <h1 style="margin: 0 0 1.5rem; font-size: 1.5rem; text-align: center;">DevFlare Auth</h1>
           <p style="text-align: center; color: hsl(var(--foreground) / 0.6);">
-            Auth service placeholder. Better-auth integration coming in Phase 1.
+            Auth service is running. Better-auth backend active at <code>/api/auth</code>.
           </p>
           <div style="margin-top: 1.5rem; text-align: center;">
             <and-button onclick="window.location.href='/health'">Check Health</and-button>

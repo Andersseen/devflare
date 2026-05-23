@@ -35,7 +35,7 @@
     "@imgly/background-removal": "^1.7.0",
     "@voltui/components": "^0.1.0",
     "@webcontainer/api": "^1.6.1",
-    "better-auth": "^1.6.2",
+    "better-auth": "^1.6.11",
     "better-sqlite3": "^12.8.0",
     "browser-image-compression": "^2.0.2",
     "colorthief": "^2.6.0",
