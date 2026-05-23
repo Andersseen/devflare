@@ -37,7 +37,9 @@ import {
     <div class="space-y-6">
       <div>
         <h1 class="text-3xl font-bold tracking-tight">SVG Optimizer</h1>
-        <p class="text-muted-foreground mt-1">Minify and clean up SVG code directly in your browser</p>
+        <p class="text-muted-foreground mt-1">
+          Minify and clean up SVG code directly in your browser
+        </p>
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -45,7 +47,9 @@ import {
         <volt-card>
           <volt-card-header class="flex flex-row items-center justify-between">
             <volt-card-title>Input</volt-card-title>
-            <span class="text-xs text-muted-foreground">{{ formatSize(inputSize()) }}</span>
+            <span class="text-xs text-muted-foreground">{{
+              formatSize(inputSize())
+            }}</span>
           </volt-card-header>
           <volt-card-content>
             <volt-textarea
@@ -74,7 +78,9 @@ import {
               <volt-badge variant="solid">-{{ savings() }}%</volt-badge>
             }
             <div class="text-right">
-              <p class="text-xs text-muted-foreground uppercase">Optimized Size</p>
+              <p class="text-xs text-muted-foreground uppercase">
+                Optimized Size
+              </p>
               <p class="text-xl font-bold">{{ formatSize(outputSize()) }}</p>
             </div>
           </div>
@@ -102,9 +108,14 @@ import {
                   style="background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgZmlsbD0ibm9uZSI+PHBhdGggZmlsbD0iI3IyZTRlOCIgZD0iTTAgMGgxMHYxMEgwem0xMCAxMGgxMHYxMEgxMHoiLz48L3N2Zz4=')"
                 >
                   @if (optimizedSvg()) {
-                    <div class="max-w-full max-h-full shadow-lg bg-card border border-border rounded p-4" [innerHTML]="optimizedSvg()"></div>
+                    <div
+                      class="max-w-full max-h-full shadow-lg bg-card border border-border rounded p-4"
+                      [innerHTML]="optimizedSvg()"
+                    ></div>
                   } @else {
-                    <p class="text-muted-foreground text-sm">Paste SVG code to see preview</p>
+                    <p class="text-muted-foreground text-sm">
+                      Paste SVG code to see preview
+                    </p>
                   }
                 </div>
               </volt-tabs-content>
@@ -114,7 +125,11 @@ import {
               <span class="text-xs text-muted-foreground font-mono">
                 {{ savingsBytes() }} bytes saved
               </span>
-              <volt-button size="sm" variant="outline" (click)="copyToClipboard()">
+              <volt-button
+                size="sm"
+                variant="outline"
+                (click)="copyToClipboard()"
+              >
                 Copy Code
               </volt-button>
             </volt-card-content>
@@ -133,7 +148,10 @@ export default class SvgOptimizerPage {
   outputSize = computed(() => this.getByteLength(this.optimizedSvg()));
   savingsBytes = computed(() => this.inputSize() - this.outputSize());
   savings = computed(() =>
-    this.#svgOptimizerService.getSavingsPercent(this.inputSize(), this.outputSize())
+    this.#svgOptimizerService.getSavingsPercent(
+      this.inputSize(),
+      this.outputSize(),
+    ),
   );
 
   #svgOptimizerService = inject(SvgOptimizer);

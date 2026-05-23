@@ -1,10 +1,5 @@
 import { Injectable, signal } from '@angular/core';
 
-interface DisplayMediaOptions {
-  video: { mediaSource: 'screen' };
-  audio: boolean;
-}
-
 @Injectable({
   providedIn: 'root',
 })
@@ -29,7 +24,9 @@ export class ScreenRecorder {
 
     if (includeMic) {
       try {
-        const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const audioStream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+        });
         tracks = [...tracks, ...audioStream.getAudioTracks()];
       } catch {
         // Silently ignore mic failure
@@ -46,7 +43,9 @@ export class ScreenRecorder {
       }
     };
 
-    this.#mediaRecorder = new MediaRecorder(this.#stream, { mimeType: 'video/webm' });
+    this.#mediaRecorder = new MediaRecorder(this.#stream, {
+      mimeType: 'video/webm',
+    });
 
     this.#mediaRecorder.ondataavailable = (event) => {
       if (event.data.size > 0) {
@@ -78,7 +77,9 @@ export class ScreenRecorder {
     const a = document.createElement('a');
     a.style.display = 'none';
     a.href = url;
-    a.download = filename || `recording-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.webm`;
+    a.download =
+      filename ||
+      `recording-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.webm`;
     document.body.appendChild(a);
     a.click();
     setTimeout(() => {

@@ -7,7 +7,8 @@ export default defineEventHandler(async (event) => {
 
   if (event.method === 'GET') {
     const user = requireAuth(session);
-    const projects = await db.sql`SELECT * FROM projects WHERE userId = ${user.id} ORDER BY createdAt DESC`;
+    const projects =
+      await db.sql`SELECT * FROM projects WHERE userId = ${user.id} ORDER BY createdAt DESC`;
     return { projects };
   }
 

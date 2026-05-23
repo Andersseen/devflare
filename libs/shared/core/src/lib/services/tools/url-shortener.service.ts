@@ -18,7 +18,10 @@ export class UrlShortener {
     return Math.random().toString(36).substring(2, 8);
   }
 
-  shorten(url: string, customSlug?: string): { shortUrl: string; slug: string } {
+  shorten(
+    url: string,
+    customSlug?: string,
+  ): { shortUrl: string; slug: string } {
     const slug = customSlug || this.generateSlug();
     const shortUrl = `${window.location.origin}/s/${slug}`;
     return { shortUrl, slug };
@@ -53,7 +56,7 @@ export class UrlShortener {
       { width: 120, margin: 1, color: { dark: '#4F46E5', light: '#FFFFFF' } },
       (err) => {
         if (err) console.error(err);
-      }
+      },
     );
   }
 }

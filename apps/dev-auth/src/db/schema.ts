@@ -4,10 +4,16 @@ export const user = sqliteTable('user', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   email: text('email').notNull().unique(),
-  emailVerified: integer('emailVerified', { mode: 'boolean' }).notNull().default(false),
+  emailVerified: integer('emailVerified', { mode: 'boolean' })
+    .notNull()
+    .default(false),
   image: text('image'),
-  createdAt: integer('createdAt', { mode: 'timestamp' }).$defaultFn(() => new Date()),
-  updatedAt: integer('updatedAt', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+  createdAt: integer('createdAt', { mode: 'timestamp' }).$defaultFn(
+    () => new Date(),
+  ),
+  updatedAt: integer('updatedAt', { mode: 'timestamp' }).$defaultFn(
+    () => new Date(),
+  ),
 });
 
 export const session = sqliteTable('session', {
@@ -19,8 +25,12 @@ export const session = sqliteTable('session', {
   expiresAt: integer('expiresAt', { mode: 'timestamp' }).notNull(),
   ipAddress: text('ipAddress'),
   userAgent: text('userAgent'),
-  createdAt: integer('createdAt', { mode: 'timestamp' }).$defaultFn(() => new Date()),
-  updatedAt: integer('updatedAt', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+  createdAt: integer('createdAt', { mode: 'timestamp' }).$defaultFn(
+    () => new Date(),
+  ),
+  updatedAt: integer('updatedAt', { mode: 'timestamp' }).$defaultFn(
+    () => new Date(),
+  ),
 });
 
 export const account = sqliteTable('account', {
@@ -33,12 +43,18 @@ export const account = sqliteTable('account', {
   accessToken: text('accessToken'),
   refreshToken: text('refreshToken'),
   accessTokenExpiresAt: integer('accessTokenExpiresAt', { mode: 'timestamp' }),
-  refreshTokenExpiresAt: integer('refreshTokenExpiresAt', { mode: 'timestamp' }),
+  refreshTokenExpiresAt: integer('refreshTokenExpiresAt', {
+    mode: 'timestamp',
+  }),
   scope: text('scope'),
   idToken: text('idToken'),
   password: text('password'),
-  createdAt: integer('createdAt', { mode: 'timestamp' }).$defaultFn(() => new Date()),
-  updatedAt: integer('updatedAt', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+  createdAt: integer('createdAt', { mode: 'timestamp' }).$defaultFn(
+    () => new Date(),
+  ),
+  updatedAt: integer('updatedAt', { mode: 'timestamp' }).$defaultFn(
+    () => new Date(),
+  ),
 });
 
 export const verification = sqliteTable('verification', {
@@ -46,8 +62,12 @@ export const verification = sqliteTable('verification', {
   identifier: text('identifier').notNull(),
   value: text('value').notNull(),
   expiresAt: integer('expiresAt', { mode: 'timestamp' }).notNull(),
-  createdAt: integer('createdAt', { mode: 'timestamp' }).$defaultFn(() => new Date()),
-  updatedAt: integer('updatedAt', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+  createdAt: integer('createdAt', { mode: 'timestamp' }).$defaultFn(
+    () => new Date(),
+  ),
+  updatedAt: integer('updatedAt', { mode: 'timestamp' }).$defaultFn(
+    () => new Date(),
+  ),
 });
 
 export type User = typeof user.$inferSelect;

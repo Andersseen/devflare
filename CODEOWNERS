@@ -1,0 +1,9 @@
+# Global code owners
+* @andersseen
+
+# Auth service
+apps/dev-auth/ @andersseen
+libs/shared/auth/ @andersseen
+
+# Frontend
+apps/devflare/ @andersseen

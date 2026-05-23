@@ -16,7 +16,7 @@ export class SeoSimulator {
     title: string,
     description: string,
     url: string,
-    imageSrc: string | null
+    imageSrc: string | null,
   ): string {
     const image = imageSrc ? 'YOUR_IMAGE_URL' : '';
     return `

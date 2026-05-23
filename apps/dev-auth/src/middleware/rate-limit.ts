@@ -14,12 +14,13 @@ const store = new Map<string, RateLimitEntry>();
  */
 export function createRateLimitMiddleware(
   maxRequests = 10,
-  windowMs = 60 * 1000 // 1 minute
+  windowMs = 60 * 1000, // 1 minute
 ) {
   return createMiddleware(async (c, next) => {
-    const ip = c.req.header('cf-connecting-ip')
-      || c.req.header('x-forwarded-for')
-      || 'unknown';
+    const ip =
+      c.req.header('cf-connecting-ip') ||
+      c.req.header('x-forwarded-for') ||
+      'unknown';
 
     const key = `${ip}:${c.req.path}`;
     const now = Date.now();
@@ -29,7 +30,7 @@ export function createRateLimitMiddleware(
       if (entry.count >= maxRequests) {
         return c.json(
           { error: 'Too many requests. Please try again later.' },
-          429
+          429,
         );
       }
       entry.count++;

@@ -10,11 +10,18 @@ const setupRoutes = new Hono<{ Bindings: Env }>();
  */
 setupRoutes.post('/d1', async (c) => {
   try {
-    const body = await c.req.json<{ accountId: string; apiToken: string; dbName: string }>();
+    const body = await c.req.json<{
+      accountId: string;
+      apiToken: string;
+      dbName: string;
+    }>();
     const { accountId, apiToken, dbName } = body;
 
     if (!accountId || !apiToken || !dbName) {
-      return c.json({ success: false, error: 'Missing accountId, apiToken, or dbName' }, 400);
+      return c.json(
+        { success: false, error: 'Missing accountId, apiToken, or dbName' },
+        400,
+      );
     }
 
     const response = await fetch(
@@ -26,14 +33,27 @@ setupRoutes.post('/d1', async (c) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ name: dbName }),
-      }
+      },
     );
 
-    const data = await response.json() as any;
+    const data = (await response.json()) as {
+      success: boolean;
+      result?: { uuid: string; name: string; version: string };
+      errors?: Array<{ message: string }>;
+    };
 
     if (!response.ok || !data.success) {
-      const errors = data.errors?.map((e: any) => e.message).join(', ') || 'Cloudflare API error';
+      const errors =
+        data.errors?.map((e: { message: string }) => e.message).join(', ') ||
+        'Cloudflare API error';
       return c.json({ success: false, error: errors }, 400);
+    }
+
+    if (!data.result) {
+      return c.json(
+        { success: false, error: 'Invalid response from Cloudflare API' },
+        500,
+      );
     }
 
     return c.json({
@@ -46,8 +66,11 @@ setupRoutes.post('/d1', async (c) => {
     });
   } catch (err) {
     return c.json(
-      { success: false, error: err instanceof Error ? err.message : 'Unknown error' },
-      500
+      {
+        success: false,
+        error: err instanceof Error ? err.message : 'Unknown error',
+      },
+      500,
     );
   }
 });
@@ -62,7 +85,10 @@ setupRoutes.get('/d1', async (c) => {
     const apiToken = c.req.query('apiToken');
 
     if (!accountId || !apiToken) {
-      return c.json({ success: false, error: 'Missing accountId or apiToken' }, 400);
+      return c.json(
+        { success: false, error: 'Missing accountId or apiToken' },
+        400,
+      );
     }
 
     const response = await fetch(
@@ -71,21 +97,30 @@ setupRoutes.get('/d1', async (c) => {
         headers: {
           Authorization: `Bearer ${apiToken}`,
         },
-      }
+      },
     );
 
-    const data = await response.json() as any;
+    const data = (await response.json()) as {
+      success: boolean;
+      result?: unknown;
+      errors?: Array<{ message: string }>;
+    };
 
     if (!response.ok || !data.success) {
-      const errors = data.errors?.map((e: any) => e.message).join(', ') || 'Cloudflare API error';
+      const errors =
+        data.errors?.map((e: { message: string }) => e.message).join(', ') ||
+        'Cloudflare API error';
       return c.json({ success: false, error: errors }, 400);
     }
 
     return c.json({ success: true, result: data.result });
   } catch (err) {
     return c.json(
-      { success: false, error: err instanceof Error ? err.message : 'Unknown error' },
-      500
+      {
+        success: false,
+        error: err instanceof Error ? err.message : 'Unknown error',
+      },
+      500,
     );
   }
 });

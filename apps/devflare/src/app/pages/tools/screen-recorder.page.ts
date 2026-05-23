@@ -1,4 +1,10 @@
-import { Component, ElementRef, ViewChild, signal, inject } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  ViewChild,
+  signal,
+  inject,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ScreenRecorder } from '@org/core';
 import { LucideAngularModule } from 'lucide-angular';
@@ -29,17 +35,27 @@ import {
     <div class="space-y-6">
       <div>
         <h1 class="text-3xl font-bold tracking-tight">Screen Recorder</h1>
-        <p class="text-muted-foreground mt-1">Record your screen directly from the browser</p>
+        <p class="text-muted-foreground mt-1">
+          Record your screen directly from the browser
+        </p>
       </div>
 
       <!-- Controls -->
       <volt-card>
         <volt-card-content>
-          <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div
+            class="flex flex-col md:flex-row items-center justify-between gap-4"
+          >
             <div class="flex items-center gap-4">
               <div class="flex items-center gap-2">
-                <volt-switch id="includeMic" [(checked)]="includeMic" [disabled]="isRecording()" />
-                <label for="includeMic" class="text-sm font-medium select-none">Include Microphone</label>
+                <volt-switch
+                  id="includeMic"
+                  [(checked)]="includeMic"
+                  [disabled]="isRecording()"
+                />
+                <label for="includeMic" class="text-sm font-medium select-none"
+                  >Include Microphone</label
+                >
               </div>
               @if (isRecording()) {
                 <volt-badge variant="destructive" class="animate-pulse">
@@ -68,7 +84,9 @@ import {
                     <lucide-icon name="download" class="w-4 h-4 mr-1" />
                     Download WebM
                   </volt-button>
-                  <volt-button variant="outline" (click)="reset()">New Recording</volt-button>
+                  <volt-button variant="outline" (click)="reset()"
+                    >New Recording</volt-button
+                  >
                 </div>
               }
             </div>
@@ -77,10 +95,15 @@ import {
       </volt-card>
 
       <!-- Preview -->
-      <div class="aspect-video bg-black rounded-xl overflow-hidden shadow-lg relative flex items-center justify-center border border-border">
+      <div
+        class="aspect-video bg-black rounded-xl overflow-hidden shadow-lg relative flex items-center justify-center border border-border"
+      >
         @if (!streamActive() && !downloadUrl()) {
           <div class="text-center text-muted-foreground">
-            <lucide-icon name="monitor" class="w-16 h-16 mx-auto mb-4 opacity-50" />
+            <lucide-icon
+              name="monitor"
+              class="w-16 h-16 mx-auto mb-4 opacity-50"
+            />
             <p>Preview will appear here when you start recording</p>
           </div>
         }
@@ -96,7 +119,9 @@ import {
       </div>
 
       @if (errorMsg()) {
-        <div class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+        <div
+          class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm"
+        >
           {{ errorMsg() }}
         </div>
       }
@@ -122,7 +147,9 @@ export default class ScreenRecorderPage {
     this.#recordedBlob = null;
 
     try {
-      const stream = await this.#screenRecorderService.startRecording(this.includeMic());
+      const stream = await this.#screenRecorderService.startRecording(
+        this.includeMic(),
+      );
 
       if (this.videoElement?.nativeElement) {
         this.videoElement.nativeElement.srcObject = stream;
@@ -142,7 +169,10 @@ export default class ScreenRecorderPage {
       }
     } catch (err: unknown) {
       console.error('Error starting recording:', err);
-      this.errorMsg.set('Failed to start recording: ' + (err instanceof Error ? err.message : 'Unknown error'));
+      this.errorMsg.set(
+        'Failed to start recording: ' +
+          (err instanceof Error ? err.message : 'Unknown error'),
+      );
     }
   }
 

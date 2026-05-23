@@ -1,4 +1,9 @@
-import { defineEventHandler, getRequestHeaders, getQuery, readRawBody } from 'h3';
+import {
+  defineEventHandler,
+  getRequestHeaders,
+  getQuery,
+  readRawBody,
+} from 'h3';
 
 /**
  * Catch-all proxy for /api/auth/* requests.
@@ -8,9 +13,10 @@ export default defineEventHandler(async (event) => {
   const authUrl = process.env['DEV_AUTH_URL'] || 'http://localhost:8787';
   const slug = event.context.params?.slug || '';
   const query = getQuery(event);
-  const queryString = Object.keys(query).length > 0
-    ? '?' + new URLSearchParams(query as Record<string, string>).toString()
-    : '';
+  const queryString =
+    Object.keys(query).length > 0
+      ? '?' + new URLSearchParams(query as Record<string, string>).toString()
+      : '';
 
   const target = `${authUrl}/api/auth/${slug}${queryString}`;
 
@@ -40,7 +46,12 @@ export default defineEventHandler(async (event) => {
   event.node.res.statusMessage = response.statusText;
 
   // Forward headers (skip h3-managed ones)
-  const skip = new Set(['content-encoding', 'transfer-encoding', 'connection', 'set-cookie']);
+  const skip = new Set([
+    'content-encoding',
+    'transfer-encoding',
+    'connection',
+    'set-cookie',
+  ]);
   for (const [key, value] of response.headers.entries()) {
     if (!skip.has(key.toLowerCase())) {
       event.node.res.setHeader(key, value);
@@ -48,7 +59,12 @@ export default defineEventHandler(async (event) => {
   }
 
   // Handle Set-Cookie separately (may be multiple)
-  const setCookie = (response.headers as any).getSetCookie?.() || response.headers.get('set-cookie') || undefined;
+  const setCookie =
+    (
+      response.headers as unknown as { getSetCookie?: () => string[] }
+    ).getSetCookie?.() ||
+    response.headers.get('set-cookie') ||
+    undefined;
   if (setCookie) {
     if (Array.isArray(setCookie)) {
       event.node.res.setHeader('Set-Cookie', setCookie);

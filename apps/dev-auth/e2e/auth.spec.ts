@@ -13,7 +13,9 @@ test.describe('Auth Flow', () => {
     await page.locator('and-input[data-field="name"]').fill(testName);
     await page.locator('and-input[data-field="email"]').fill(testEmail);
     await page.locator('and-input[data-field="password"]').fill(testPassword);
-    await page.locator('and-input[data-field="confirmPassword"]').fill(testPassword);
+    await page
+      .locator('and-input[data-field="confirmPassword"]')
+      .fill(testPassword);
 
     await page.locator('and-button:has-text("Create Account")').click();
 
@@ -53,7 +55,9 @@ test.describe('Auth Flow', () => {
 
     // Verify session is gone
     const response = await page.evaluate(async () => {
-      const res = await fetch('/api/auth/get-session', { credentials: 'include' });
+      const res = await fetch('/api/auth/get-session', {
+        credentials: 'include',
+      });
       return res.json();
     });
 
@@ -63,6 +67,6 @@ test.describe('Auth Flow', () => {
   test('shows 404 page for unknown routes', async ({ page }) => {
     await page.goto('http://localhost:8787/nonexistent');
     await expect(page.locator('text=404')).toBeVisible();
-    await expect(page.locator('text=This page doesn\'t exist')).toBeVisible();
+    await expect(page.locator("text=This page doesn't exist")).toBeVisible();
   });
 });

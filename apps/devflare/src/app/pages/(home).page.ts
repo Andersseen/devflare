@@ -1,11 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
-import {
-  VoltCard,
-  VoltCardContent,
-  VoltBadge,
-} from '@voltui/components';
+import { VoltCard, VoltCardContent, VoltBadge } from '@voltui/components';
 import { Auth } from '@org/auth';
 
 interface Tool {
@@ -30,38 +26,53 @@ interface Tool {
     <div class="space-y-10">
       <!-- Hero -->
       <div class="text-center space-y-4 py-4">
-        <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-indigo-500 pb-2">
+        <h1
+          class="text-4xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-indigo-500 pb-2"
+        >
           Developer Tools, Reimagined.
         </h1>
         <p class="text-xl text-muted-foreground max-w-2xl mx-auto">
-          A suite of powerful, client-side tools to help you build, optimize, and deploy faster. No server required.
+          A suite of powerful, client-side tools to help you build, optimize,
+          and deploy faster. No server required.
         </p>
         @if (auth.user(); as user) {
-          <p class="text-sm text-muted-foreground">Welcome back, <span class="font-medium text-foreground">{{ user.name || user.email }}</span></p>
+          <p class="text-sm text-muted-foreground">
+            Welcome back,
+            <span class="font-medium text-foreground">{{
+              user.name || user.email
+            }}</span>
+          </p>
         }
       </div>
 
       <!-- Tools Grid -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         @for (tool of tools; track tool.title) {
-          <a
-            [routerLink]="tool.link"
-            class="group cursor-pointer"
-          >
-            <volt-card class="h-full transition-all duration-300 hover:-translate-y-1 hover:shadow-lg border-border hover:border-primary/30">
+          <a [routerLink]="tool.link" class="group cursor-pointer">
+            <volt-card
+              class="h-full transition-all duration-300 hover:-translate-y-1 hover:shadow-lg border-border hover:border-primary/30"
+            >
               <volt-card-content>
                 <div class="p-2 space-y-4 flex-1">
                   <div
                     class="w-12 h-12 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110"
                     [class]="tool.bgClass"
                   >
-                    <lucide-icon [name]="tool.icon" class="w-6 h-6" [class]="tool.colorClass" />
+                    <lucide-icon
+                      [name]="tool.icon"
+                      class="w-6 h-6"
+                      [class]="tool.colorClass"
+                    />
                   </div>
                   <div>
-                    <h3 class="text-xl font-bold transition-colors group-hover:text-primary">
+                    <h3
+                      class="text-xl font-bold transition-colors group-hover:text-primary"
+                    >
                       {{ tool.title }}
                     </h3>
-                    <p class="text-muted-foreground mt-2 text-sm">{{ tool.description }}</p>
+                    <p class="text-muted-foreground mt-2 text-sm">
+                      {{ tool.description }}
+                    </p>
                   </div>
                 </div>
               </volt-card-content>
@@ -78,7 +89,8 @@ export default class HomePage {
   tools: Tool[] = [
     {
       title: 'Image Compressor',
-      description: 'Optimize PNG, JPEG, and WEBP images locally with WebWorkers.',
+      description:
+        'Optimize PNG, JPEG, and WEBP images locally with WebWorkers.',
       link: '/tools/image-compressor',
       icon: 'image',
       colorClass: 'text-blue-500',
@@ -86,7 +98,8 @@ export default class HomePage {
     },
     {
       title: 'QR Code Studio',
-      description: 'Generate customizable QR codes for URLs, text, and Wi-Fi networks.',
+      description:
+        'Generate customizable QR codes for URLs, text, and Wi-Fi networks.',
       link: '/tools/qr-generator',
       icon: 'qr-code',
       colorClass: 'text-pink-500',
@@ -102,7 +115,8 @@ export default class HomePage {
     },
     {
       title: 'SEO Simulator',
-      description: 'Preview how your pages appear on Google, Twitter, and Facebook.',
+      description:
+        'Preview how your pages appear on Google, Twitter, and Facebook.',
       link: '/tools/seo-simulator',
       icon: 'search',
       colorClass: 'text-sky-500',
@@ -118,7 +132,8 @@ export default class HomePage {
     },
     {
       title: 'Screen Recorder',
-      description: 'Record your screen directly from the browser without plugins.',
+      description:
+        'Record your screen directly from the browser without plugins.',
       link: '/tools/recorder',
       icon: 'video',
       colorClass: 'text-red-500',
@@ -126,7 +141,8 @@ export default class HomePage {
     },
     {
       title: 'Social Card Designer',
-      description: 'Create beautiful Open Graph images for your social media posts.',
+      description:
+        'Create beautiful Open Graph images for your social media posts.',
       link: '/tools/og-generator',
       icon: 'globe',
       colorClass: 'text-purple-500',
@@ -150,7 +166,8 @@ export default class HomePage {
     },
     {
       title: 'URL Shortener',
-      description: 'Shorten long links and keep track of them with custom aliases.',
+      description:
+        'Shorten long links and keep track of them with custom aliases.',
       link: '/tools/shortener',
       icon: 'link',
       colorClass: 'text-indigo-500',

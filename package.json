@@ -23,7 +23,19 @@
     "graph": "nx graph",
     "affected:test": "nx affected -t test",
     "affected:lint": "nx affected -t lint",
-    "affected:build": "nx affected -t build"
+    "affected:build": "nx affected -t build",
+    "format:check": "prettier --check .",
+    "format:write": "prettier --write .",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "prepare": "husky || true"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,mjs,cjs,json,html,css,scss,md,yml,yaml}": [
+      "prettier --write"
+    ],
+    "*.{ts,tsx,js,jsx,mjs,cjs}": [
+      "eslint --fix"
+    ]
   },
   "dependencies": {
     "@angular-devkit/build-angular": "21.0.3",
@@ -106,9 +118,11 @@
     "eslint": "^9.8.0",
     "eslint-config-prettier": "^10.0.0",
     "eslint-plugin-playwright": "^1.6.2",
+    "husky": "^9.1.7",
     "jiti": "2.4.2",
     "jsdom": "~22.1.0",
     "jsonc-eslint-parser": "^2.1.0",
+    "lint-staged": "^17.0.5",
     "nitropack": "^2.13.3",
     "nx": "22.3.1",
     "postcss": "^8.5.3",

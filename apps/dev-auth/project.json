@@ -39,7 +39,7 @@
       }
     },
     "test": {
-      "executor": "@nx/vite:test",
+      "executor": "@nx/vitest:test",
       "options": {
         "config": "apps/dev-auth/vitest.config.ts"
       }

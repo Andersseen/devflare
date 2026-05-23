@@ -36,7 +36,9 @@ import { Projects, type Project } from '@org/core';
       <div class="flex items-center justify-between">
         <div>
           <h1 class="text-3xl font-bold tracking-tight">Projects</h1>
-          <p class="text-muted-foreground mt-1">Manage your deployed projects</p>
+          <p class="text-muted-foreground mt-1">
+            Manage your deployed projects
+          </p>
         </div>
       </div>
 
@@ -46,7 +48,10 @@ import { Projects, type Project } from '@org/core';
           <volt-card-title>Create New Project</volt-card-title>
         </volt-card-header>
         <volt-card-content>
-          <form class="flex flex-col sm:flex-row gap-4 items-end" (submit)="onCreate($event)">
+          <form
+            class="flex flex-col sm:flex-row gap-4 items-end"
+            (submit)="onCreate($event)"
+          >
             <volt-form-field class="flex-1 w-full">
               <volt-label>Project Name</volt-label>
               <volt-input
@@ -65,7 +70,11 @@ import { Projects, type Project } from '@org/core';
                 autocomplete="off"
               />
             </volt-form-field>
-            <volt-button type="submit" variant="solid" [disabled]="isCreating() || !newName()">
+            <volt-button
+              type="submit"
+              variant="solid"
+              [disabled]="isCreating() || !newName()"
+            >
               @if (isCreating()) {
                 <lucide-icon name="loader" class="animate-spin w-4 h-4 mr-1" />
                 Creating...
@@ -84,7 +93,10 @@ import { Projects, type Project } from '@org/core';
       <!-- Loading -->
       @if (isLoading()) {
         <div class="flex items-center justify-center py-12">
-          <lucide-icon name="loader" class="animate-spin w-8 h-8 text-muted-foreground" />
+          <lucide-icon
+            name="loader"
+            class="animate-spin w-8 h-8 text-muted-foreground"
+          />
         </div>
       }
 
@@ -93,16 +105,29 @@ import { Projects, type Project } from '@org/core';
         <div class="grid grid-cols-1 gap-4">
           @for (project of projects(); track project.id) {
             <volt-card>
-              <volt-card-content class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-4">
+              <volt-card-content
+                class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-4"
+              >
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                      <lucide-icon name="folder-open" class="w-5 h-5 text-primary" />
+                    <div
+                      class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0"
+                    >
+                      <lucide-icon
+                        name="folder-open"
+                        class="w-5 h-5 text-primary"
+                      />
                     </div>
                     <div>
-                      <h3 class="font-semibold text-lg truncate">{{ project.name }}</h3>
+                      <h3 class="font-semibold text-lg truncate">
+                        {{ project.name }}
+                      </h3>
                       @if (project.repoUrl) {
-                        <a [href]="project.repoUrl" target="_blank" class="text-sm text-muted-foreground hover:text-primary hover:underline truncate block max-w-md">
+                        <a
+                          [href]="project.repoUrl"
+                          target="_blank"
+                          class="text-sm text-muted-foreground hover:text-primary hover:underline truncate block max-w-md"
+                        >
                           {{ project.repoUrl }}
                         </a>
                       }
@@ -110,8 +135,14 @@ import { Projects, type Project } from '@org/core';
                   </div>
                 </div>
                 <div class="flex items-center gap-3 shrink-0">
-                  <volt-badge variant="secondary">{{ formatDate(project.createdAt) }}</volt-badge>
-                  <volt-button size="sm" variant="destructive" (click)="onDelete(project.id)">
+                  <volt-badge variant="secondary">{{
+                    formatDate(project.createdAt)
+                  }}</volt-badge>
+                  <volt-button
+                    size="sm"
+                    variant="destructive"
+                    (click)="onDelete(project.id)"
+                  >
                     <lucide-icon name="x" class="w-4 h-4 mr-1" />
                     Delete
                   </volt-button>
@@ -127,11 +158,18 @@ import { Projects, type Project } from '@org/core';
         <volt-card>
           <volt-card-content>
             <div class="text-center py-12">
-              <div class="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                <lucide-icon name="folder-open" class="w-8 h-8 text-muted-foreground" />
+              <div
+                class="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4"
+              >
+                <lucide-icon
+                  name="folder-open"
+                  class="w-8 h-8 text-muted-foreground"
+                />
               </div>
               <h3 class="text-lg font-medium">No projects yet</h3>
-              <p class="text-muted-foreground mt-1">Create your first project above to get started</p>
+              <p class="text-muted-foreground mt-1">
+                Create your first project above to get started
+              </p>
             </div>
           </volt-card-content>
         </volt-card>
@@ -173,13 +211,15 @@ export default class ProjectsPage {
     try {
       const project = await this.#projectsService.createProject(
         this.newName(),
-        this.newRepoUrl() || undefined
+        this.newRepoUrl() || undefined,
       );
       this.projects.update((list) => [project, ...list]);
       this.newName.set('');
       this.newRepoUrl.set('');
     } catch (err: unknown) {
-      this.createError.set(err instanceof Error ? err.message : 'Failed to create project');
+      this.createError.set(
+        err instanceof Error ? err.message : 'Failed to create project',
+      );
     } finally {
       this.isCreating.set(false);
     }

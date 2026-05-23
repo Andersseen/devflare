@@ -29,7 +29,7 @@ export class QrGenerator {
         (error: Error | null | undefined) => {
           if (error) reject(error);
           else resolve();
-        }
+        },
       );
     });
   }
@@ -45,7 +45,7 @@ export class QrGenerator {
     ssid: string,
     password: string,
     encryption: 'WPA' | 'WEP' | 'nopass',
-    hidden: boolean
+    hidden: boolean,
   ): string {
     const s = this.#escapeWifi(ssid);
     const p = this.#escapeWifi(password);

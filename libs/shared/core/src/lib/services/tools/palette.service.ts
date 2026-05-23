@@ -5,7 +5,10 @@ declare module 'colorthief' {
   export default class ColorThief {
     constructor();
     getColor(img: HTMLImageElement): [number, number, number];
-    getPalette(img: HTMLImageElement, colorCount?: number): [number, number, number][];
+    getPalette(
+      img: HTMLImageElement,
+      colorCount?: number,
+    ): [number, number, number][];
   }
 }
 
@@ -29,10 +32,16 @@ export class Palette {
   }
 
   rgbToHex(r: number, g: number, b: number): string {
-    return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
+    return (
+      '#' +
+      ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()
+    );
   }
 
-  createCinematicImage(img: HTMLImageElement, colors: ExtractedColor[]): string {
+  createCinematicImage(
+    img: HTMLImageElement,
+    colors: ExtractedColor[],
+  ): string {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     if (!ctx) return '';
@@ -48,7 +57,12 @@ export class Palette {
     const swatchWidth = canvas.width / colors.length;
     colors.forEach((color, index) => {
       ctx.fillStyle = color.hex;
-      ctx.fillRect(index * swatchWidth, img.naturalHeight, swatchWidth, stripHeight);
+      ctx.fillRect(
+        index * swatchWidth,
+        img.naturalHeight,
+        swatchWidth,
+        stripHeight,
+      );
     });
 
     return canvas.toDataURL('image/png');

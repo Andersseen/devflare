@@ -13,14 +13,14 @@ A standalone authentication microservice built with **Hono**, **Better Auth**, a
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| Framework | Hono |
-| Auth | Better Auth |
-| Database | Cloudflare D1 (SQLite) |
-| UI | `@andersseen/web-components` |
-| Layout | `@andersseen/layout` (attribute-driven) |
-| Deploy | Cloudflare Workers |
+| Layer     | Technology                              |
+| --------- | --------------------------------------- |
+| Framework | Hono                                    |
+| Auth      | Better Auth                             |
+| Database  | Cloudflare D1 (SQLite)                  |
+| UI        | `@andersseen/web-components`            |
+| Layout    | `@andersseen/layout` (attribute-driven) |
+| Deploy    | Cloudflare Workers                      |
 
 ## Quick Start
 
@@ -61,14 +61,14 @@ wrangler secret put BETTER_AUTH_SECRET
 
 ## API Endpoints
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/health` | GET | Service health check |
-| `/api/auth/sign-up/email` | POST | Register new user |
-| `/api/auth/sign-in/email` | POST | Sign in |
-| `/api/auth/sign-out` | POST | Sign out |
-| `/api/auth/get-session` | GET | Get current session |
-| `/api/setup/d1` | POST | Create D1 database (setup wizard) |
+| Endpoint                  | Method | Description                       |
+| ------------------------- | ------ | --------------------------------- |
+| `/health`                 | GET    | Service health check              |
+| `/api/auth/sign-up/email` | POST   | Register new user                 |
+| `/api/auth/sign-in/email` | POST   | Sign in                           |
+| `/api/auth/sign-out`      | POST   | Sign out                          |
+| `/api/auth/get-session`   | GET    | Get current session               |
+| `/api/setup/d1`           | POST   | Create D1 database (setup wizard) |
 
 ## Integration with DevFlare
 
@@ -206,6 +206,7 @@ curl -X POST http://localhost:8787/api/auth/sign-up/email \
 ```
 
 Default test credentials:
+
 - **Email**: `test@devflare.com`
 - **Password**: `TestPass123`
 

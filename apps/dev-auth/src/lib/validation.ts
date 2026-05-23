@@ -20,15 +20,27 @@ export function isValidPassword(password: string): boolean {
 /**
  * Returns a user-friendly password strength message.
  */
-export function getPasswordStrength(password: string): { valid: boolean; message?: string } {
+export function getPasswordStrength(password: string): {
+  valid: boolean;
+  message?: string;
+} {
   if (password.length < 8) {
-    return { valid: false, message: 'Password must be at least 8 characters long' };
+    return {
+      valid: false,
+      message: 'Password must be at least 8 characters long',
+    };
   }
   if (!/[a-zA-Z]/.test(password)) {
-    return { valid: false, message: 'Password must contain at least one letter' };
+    return {
+      valid: false,
+      message: 'Password must contain at least one letter',
+    };
   }
   if (!/\d/.test(password)) {
-    return { valid: false, message: 'Password must contain at least one number' };
+    return {
+      valid: false,
+      message: 'Password must contain at least one number',
+    };
   }
   return { valid: true };
 }

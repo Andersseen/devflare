@@ -4,19 +4,19 @@
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Framework | [AnalogJS 2.4](https://analogjs.org) (file-based routing, SSR) |
-| UI Library | [Angular 21](https://angular.dev) · Standalone Components |
-| Components | [@voltui/components](https://volt-ui.andersseen.dev) |
-| Styling | [Tailwind CSS 4](https://tailwindcss.com) |
-| Monorepo | [Nx 22](https://nx.dev) |
-| Auth | [better-auth](https://better-auth.com) + [Hono](https://hono.dev) |
-| Auth DB | [Cloudflare D1](https://developers.cloudflare.com/d1/) (SQLite) |
-| App DB | [db0](https://github.com/unjs/db0) + SQLite |
-| Build | [Vite 7](https://vite.dev) |
-| Testing | [Vitest](https://vitest.dev) + [Playwright](https://playwright.dev) |
-| Package Manager | [pnpm](https://pnpm.io) |
+| Layer           | Technology                                                          |
+| --------------- | ------------------------------------------------------------------- |
+| Framework       | [AnalogJS 2.4](https://analogjs.org) (file-based routing, SSR)      |
+| UI Library      | [Angular 21](https://angular.dev) · Standalone Components           |
+| Components      | [@voltui/components](https://volt-ui.andersseen.dev)                |
+| Styling         | [Tailwind CSS 4](https://tailwindcss.com)                           |
+| Monorepo        | [Nx 22](https://nx.dev)                                             |
+| Auth            | [better-auth](https://better-auth.com) + [Hono](https://hono.dev)   |
+| Auth DB         | [Cloudflare D1](https://developers.cloudflare.com/d1/) (SQLite)     |
+| App DB          | [db0](https://github.com/unjs/db0) + SQLite                         |
+| Build           | [Vite 7](https://vite.dev)                                          |
+| Testing         | [Vitest](https://vitest.dev) + [Playwright](https://playwright.dev) |
+| Package Manager | [pnpm](https://pnpm.io)                                             |
 
 ## Project Structure
 
@@ -86,6 +86,7 @@ pnpm seed:user
 ```
 
 Default test credentials:
+
 - **Email**: `test@devflare.com`
 - **Password**: `TestPass123`
 
@@ -112,17 +113,17 @@ curl http://localhost:8787/api/auth/get-session -b cookies.txt
 
 ## Available Scripts
 
-| Script | Description |
-|--------|-------------|
-| `pnpm dev:auth` | Start auth service (port 8787) |
-| `pnpm dev:app` | Start DevFlare app (port 4200) |
-| `pnpm dev:all` | Start both services together |
-| `pnpm seed:user` | Create test user in auth DB |
-| `pnpm start` | Start DevFlare app only |
-| `pnpm build` | Build DevFlare app |
-| `pnpm test` | Run all tests |
-| `pnpm lint` | Run ESLint |
-| `pnpm typecheck` | Run TypeScript checks |
+| Script           | Description                    |
+| ---------------- | ------------------------------ |
+| `pnpm dev:auth`  | Start auth service (port 8787) |
+| `pnpm dev:app`   | Start DevFlare app (port 4200) |
+| `pnpm dev:all`   | Start both services together   |
+| `pnpm seed:user` | Create test user in auth DB    |
+| `pnpm start`     | Start DevFlare app only        |
+| `pnpm build`     | Build DevFlare app             |
+| `pnpm test`      | Run all tests                  |
+| `pnpm lint`      | Run ESLint                     |
+| `pnpm typecheck` | Run TypeScript checks          |
 
 ## Auth Architecture
 

@@ -21,7 +21,10 @@ export async function getRemoteSession(event: H3Event) {
     }
 
     const data = await response.json();
-    return data as { session?: { id: string; userId: string }; user?: { id: string } } | null;
+    return data as {
+      session?: { id: string; userId: string };
+      user?: { id: string };
+    } | null;
   } catch {
     return null;
   }
