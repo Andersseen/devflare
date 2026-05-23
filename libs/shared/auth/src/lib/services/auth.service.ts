@@ -1,4 +1,10 @@
-import { Injectable, inject, signal, computed, PLATFORM_ID } from '@angular/core';
+import {
+  Injectable,
+  inject,
+  signal,
+  computed,
+  PLATFORM_ID,
+} from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { createClient } from '../client/auth-client';
 import type { AuthUser } from '../types/auth.types';
@@ -37,13 +43,20 @@ export class Auth {
   }
 
   async login(email: string, password: string): Promise<void> {
-    const { data, error } = await this.#client.signIn.email({ email, password });
+    const { data, error } = await this.#client.signIn.email({
+      email,
+      password,
+    });
     if (error) throw new Error(error.message);
     this.#_user.set((data?.user as AuthUser) ?? null);
   }
 
   async register(email: string, password: string, name: string): Promise<void> {
-    const { data, error } = await this.#client.signUp.email({ email, password, name });
+    const { data, error } = await this.#client.signUp.email({
+      email,
+      password,
+      name,
+    });
     if (error) throw new Error(error.message);
     this.#_user.set((data?.user as AuthUser) ?? null);
   }

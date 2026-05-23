@@ -16,10 +16,26 @@
     "test": "nx run-many -t test",
     "lint": "nx run-many -t lint",
     "typecheck": "nx run-many -t typecheck",
+    "dev:auth": "nx serve dev-auth",
+    "dev:app": "nx serve devflare",
+    "dev:all": "concurrently \"pnpm dev:auth\" \"pnpm dev:app\" -k -n AUTH,APP -c blue,green",
+    "seed:user": "npx tsx apps/dev-auth/scripts/seed-test-user.ts",
     "graph": "nx graph",
     "affected:test": "nx affected -t test",
     "affected:lint": "nx affected -t lint",
-    "affected:build": "nx affected -t build"
+    "affected:build": "nx affected -t build",
+    "format:check": "prettier --check .",
+    "format:write": "prettier --write .",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "prepare": "husky || true"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,mjs,cjs,json,html,css,scss,md,yml,yaml}": [
+      "prettier --write"
+    ],
+    "*.{ts,tsx,js,jsx,mjs,cjs}": [
+      "eslint --fix"
+    ]
   },
   "dependencies": {
     "@angular-devkit/build-angular": "21.0.3",
@@ -31,16 +47,19 @@
     "@angular/platform-server": "~21.0.6",
     "@angular/router": "21.0.6",
     "@angular/ssr": "21.0.3",
+    "@better-auth/drizzle-adapter": "^1.6.11",
     "@imgly/background-removal": "^1.7.0",
+    "@sentry/angular": "^10.53.1",
     "@voltui/components": "^0.1.0",
     "@webcontainer/api": "^1.6.1",
-    "better-auth": "^1.6.2",
+    "better-auth": "^1.6.11",
     "better-sqlite3": "^12.8.0",
     "browser-image-compression": "^2.0.2",
     "colorthief": "^2.6.0",
     "db0": "^0.3.4",
     "drizzle-orm": "^0.45.2",
     "front-matter": "^4.0.2",
+    "hono": "^4.12.22",
     "html-to-image": "^1.11.13",
     "lucide-angular": "^0.562.0",
     "marked": "^15.0.7",
@@ -67,6 +86,7 @@
     "@angular/cli": "21.0.3",
     "@angular/compiler-cli": "21.0.6",
     "@angular/language-service": "21.0.6",
+    "@cloudflare/workers-types": "^4.20260523.1",
     "@eslint/js": "^9.8.0",
     "@nx/angular": "22.3.1",
     "@nx/devkit": "22.3.1",
@@ -80,6 +100,7 @@
     "@nx/workspace": "22.3.1",
     "@playwright/test": "^1.36.0",
     "@schematics/angular": "21.0.3",
+    "@sentry/cloudflare": "^10.53.1",
     "@swc-node/register": "~1.9.1",
     "@swc/core": "~1.5.7",
     "@swc/helpers": "~0.5.11",
@@ -93,14 +114,17 @@
     "@vitest/coverage-v8": "4.0.9",
     "@vitest/ui": "4.0.9",
     "angular-eslint": "21.1.0",
+    "concurrently": "^9.2.1",
     "drizzle-kit": "^0.31.10",
     "esbuild": "^0.19.2",
     "eslint": "^9.8.0",
     "eslint-config-prettier": "^10.0.0",
     "eslint-plugin-playwright": "^1.6.2",
+    "husky": "^9.1.7",
     "jiti": "2.4.2",
     "jsdom": "~22.1.0",
     "jsonc-eslint-parser": "^2.1.0",
+    "lint-staged": "^17.0.5",
     "nitropack": "^2.13.3",
     "nx": "22.3.1",
     "postcss": "^8.5.3",
@@ -113,6 +137,7 @@
     "typescript-eslint": "^8.40.0",
     "vite": "^7.0.0",
     "vite-tsconfig-paths": "^4.2.0",
-    "vitest": "4.0.9"
+    "vitest": "4.0.9",
+    "wrangler": "^4.94.0"
   }
 }

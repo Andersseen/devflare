@@ -16,7 +16,10 @@ export function createAuth(options: AuthAdapterOptions) {
   return betterAuth({
     database: options.database,
     baseURL: options.baseURL ?? 'http://localhost:4200',
-    secret: options.secret ?? process.env['BETTER_AUTH_SECRET'] ?? 'change-me-in-production',
+    secret:
+      options.secret ??
+      process.env['BETTER_AUTH_SECRET'] ??
+      'change-me-in-production',
     emailAndPassword: {
       enabled: true,
       minPasswordLength: 8,

@@ -2,37 +2,64 @@
 
 > A modern developer tools platform built with AnalogJS, Angular 21, and an Nx monorepo.
 
+## Quick Start
+
+```bash
+# 1. Install dependencies
+pnpm install
+
+# 2. Copy environment sample and fill in your values
+cp .env.sample .env
+
+# 3. Start both services
+pnpm dev:all
+
+# 4. Seed test user (in another terminal)
+pnpm seed:user
+```
+
+Open http://localhost:4200 and login with:
+
+- Email: `test@devflare.com`
+- Password: `TestPass123`
+
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Framework | [AnalogJS 2.4](https://analogjs.org) (file-based routing, SSR) |
-| UI Library | [Angular 21](https://angular.dev) · Standalone Components |
-| Components | [@voltui/components](https://volt-ui.andersseen.dev) |
-| Styling | [Tailwind CSS 4](https://tailwindcss.com) |
-| Monorepo | [Nx 22](https://nx.dev) |
-| Auth | [better-auth](https://better-auth.com) |
-| Database | [Drizzle ORM](https://orm.drizzle.team) + SQLite |
-| Build | [Vite 7](https://vite.dev) |
-| Testing | [Vitest](https://vitest.dev) + [Playwright](https://playwright.dev) |
-| Package Manager | [pnpm](https://pnpm.io) |
+| Layer           | Technology                                                          |
+| --------------- | ------------------------------------------------------------------- |
+| Framework       | [AnalogJS 2.4](https://analogjs.org) (file-based routing, SSR)      |
+| UI Library      | [Angular 21](https://angular.dev) · Standalone Components           |
+| Components      | [@voltui/components](https://volt-ui.andersseen.dev)                |
+| Styling         | [Tailwind CSS 4](https://tailwindcss.com)                           |
+| Monorepo        | [Nx 22](https://nx.dev)                                             |
+| Auth            | [better-auth](https://better-auth.com) + [Hono](https://hono.dev)   |
+| Auth DB         | [Cloudflare D1](https://developers.cloudflare.com/d1/) (SQLite)     |
+| App DB          | [db0](https://github.com/unjs/db0) + SQLite                         |
+| Build           | [Vite 7](https://vite.dev)                                          |
+| Testing         | [Vitest](https://vitest.dev) + [Playwright](https://playwright.dev) |
+| Package Manager | [pnpm](https://pnpm.io)                                             |
 
 ## Project Structure
 
 ```
 devflare/
 ├── apps/
-│   ├── devflare/          # Main AnalogJS application
+│   ├── devflare/          # Main AnalogJS application (developer tools)
 │   │   └── src/app/
 │   │       ├── pages/     # File-based routes (AnalogJS)
 │   │       ├── components/ # Layout, sidebar
 │   │       └── app.config.ts
-│   ├── devflare-e2e/      # Playwright E2E tests
-│   └── frontend/          # Secondary Angular app
+│   ├── dev-auth/          # Standalone auth microservice (Hono + better-auth + D1)
+│   │   ├── src/
+│   │   │   ├── pages/     # Login, signup, forgot-password UI
+│   │   │   ├── routes/    # API routes
+│   │   │   └── db/        # D1 schema and migrations
+│   │   └── wrangler.toml  # Cloudflare Workers config
+│   └── devflare-e2e/      # Playwright E2E tests
 ├── libs/
 │   ├── deploy/            # Deployment library
 │   └── shared/
-│       ├── auth/          # Auth service (better-auth)
+│       ├── auth/          # Shared auth client (better-auth)
 │       ├── core/          # Guards, interceptors, services
 │       └── ui/            # Shared UI components
 ├── package.json
@@ -49,81 +76,93 @@ devflare/
 npm install -g pnpm
 ```
 
-## Getting Started
+## Quick Start
+
+### Install dependencies
 
 ```bash
-# Install dependencies
 pnpm install
-
-# Start dev server
-pnpm start
-# → http://localhost:5173
 ```
 
-## Scripts
+### Start both services
 
 ```bash
-pnpm start                # Dev server (devflare app)
-pnpm build                # Build for development
-pnpm build:prod           # Build for production
-pnpm test                 # Run all unit tests
-pnpm lint                 # Lint all projects
-pnpm typecheck            # Type check all projects
-pnpm graph                # View Nx dependency graph
-pnpm affected:test        # Test only affected projects
-pnpm affected:lint        # Lint only affected projects
-pnpm affected:build       # Build only affected projects
+# Option 1: Same terminal (with colored output)
+pnpm dev:all
+
+# Option 2: macOS — separate Terminal windows
+./scripts/dev-macos.sh
+
+# Option 3: Manual — separate terminals
+# Terminal 1: pnpm dev:auth   → http://localhost:8787
+# Terminal 2: pnpm dev:app    → http://localhost:4200
 ```
 
-### Individual project commands
+### Create a test user
+
+With the auth service running:
 
 ```bash
-npx nx serve devflare           # Dev server
-npx nx build devflare           # Build
-npx nx test devflare            # Unit tests
-npx nx e2e devflare-e2e         # E2E tests
-npx nx lint devflare            # Lint
-npx nx typecheck devflare       # Type check
+pnpm seed:user
 ```
 
-## Path Aliases
+Default test credentials:
 
-Configured in `tsconfig.base.json`:
+- **Email**: `test@devflare.com`
+- **Password**: `TestPass123`
 
-| Alias | Source |
-|---|---|
-| `@org/ui` | `libs/shared/ui` |
-| `@org/core` | `libs/shared/core` |
-| `@org/auth` | `libs/shared/auth` |
-| `@org/deploy` | `libs/deploy` |
+### Test the full flow
 
-## Features
+1. Open **DevFlare App**: http://localhost:4200
+2. Click **Sign In** in the sidebar
+3. Enter test credentials → you are redirected back to DevFlare
+4. Try creating a **Project** — it will be linked to your authenticated user
 
-- **Image tools** — compression, background removal, palette generation
-- **Web utilities** — OG image generator, QR code generator
-- **Deploy** — project deployment management
-- **Auth** — sign in / sign up via better-auth
-- **Responsive sidebar** — collapsible on desktop, slide-over on mobile (volt-ui)
+### Test the auth service directly
 
-## Architecture
+```bash
+# Login
+curl -X POST http://localhost:8787/api/auth/sign-in/email \
+  -H "Content-Type: application/json" \
+  -H "Origin: http://localhost:8787" \
+  -d '{"email":"test@devflare.com","password":"TestPass123"}' \
+  -c cookies.txt
 
-- **File-based routing** via AnalogJS — pages live in `src/app/pages/`
-- **Standalone components** — no NgModules
-- **Nx module boundaries** — ESLint rules enforce clean dependency graph
-- **Signals** — Angular 21 reactive primitives throughout
-- **Compound UI** — `@voltui/components` replaces custom shared/ui components
+# Get session
+curl http://localhost:8787/api/auth/get-session -b cookies.txt
+```
 
-## Contributing
+## Available Scripts
 
-1. Branch off `main`: `git checkout -b feature/my-feature`
-2. Make changes and run quality checks:
-   ```bash
-   pnpm affected:lint
-   pnpm affected:test
-   pnpm affected:build
-   ```
-3. Open a pull request
+| Script           | Description                    |
+| ---------------- | ------------------------------ |
+| `pnpm dev:auth`  | Start auth service (port 8787) |
+| `pnpm dev:app`   | Start DevFlare app (port 4200) |
+| `pnpm dev:all`   | Start both services together   |
+| `pnpm seed:user` | Create test user in auth DB    |
+| `pnpm start`     | Start DevFlare app only        |
+| `pnpm build`     | Build DevFlare app             |
+| `pnpm test`      | Run all tests                  |
+| `pnpm lint`      | Run ESLint                     |
+| `pnpm typecheck` | Run TypeScript checks          |
+
+## Auth Architecture
+
+DevFlare uses a **standalone auth microservice** (`apps/dev-auth`) that can be deployed independently:
+
+- **Development**: Vite proxies `/api/auth/*` from DevFlare to the auth service
+- **Production**: Both services run on subdomains of the same domain (e.g., `auth.yourdomain.com` + `app.yourdomain.com`)
+
+See `apps/dev-auth/README.md` for deployment instructions.
+
+## Development Guidelines
+
+- **VOLTUI** for UI components in `apps/devflare`
+- **@andersseen/web-components** for auth pages in `apps/dev-auth`
+- AnalogJS file-based routing (`.page.ts` files)
+- Standalone Angular components (no NgModules)
+- Signals over RxJS where possible
 
 ## License
 
-[MIT](LICENSE) © [andersseen](https://github.com/andersseen)
+MIT

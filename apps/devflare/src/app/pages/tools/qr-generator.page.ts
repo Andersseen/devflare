@@ -1,4 +1,11 @@
-import { Component, effect, ElementRef, signal, ViewChild, inject } from '@angular/core';
+import {
+  Component,
+  effect,
+  ElementRef,
+  signal,
+  ViewChild,
+  inject,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { QrGenerator } from '@org/core';
 import { LucideAngularModule } from 'lucide-angular';
@@ -45,7 +52,9 @@ import {
     <div class="space-y-6">
       <div>
         <h1 class="text-3xl font-bold tracking-tight">QR Code Studio</h1>
-        <p class="text-muted-foreground mt-1">Generate custom QR codes for URLs, text, or Wi-Fi networks</p>
+        <p class="text-muted-foreground mt-1">
+          Generate custom QR codes for URLs, text, or Wi-Fi networks
+        </p>
       </div>
 
       <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
@@ -73,11 +82,23 @@ import {
             <volt-tabs-content value="wifi">
               <volt-card>
                 <volt-card-content class="space-y-4">
-                  <volt-input label="Network Name (SSID)" [(value)]="wifiSSID" placeholder="MyHomeWiFi" />
-                  <volt-input label="Password" [(value)]="wifiPassword" placeholder="SecretKey123" />
+                  <volt-input
+                    label="Network Name (SSID)"
+                    [(value)]="wifiSSID"
+                    placeholder="MyHomeWiFi"
+                  />
+                  <volt-input
+                    label="Password"
+                    [(value)]="wifiPassword"
+                    placeholder="SecretKey123"
+                  />
 
                   <div>
-                    <label for="wifiEncryption" class="text-sm font-medium block mb-1">Encryption</label>
+                    <label
+                      for="wifiEncryption"
+                      class="text-sm font-medium block mb-1"
+                      >Encryption</label
+                    >
                     <select
                       id="wifiEncryption"
                       [(ngModel)]="wifiEncryption"
@@ -96,7 +117,9 @@ import {
                       [(ngModel)]="wifiHidden"
                       class="rounded border-border"
                     />
-                    <label for="hiddenWifi" class="text-sm select-none">Hidden Network</label>
+                    <label for="hiddenWifi" class="text-sm select-none"
+                      >Hidden Network</label
+                    >
                   </div>
                 </volt-card-content>
               </volt-card>
@@ -111,16 +134,41 @@ import {
             <volt-card-content>
               <div class="grid grid-cols-3 gap-4">
                 <div>
-                  <label for="fgColor" class="text-sm font-medium block mb-1">Foreground</label>
-                  <input id="fgColor" type="color" [(ngModel)]="fgColor" class="w-full h-10 rounded cursor-pointer">
+                  <label for="fgColor" class="text-sm font-medium block mb-1"
+                    >Foreground</label
+                  >
+                  <input
+                    id="fgColor"
+                    type="color"
+                    [(ngModel)]="fgColor"
+                    class="w-full h-10 rounded cursor-pointer"
+                  />
                 </div>
                 <div>
-                  <label for="bgColor" class="text-sm font-medium block mb-1">Background</label>
-                  <input id="bgColor" type="color" [(ngModel)]="bgColor" class="w-full h-10 rounded cursor-pointer">
+                  <label for="bgColor" class="text-sm font-medium block mb-1"
+                    >Background</label
+                  >
+                  <input
+                    id="bgColor"
+                    type="color"
+                    [(ngModel)]="bgColor"
+                    class="w-full h-10 rounded cursor-pointer"
+                  />
                 </div>
                 <div>
-                  <label for="margin" class="text-sm font-medium block mb-1">Margin: {{ margin() }}</label>
-                  <input id="margin" type="range" min="0" max="10" step="1" [value]="margin()" (change)="margin.set(+$any($event).target.value)" class="w-full">
+                  <label for="margin" class="text-sm font-medium block mb-1"
+                    >Margin: {{ margin() }}</label
+                  >
+                  <input
+                    id="margin"
+                    type="range"
+                    min="0"
+                    max="10"
+                    step="1"
+                    [value]="margin()"
+                    (change)="margin.set(+$any($event).target.value)"
+                    class="w-full"
+                  />
                 </div>
               </div>
             </volt-card-content>
@@ -134,10 +182,16 @@ import {
               <volt-card-title>Preview</volt-card-title>
             </volt-card-header>
             <volt-card-content class="flex flex-col items-center gap-4">
-              <div class="bg-white p-4 rounded-lg border border-border flex items-center justify-center min-h-[280px] w-full">
+              <div
+                class="bg-white p-4 rounded-lg border border-border flex items-center justify-center min-h-[280px] w-full"
+              >
                 <canvas #qrCanvas class="max-w-full"></canvas>
               </div>
-              <volt-button variant="solid" class="w-full" (click)="downloadQR()">
+              <volt-button
+                variant="solid"
+                class="w-full"
+                (click)="downloadQR()"
+              >
                 <lucide-icon name="download" class="w-4 h-4 mr-2" />
                 Download PNG
               </volt-button>
@@ -191,7 +245,7 @@ export default class QrGeneratorPage {
         this.wifiSSID(),
         this.wifiPassword(),
         this.wifiEncryption(),
-        this.wifiHidden()
+        this.wifiHidden(),
       );
     }
 

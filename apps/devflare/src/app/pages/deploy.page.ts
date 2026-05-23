@@ -11,7 +11,15 @@ import {
 } from '@voltui/components';
 import { WebContainer } from '@org/core';
 
-type DeployStep = 'idle' | 'boot' | 'clone' | 'install' | 'build' | 'upload' | 'done' | 'error';
+type DeployStep =
+  | 'idle'
+  | 'boot'
+  | 'clone'
+  | 'install'
+  | 'build'
+  | 'upload'
+  | 'done'
+  | 'error';
 
 @Component({
   selector: 'app-deploy-page',
@@ -31,12 +39,17 @@ type DeployStep = 'idle' | 'boot' | 'clone' | 'install' | 'build' | 'upload' | '
       <div class="text-center space-y-4">
         <h1 class="text-3xl md:text-4xl font-bold">Deploy your project</h1>
         <p class="text-muted-foreground max-w-2xl mx-auto">
-          Import your Git repository and we'll handle the build and deployment pipeline using WebContainers.
+          Import your Git repository and we'll handle the build and deployment
+          pipeline using WebContainers.
         </p>
 
         @if (!isCOOP) {
-          <div class="p-4 text-sm text-yellow-800 bg-yellow-100 rounded-lg" role="alert">
-            <span class="font-medium">Warning!</span> Cross-Origin Isolation is not enabled. WebContainers requires COOP/COEP headers.
+          <div
+            class="p-4 text-sm text-yellow-800 bg-yellow-100 rounded-lg"
+            role="alert"
+          >
+            <span class="font-medium">Warning!</span> Cross-Origin Isolation is
+            not enabled. WebContainers requires COOP/COEP headers.
           </div>
         }
       </div>
@@ -94,10 +107,17 @@ type DeployStep = 'idle' | 'boot' | 'clone' | 'install' | 'build' | 'upload' | '
                       }
                     </div>
                     <div>
-                      <p class="font-medium" [class.text-muted-foreground]="!isStepActive(step.id) && !isStepComplete(step.id)">
+                      <p
+                        class="font-medium"
+                        [class.text-muted-foreground]="
+                          !isStepActive(step.id) && !isStepComplete(step.id)
+                        "
+                      >
                         {{ step.label }}
                       </p>
-                      <p class="text-sm text-muted-foreground">{{ step.description }}</p>
+                      <p class="text-sm text-muted-foreground">
+                        {{ step.description }}
+                      </p>
                     </div>
                   </div>
                 }
@@ -111,7 +131,9 @@ type DeployStep = 'idle' | 'boot' | 'clone' | 'install' | 'build' | 'upload' | '
               <volt-card-title>Build Logs</volt-card-title>
             </volt-card-header>
             <volt-card-content>
-              <div class="bg-black rounded-lg p-4 h-64 overflow-auto font-mono text-sm">
+              <div
+                class="bg-black rounded-lg p-4 h-64 overflow-auto font-mono text-sm"
+              >
                 @for (log of logs(); track $index) {
                   <div class="text-green-400">{{ log }}</div>
                 }
@@ -135,22 +157,52 @@ export default class DeployPage implements OnInit {
   isCOOP = true;
 
   steps = [
-    { id: 'boot', label: 'Boot System', description: 'Initializing WebContainer...', stepNumber: 1 },
-    { id: 'clone', label: 'Clone Repository', description: 'Fetching source code...', stepNumber: 2 },
-    { id: 'install', label: 'Install Dependencies', description: 'Running npm install...', stepNumber: 3 },
-    { id: 'build', label: 'Build Project', description: 'Running build script...', stepNumber: 4 },
-    { id: 'upload', label: 'Upload Assets', description: 'Deploying to storage...', stepNumber: 5 },
+    {
+      id: 'boot',
+      label: 'Boot System',
+      description: 'Initializing WebContainer...',
+      stepNumber: 1,
+    },
+    {
+      id: 'clone',
+      label: 'Clone Repository',
+      description: 'Fetching source code...',
+      stepNumber: 2,
+    },
+    {
+      id: 'install',
+      label: 'Install Dependencies',
+      description: 'Running npm install...',
+      stepNumber: 3,
+    },
+    {
+      id: 'build',
+      label: 'Build Project',
+      description: 'Running build script...',
+      stepNumber: 4,
+    },
+    {
+      id: 'upload',
+      label: 'Upload Assets',
+      description: 'Deploying to storage...',
+      stepNumber: 5,
+    },
   ] as const;
 
   ngOnInit() {
-    this.isCOOP = typeof crossOriginIsolated !== 'undefined' ? crossOriginIsolated : false;
+    this.isCOOP =
+      typeof crossOriginIsolated !== 'undefined' ? crossOriginIsolated : false;
   }
 
   isDeploying = () =>
-    this.currentStep() !== 'idle' && this.currentStep() !== 'done' && this.currentStep() !== 'error';
+    this.currentStep() !== 'idle' &&
+    this.currentStep() !== 'done' &&
+    this.currentStep() !== 'error';
 
   isStepComplete = (stepId: string) => {
-    const currentIndex = this.steps.findIndex((s) => s.id === this.currentStep());
+    const currentIndex = this.steps.findIndex(
+      (s) => s.id === this.currentStep(),
+    );
     const stepIndex = this.steps.findIndex((s) => s.id === stepId);
     return stepIndex < currentIndex || this.currentStep() === 'done';
   };
@@ -189,9 +241,13 @@ export default class DeployPage implements OnInit {
       // Step 3: Install
       this.currentStep.set('install');
       this.addLog('Running npm install...');
-      const exitCode = await this.#webContainer.run('npm', ['install'], (data) => {
-        this.addLog(data.trimEnd());
-      });
+      const exitCode = await this.#webContainer.run(
+        'npm',
+        ['install'],
+        (data) => {
+          this.addLog(data.trimEnd());
+        },
+      );
 
       if (exitCode !== 0) throw new Error('npm install failed');
       this.addLog('✓ Dependencies installed');

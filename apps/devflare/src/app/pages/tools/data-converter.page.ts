@@ -1,16 +1,15 @@
-import { Component, signal, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DataConverter } from '@org/core';
-import { LucideAngularModule } from 'lucide-angular';
 import {
+  VoltButton,
   VoltCard,
+  VoltCardContent,
   VoltCardHeader,
   VoltCardTitle,
-  VoltCardContent,
   VoltTextarea,
-  VoltButton,
-  VoltBadge,
 } from '@voltui/components';
+import { LucideAngularModule } from 'lucide-angular';
 
 @Component({
   selector: 'app-data-converter-page',
@@ -23,13 +22,14 @@ import {
     VoltCardContent,
     VoltTextarea,
     VoltButton,
-    VoltBadge,
   ],
   template: `
     <div class="space-y-6">
       <div>
         <h1 class="text-3xl font-bold tracking-tight">Data Converter</h1>
-        <p class="text-muted-foreground mt-1">Convert between JSON and CSV formats instantly</p>
+        <p class="text-muted-foreground mt-1">
+          Convert between JSON and CSV formats instantly
+        </p>
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
@@ -38,8 +38,12 @@ import {
           <volt-card-header class="flex flex-row items-center justify-between">
             <volt-card-title>JSON</volt-card-title>
             <div class="flex gap-2">
-              <volt-button size="sm" variant="ghost" (click)="prettifyJson()">Prettify</volt-button>
-              <volt-button size="sm" variant="ghost" (click)="clearJson()">Clear</volt-button>
+              <volt-button size="sm" variant="ghost" (click)="prettifyJson()"
+                >Prettify</volt-button
+              >
+              <volt-button size="sm" variant="ghost" (click)="clearJson()"
+                >Clear</volt-button
+              >
             </div>
           </volt-card-header>
           <volt-card-content>
@@ -53,19 +57,35 @@ import {
               [state]="jsonError() ? 'error' : 'default'"
             />
             @if (jsonError()) {
-              <p class="text-xs text-red-500 font-medium mt-2">{{ jsonError() }}</p>
+              <p class="text-xs text-red-500 font-medium mt-2">
+                {{ jsonError() }}
+              </p>
             }
           </volt-card-content>
         </volt-card>
 
         <!-- Controls -->
         <div class="flex lg:flex-col items-center justify-center gap-4 py-2">
-          <volt-button variant="solid" (click)="convertJsonToCsv()" title="JSON → CSV">
-            <lucide-icon name="arrow-right-left" class="w-4 h-4 lg:rotate-0 rotate-90" />
+          <volt-button
+            variant="solid"
+            (click)="convertJsonToCsv()"
+            title="JSON → CSV"
+          >
+            <lucide-icon
+              name="arrow-right-left"
+              class="w-4 h-4 lg:rotate-0 rotate-90"
+            />
             <span class="ml-2 hidden lg:inline">JSON → CSV</span>
           </volt-button>
-          <volt-button variant="outline" (click)="convertCsvToJson()" title="CSV → JSON">
-            <lucide-icon name="arrow-right-left" class="w-4 h-4 lg:rotate-0 rotate-90" />
+          <volt-button
+            variant="outline"
+            (click)="convertCsvToJson()"
+            title="CSV → JSON"
+          >
+            <lucide-icon
+              name="arrow-right-left"
+              class="w-4 h-4 lg:rotate-0 rotate-90"
+            />
             <span class="ml-2 hidden lg:inline">CSV → JSON</span>
           </volt-button>
         </div>
@@ -74,7 +94,9 @@ import {
         <volt-card>
           <volt-card-header class="flex flex-row items-center justify-between">
             <volt-card-title>CSV</volt-card-title>
-            <volt-button size="sm" variant="ghost" (click)="clearCsv()">Clear</volt-button>
+            <volt-button size="sm" variant="ghost" (click)="clearCsv()"
+              >Clear</volt-button
+            >
           </volt-card-header>
           <volt-card-content>
             <volt-textarea
@@ -86,7 +108,9 @@ import {
               [state]="csvError() ? 'error' : 'default'"
             />
             @if (csvError()) {
-              <p class="text-xs text-red-500 font-medium mt-2">{{ csvError() }}</p>
+              <p class="text-xs text-red-500 font-medium mt-2">
+                {{ csvError() }}
+              </p>
             }
           </volt-card-content>
         </volt-card>

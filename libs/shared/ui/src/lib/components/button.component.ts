@@ -26,14 +26,17 @@ export class ButtonComponent {
   type = input<'button' | 'submit' | 'reset'>('button');
   disabled = input<boolean>(false);
   fullWidth = input<boolean>(false);
-  
+
   onClick = output<MouseEvent>();
 
   classes = () => {
     const baseClasses = {
-      primary: 'bg-primary text-primary-foreground hover:bg-primary/90 focus:ring-primary',
-      secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80 focus:ring-secondary',
-      danger: 'bg-destructive text-destructive-foreground hover:bg-destructive/90 focus:ring-destructive',
+      primary:
+        'bg-primary text-primary-foreground hover:bg-primary/90 focus:ring-primary',
+      secondary:
+        'bg-secondary text-secondary-foreground hover:bg-secondary/80 focus:ring-secondary',
+      danger:
+        'bg-destructive text-destructive-foreground hover:bg-destructive/90 focus:ring-destructive',
       ghost: 'hover:bg-accent hover:text-accent-foreground focus:ring-accent',
     };
 

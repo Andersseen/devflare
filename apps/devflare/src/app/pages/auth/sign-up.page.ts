@@ -36,7 +36,9 @@ import { Auth } from '@org/auth';
       <div class="w-full max-w-md">
         <!-- Logo -->
         <div class="flex items-center justify-center gap-2 mb-8">
-          <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+          <div
+            class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center"
+          >
             <span class="text-primary-foreground font-bold text-xl">D</span>
           </div>
           <span class="text-2xl font-bold">DevFlare</span>
@@ -45,7 +47,9 @@ import { Auth } from '@org/auth';
         <volt-card>
           <volt-card-header>
             <volt-card-title>Create an account</volt-card-title>
-            <volt-card-description>Get started with DevFlare</volt-card-description>
+            <volt-card-description
+              >Get started with DevFlare</volt-card-description
+            >
           </volt-card-header>
           <volt-card-content>
             <form class="space-y-4" (submit)="onSubmit($event)">
@@ -102,7 +106,9 @@ import { Auth } from '@org/auth';
 
             <div class="mt-4 text-center text-sm text-muted-foreground">
               Already have an account?
-              <a routerLink="/login" class="text-primary hover:underline">Sign in</a>
+              <a routerLink="/login" class="text-primary hover:underline"
+                >Sign in</a
+              >
             </div>
           </volt-card-content>
         </volt-card>
@@ -129,7 +135,9 @@ export default class SignUpPage {
       await this.#auth.register(this.email(), this.password(), this.name());
       this.#router.navigate(['/']);
     } catch (err: unknown) {
-      this.error.set(err instanceof Error ? err.message : 'Failed to create account');
+      this.error.set(
+        err instanceof Error ? err.message : 'Failed to create account',
+      );
     } finally {
       this.isLoading.set(false);
     }

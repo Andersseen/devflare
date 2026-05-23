@@ -13,7 +13,9 @@ import { SidebarComponent } from './sidebar.component';
 
       <div class="flex flex-1 flex-col min-w-0">
         <!-- Mobile topbar -->
-        <header class="flex h-14 items-center gap-4 border-b border-border px-4 md:hidden">
+        <header
+          class="flex h-14 items-center gap-4 border-b border-border px-4 md:hidden"
+        >
           <button
             (click)="sidebarService.toggleMobile()"
             class="flex items-center justify-center rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"

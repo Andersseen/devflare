@@ -4,12 +4,16 @@ import { resolve } from 'node:path';
 
 function getDbPath(): string {
   const cwd = process.cwd();
-  return cwd.includes('apps/devflare') ? resolve(cwd, '../../data/devflare.db') : resolve(cwd, 'data/devflare.db');
+  return cwd.includes('apps/devflare')
+    ? resolve(cwd, '../../data/devflare.db')
+    : resolve(cwd, 'data/devflare.db');
 }
 
-export const db = createDatabase(sqlite({
-  path: getDbPath(),
-}));
+export const db = createDatabase(
+  sqlite({
+    path: getDbPath(),
+  }),
+);
 
 export async function initDatabase() {
   await db.sql`CREATE TABLE IF NOT EXISTS projects (

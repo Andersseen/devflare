@@ -1,0 +1,74 @@
+name = "dev-auth"
+main = "src/index.ts"
+compatibility_date = "2026-05-23"
+compatibility_flags = ["nodejs_compat"]
+
+# D1 Database binding (override in production with real database_id)
+[[d1_databases]]
+binding = "DB"
+database_name = "dev-auth-db"
+database_id = "local-dev-auth-db"
+migrations_dir = "src/db/migrations"
+
+# KV Namespace for rate limiting (persistent across workers)
+[[kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "local-rate-limit-kv"
+
+# Environment variables
+[vars]
+# These are defaults for local development.
+# Override via wrangler secret for production.
+BETTER_AUTH_URL = "http://localhost:8787"
+
+# Secrets (set via: wrangler secret put BETTER_AUTH_SECRET)
+# BETTER_AUTH_SECRET = "change-me-in-production"
+# GITHUB_CLIENT_SECRET = "your-github-oauth-app-secret"
+
+# D1 Migrations
+[[migrations]]
+tag = "v1"
+new_classes = []
+
+# Build configuration
+[build]
+command = ""
+
+# Production environment overrides
+[env.production]
+name = "dev-auth-prod"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "dev-auth-db-prod"
+# Replace with your real production D1 database ID
+# database_id = "your-production-d1-database-id"
+
+[[env.production.kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+# Replace with your real production KV namespace ID
+# id = "your-production-kv-namespace-id"
+
+[env.production.vars]
+BETTER_AUTH_URL = "https://auth.yourdomain.com"
+# GITHUB_CLIENT_ID = "your-github-oauth-app-id"
+
+# Staging environment
+[env.staging]
+name = "dev-auth-staging"
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "dev-auth-db-staging"
+# Replace with your real staging D1 database ID
+# database_id = "your-staging-d1-database-id"
+
+[[env.staging.kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+# Replace with your real staging KV namespace ID
+# id = "your-staging-kv-namespace-id"
+
+[env.staging.vars]
+BETTER_AUTH_URL = "https://auth-staging.yourdomain.com"
+ENVIRONMENT = "staging"
+# GITHUB_CLIENT_ID = "your-github-oauth-app-id"

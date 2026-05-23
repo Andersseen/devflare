@@ -35,13 +35,15 @@ export class WebContainer {
     if (!this.#instance) {
       throw new Error('WebContainer not initialized');
     }
-    await this.#instance.mount(files as Parameters<WebContainerApi['mount']>[0]);
+    await this.#instance.mount(
+      files as Parameters<WebContainerApi['mount']>[0],
+    );
   }
 
   async run(
     command: string,
     args: string[],
-    onOutput?: (data: string) => void
+    onOutput?: (data: string) => void,
   ): Promise<number> {
     if (!this.#instance) {
       throw new Error('WebContainer not initialized');
@@ -55,7 +57,7 @@ export class WebContainer {
           write(data) {
             onOutput(data);
           },
-        })
+        }),
       );
     }
 
@@ -69,7 +71,10 @@ export class WebContainer {
     return this.#instance.fs.readFile(filePath);
   }
 
-  async writeFile(filePath: string, content: string | Uint8Array): Promise<void> {
+  async writeFile(
+    filePath: string,
+    content: string | Uint8Array,
+  ): Promise<void> {
     if (!this.#instance) {
       throw new Error('WebContainer not initialized');
     }
@@ -93,7 +98,7 @@ export class WebContainer {
               },
             },
             null,
-            2
+            2,
           ),
         },
       },

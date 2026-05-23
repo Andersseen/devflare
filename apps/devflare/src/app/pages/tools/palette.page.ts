@@ -1,4 +1,10 @@
-import { Component, ElementRef, signal, ViewChild, inject } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  signal,
+  ViewChild,
+  inject,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Palette, ExtractedColor } from '@org/core';
 import { LucideAngularModule } from 'lucide-angular';
@@ -29,7 +35,9 @@ import {
     <div class="space-y-6">
       <div>
         <h1 class="text-3xl font-bold tracking-tight">Cinematic Palette</h1>
-        <p class="text-muted-foreground mt-1">Extract dominant colors and create cinematic compositions</p>
+        <p class="text-muted-foreground mt-1">
+          Extract dominant colors and create cinematic compositions
+        </p>
       </div>
 
       @if (!imageSrc()) {
@@ -43,9 +51,20 @@ import {
           (keydown.enter)="fileInput.click()"
           (keydown.space)="fileInput.click()"
         >
-          <input #fileInput type="file" accept="image/*" class="hidden" (change)="onFileSelected($event)">
-          <lucide-icon name="palette" class="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <p class="text-lg text-muted-foreground">Drag & drop an image here, or click to select</p>
+          <input
+            #fileInput
+            type="file"
+            accept="image/*"
+            class="hidden"
+            (change)="onFileSelected($event)"
+          />
+          <lucide-icon
+            name="palette"
+            class="w-12 h-12 text-muted-foreground mx-auto mb-4"
+          />
+          <p class="text-lg text-muted-foreground">
+            Drag & drop an image here, or click to select
+          </p>
         </div>
       } @else {
         <div class="space-y-6">
@@ -58,7 +77,12 @@ import {
               (load)="extractColors()"
               alt="Source"
             />
-            <volt-button size="sm" variant="destructive" class="absolute top-2 right-2" (click)="reset()">
+            <volt-button
+              size="sm"
+              variant="destructive"
+              class="absolute top-2 right-2"
+              (click)="reset()"
+            >
               <lucide-icon name="x" class="w-4 h-4 mr-1" />
               Clear
             </volt-button>
@@ -87,7 +111,9 @@ import {
                 </div>
                 <div class="flex gap-2 flex-wrap">
                   @for (color of extractedColors(); track color.hex) {
-                    <code class="bg-muted px-2 py-1 rounded text-sm">{{ color.hex }}</code>
+                    <code class="bg-muted px-2 py-1 rounded text-sm">{{
+                      color.hex
+                    }}</code>
                   }
                 </div>
               </volt-card-content>
@@ -96,8 +122,14 @@ import {
 
           <!-- Controls -->
           <volt-card>
-            <volt-card-content class="flex flex-col sm:flex-row gap-4 items-center">
-              <label for="paletteCount" class="text-sm font-medium whitespace-nowrap">Colors to extract:</label>
+            <volt-card-content
+              class="flex flex-col sm:flex-row gap-4 items-center"
+            >
+              <label
+                for="paletteCount"
+                class="text-sm font-medium whitespace-nowrap"
+                >Colors to extract:</label
+              >
               <input
                 id="paletteCount"
                 type="range"
@@ -107,11 +139,17 @@ import {
                 (input)="updatePaletteCount(+$any($event).target.value)"
                 class="flex-1 w-full"
               />
-              <span class="text-sm text-muted-foreground w-6">{{ paletteCount() }}</span>
+              <span class="text-sm text-muted-foreground w-6">{{
+                paletteCount()
+              }}</span>
             </volt-card-content>
           </volt-card>
 
-          <volt-button variant="solid" (click)="downloadCinematicImage()" [disabled]="extractedColors().length === 0">
+          <volt-button
+            variant="solid"
+            (click)="downloadCinematicImage()"
+            [disabled]="extractedColors().length === 0"
+          >
             <lucide-icon name="download" class="w-4 h-4 mr-2" />
             Download Cinematic Image
           </volt-button>
@@ -158,7 +196,10 @@ export default class PalettePage {
     if (!img.complete) return;
 
     try {
-      const colors = this.#paletteService.extractColors(img, this.paletteCount() || 5);
+      const colors = this.#paletteService.extractColors(
+        img,
+        this.paletteCount() || 5,
+      );
       this.extractedColors.set(colors);
     } catch (e) {
       console.error('Error extracting colors', e);
@@ -182,7 +223,10 @@ export default class PalettePage {
   downloadCinematicImage() {
     if (!this.imageSrc() || this.extractedColors().length === 0) return;
     const img = this.sourceImageRef.nativeElement;
-    const dataUrl = this.#paletteService.createCinematicImage(img, this.extractedColors());
+    const dataUrl = this.#paletteService.createCinematicImage(
+      img,
+      this.extractedColors(),
+    );
     if (dataUrl) {
       const link = document.createElement('a');
       link.download = `cinematic-palette-${Date.now()}.png`;
