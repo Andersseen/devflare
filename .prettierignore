@@ -7,3 +7,6 @@
 .wrangler
 node_modules
 pnpm-lock.yaml
+.env.sample
+.env.example
+.dev.vars

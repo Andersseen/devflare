@@ -17,6 +17,22 @@ export function createAuth(env: Env) {
     emailAndPassword: {
       enabled: true,
       minPasswordLength: 8,
+      requireEmailVerification: true,
+    },
+    emailVerification: {
+      sendOnSignUp: true,
+      autoSignInAfterVerification: true,
+      sendVerificationEmail: async ({ user, url }) => {
+        // In production, integrate with Resend/SendGrid/AWS SES
+        // For now, log the verification URL in development
+        console.log(`[Email] Verification for ${user.email}: ${url}`);
+      },
+    },
+    socialProviders: {
+      github: {
+        clientId: env.GITHUB_CLIENT_ID || '',
+        clientSecret: env.GITHUB_CLIENT_SECRET || '',
+      },
     },
     session: {
       cookieCache: {

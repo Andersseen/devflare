@@ -23,6 +23,7 @@ BETTER_AUTH_URL = "http://localhost:8787"
 
 # Secrets (set via: wrangler secret put BETTER_AUTH_SECRET)
 # BETTER_AUTH_SECRET = "change-me-in-production"
+# GITHUB_CLIENT_SECRET = "your-github-oauth-app-secret"
 
 # D1 Migrations
 [[migrations]]
@@ -50,6 +51,7 @@ binding = "RATE_LIMIT_KV"
 
 [env.production.vars]
 BETTER_AUTH_URL = "https://auth.yourdomain.com"
+# GITHUB_CLIENT_ID = "your-github-oauth-app-id"
 
 # Staging environment
 [env.staging]
@@ -69,3 +71,4 @@ binding = "RATE_LIMIT_KV"
 [env.staging.vars]
 BETTER_AUTH_URL = "https://auth-staging.yourdomain.com"
 ENVIRONMENT = "staging"
+# GITHUB_CLIENT_ID = "your-github-oauth-app-id"

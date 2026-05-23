@@ -5,11 +5,14 @@ import { createRateLimitMiddleware } from './middleware/rate-limit';
 import { securityHeaders } from './middleware/security-headers';
 import authRoutes from './routes/auth';
 import setupRoutes from './routes/setup';
+import adminRoutes from './routes/admin';
+import analyticsRoutes from './routes/analytics';
 import { renderLoginPage } from './pages/login';
 import { renderSignupPage } from './pages/signup';
 import { renderForgotPage } from './pages/forgot';
 import { renderSetupPage } from './pages/setup';
 import { renderNotFoundPage } from './pages/not-found';
+import { renderVerifyPage } from './pages/verify';
 
 export interface Env {
   DB: D1Database;
@@ -20,6 +23,9 @@ export interface Env {
   RATE_LIMIT_KV?: KVNamespace;
   ENVIRONMENT?: string;
   SENTRY_DSN?: string;
+  ADMIN_SECRET?: string;
+  GITHUB_CLIENT_ID?: string;
+  GITHUB_CLIENT_SECRET?: string;
 }
 
 const app = new Hono<{ Bindings: Env }>();
@@ -62,6 +68,12 @@ app.route('/api/auth', authRoutes);
 // Setup API — disabled in production
 app.route('/api/setup', setupRoutes);
 
+// Admin API — protected by secret token
+app.route('/api/admin', adminRoutes);
+
+// Analytics API
+app.route('/api/analytics', analyticsRoutes);
+
 // Auth pages
 app.get('/login', (c) => {
   return c.html(renderLoginPage());
@@ -78,6 +90,12 @@ app.get('/forgot', (c) => {
 // Setup page
 app.get('/setup', (c) => {
   return c.html(renderSetupPage());
+});
+
+// Email verification page
+app.get('/verify', (c) => {
+  const error = c.req.query('error');
+  return c.html(renderVerifyPage(error || undefined));
 });
 
 // Root — redirect to login

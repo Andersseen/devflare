@@ -2,6 +2,27 @@
 
 > A modern developer tools platform built with AnalogJS, Angular 21, and an Nx monorepo.
 
+## Quick Start
+
+```bash
+# 1. Install dependencies
+pnpm install
+
+# 2. Copy environment sample and fill in your values
+cp .env.sample .env
+
+# 3. Start both services
+pnpm dev:all
+
+# 4. Seed test user (in another terminal)
+pnpm seed:user
+```
+
+Open http://localhost:4200 and login with:
+
+- Email: `test@devflare.com`
+- Password: `TestPass123`
+
 ## Tech Stack
 
 | Layer           | Technology                                                          |

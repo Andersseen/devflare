@@ -145,7 +145,64 @@ curl -X POST https://auth.yourdomain.com/api/auth/sign-in/email \
   -d '{"email":"test@devflare.com","password":"TestPass123"}'
 ```
 
-## 7. Security Checklist
+## 7. Optional Features
+
+### GitHub OAuth
+
+1. Create a GitHub OAuth App: https://github.com/settings/applications/new
+2. Set Authorization callback URL to: `https://auth.yourdomain.com/api/auth/callback/github`
+3. Set secrets:
+   ```bash
+   npx wrangler secret put GITHUB_CLIENT_ID --env production
+   npx wrangler secret put GITHUB_CLIENT_SECRET --env production
+   ```
+
+### Email Verification
+
+Email verification is enabled by default. In production, integrate with Resend:
+
+```bash
+pnpm add resend
+```
+
+Update `auth.config.ts`:
+
+```ts
+import { Resend } from 'resend';
+
+emailVerification: {
+  sendVerificationEmail: async ({ user, url }) => {
+    const resend = new Resend(env.RESEND_API_KEY);
+    await resend.emails.send({
+      from: 'auth@yourdomain.com',
+      to: user.email,
+      subject: 'Verify your email',
+      html: `<a href="${url}">Verify email</a>`,
+    });
+  },
+},
+```
+
+### Analytics
+
+Track events from the frontend:
+
+```ts
+fetch('/api/analytics/event', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ event: 'page_view', path: '/projects' }),
+});
+```
+
+View events (admin only):
+
+```bash
+curl -H "Authorization: Bearer $ADMIN_SECRET" \
+  https://auth.yourdomain.com/api/analytics/events
+```
+
+## 8. Security Checklist
 
 - [ ] `BETTER_AUTH_SECRET` is a strong random string (32+ chars)
 - [ ] `BETTER_AUTH_URL` points to HTTPS domain (not localhost)
@@ -155,6 +212,8 @@ curl -X POST https://auth.yourdomain.com/api/auth/sign-in/email \
 - [ ] KV namespace is created for rate limiting
 - [ ] `/api/setup/*` endpoints return 403 in production
 - [ ] `ENVIRONMENT=production` is set
+- [ ] `ADMIN_SECRET` is set for protected endpoints
+- [ ] GitHub secrets are set (if using OAuth)
 
 ## Troubleshooting
 
