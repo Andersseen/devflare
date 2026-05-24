@@ -27,12 +27,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Enable pnpm via corepack (Node 20+)
-      - run: corepack enable
+      # Install pnpm (pinned version, compatible with Node 20/22)
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'pnpm'
 
       - run: pnpm install --frozen-lockfile
