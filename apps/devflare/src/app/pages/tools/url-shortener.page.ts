@@ -11,12 +11,9 @@ import { UrlShortener, HistoryItem } from '@org/core';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   VoltCard,
-  VoltCardHeader,
-  VoltCardTitle,
   VoltCardContent,
   VoltInput,
   VoltButton,
-  VoltBadge,
 } from '@voltui/components';
 
 @Component({
@@ -25,12 +22,9 @@ import {
     FormsModule,
     LucideAngularModule,
     VoltCard,
-    VoltCardHeader,
-    VoltCardTitle,
     VoltCardContent,
     VoltInput,
     VoltButton,
-    VoltBadge,
   ],
   template: `
     <div class="space-y-6 max-w-3xl mx-auto">

@@ -1,5 +1,4 @@
 import { Component, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   VoltCard,
@@ -18,7 +17,6 @@ import { Projects, type Project } from '@org/core';
 @Component({
   selector: 'app-projects-page',
   imports: [
-    RouterLink,
     LucideAngularModule,
     VoltCard,
     VoltCardHeader,

@@ -9,7 +9,6 @@ import {
   VoltCardContent,
   VoltButton,
   VoltBadge,
-  VoltSlider,
 } from '@voltui/components';
 
 @Component({
@@ -23,7 +22,6 @@ import {
     VoltCardContent,
     VoltButton,
     VoltBadge,
-    VoltSlider,
   ],
   template: `
     <div class="space-y-6">
@@ -175,8 +173,8 @@ import {
                   >
                   <select
                     id="format"
-                    [(ngModel)]="format"
-                    (change)="processImage()"
+                    [ngModel]="format()"
+                    (ngModelChange)="format.set($event); processImage()"
                     class="w-full h-10 rounded-md border border-border bg-background px-3 text-sm"
                   >
                     <option value="image/jpeg">JPEG</option>

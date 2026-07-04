@@ -118,7 +118,8 @@ import {
                   <input
                     id="backgroundColor"
                     type="color"
-                    [(ngModel)]="backgroundColor"
+                    [ngModel]="backgroundColor()"
+                    (ngModelChange)="backgroundColor.set($event)"
                     class="w-full h-10 rounded cursor-pointer"
                   />
                 </div>
@@ -129,7 +130,8 @@ import {
                   <input
                     id="themeColor"
                     type="color"
-                    [(ngModel)]="themeColor"
+                    [ngModel]="themeColor()"
+                    (ngModelChange)="themeColor.set($event)"
                     class="w-full h-10 rounded cursor-pointer"
                   />
                 </div>

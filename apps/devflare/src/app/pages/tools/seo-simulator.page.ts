@@ -4,8 +4,6 @@ import { SeoSimulator } from '@org/core';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   VoltCard,
-  VoltCardHeader,
-  VoltCardTitle,
   VoltCardContent,
   VoltInput,
   VoltTextarea,
@@ -22,8 +20,6 @@ import {
     FormsModule,
     LucideAngularModule,
     VoltCard,
-    VoltCardHeader,
-    VoltCardTitle,
     VoltCardContent,
     VoltInput,
     VoltTextarea,

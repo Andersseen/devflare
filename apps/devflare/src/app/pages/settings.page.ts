@@ -1,6 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   VoltCard,
@@ -26,7 +25,6 @@ const BIO_STORAGE_KEY = 'devflare_user_bio';
   selector: 'app-settings-page',
   imports: [
     FormsModule,
-    RouterLink,
     LucideAngularModule,
     VoltCard,
     VoltCardHeader,
