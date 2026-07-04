@@ -10,8 +10,6 @@ import { ScreenRecorder } from '@org/core';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   VoltCard,
-  VoltCardHeader,
-  VoltCardTitle,
   VoltCardContent,
   VoltButton,
   VoltSwitch,
@@ -24,8 +22,6 @@ import {
     FormsModule,
     LucideAngularModule,
     VoltCard,
-    VoltCardHeader,
-    VoltCardTitle,
     VoltCardContent,
     VoltButton,
     VoltSwitch,

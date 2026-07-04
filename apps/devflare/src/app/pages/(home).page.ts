@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
-import { VoltCard, VoltCardContent, VoltBadge } from '@voltui/components';
+import { VoltCard, VoltCardContent } from '@voltui/components';
 import { Auth } from '@org/auth';
 
 interface Tool {
@@ -15,13 +15,7 @@ interface Tool {
 
 @Component({
   selector: 'app-home-page',
-  imports: [
-    RouterLink,
-    LucideAngularModule,
-    VoltCard,
-    VoltCardContent,
-    VoltBadge,
-  ],
+  imports: [RouterLink, LucideAngularModule, VoltCard, VoltCardContent],
   template: `
     <div class="space-y-10">
       <!-- Hero -->

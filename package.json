@@ -50,7 +50,7 @@
     "@better-auth/drizzle-adapter": "^1.6.11",
     "@imgly/background-removal": "^1.7.0",
     "@sentry/angular": "^10.53.1",
-    "@voltui/components": "^0.1.0",
+    "@voltui/components": "^0.5.0",
     "@webcontainer/api": "^1.6.1",
     "better-auth": "^1.6.11",
     "better-sqlite3": "^12.8.0",
@@ -71,8 +71,7 @@
     "prismjs": "^1.29.0",
     "qrcode": "^1.5.4",
     "rxjs": "~7.8.0",
-    "tslib": "^2.3.0",
-    "zone.js": "0.16.0"
+    "tslib": "^2.3.0"
   },
   "devDependencies": {
     "@analogjs/content": "^2.4.5",

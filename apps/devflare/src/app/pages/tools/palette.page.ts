@@ -14,8 +14,6 @@ import {
   VoltCardTitle,
   VoltCardContent,
   VoltButton,
-  VoltSlider,
-  VoltBadge,
 } from '@voltui/components';
 
 @Component({
@@ -28,8 +26,6 @@ import {
     VoltCardTitle,
     VoltCardContent,
     VoltButton,
-    VoltSlider,
-    VoltBadge,
   ],
   template: `
     <div class="space-y-6">

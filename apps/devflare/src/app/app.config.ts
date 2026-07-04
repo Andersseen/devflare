@@ -1,6 +1,7 @@
 import {
   ApplicationConfig,
   provideZonelessChangeDetection,
+  provideBrowserGlobalErrorListeners,
   ErrorHandler,
 } from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
@@ -67,6 +68,7 @@ if (typeof window !== 'undefined') {
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZonelessChangeDetection(),
+    provideBrowserGlobalErrorListeners(),
     provideRouter(appRoutes, withComponentInputBinding()),
     provideHttpClient(),
     {

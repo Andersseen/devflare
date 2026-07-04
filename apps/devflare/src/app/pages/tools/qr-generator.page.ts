@@ -21,10 +21,6 @@ import {
   VoltTabsList,
   VoltTabsTrigger,
   VoltTabsContent,
-  VoltSelect,
-  VoltSelectItem,
-  VoltSelectContent,
-  VoltSwitch,
 } from '@voltui/components';
 
 @Component({
@@ -43,10 +39,6 @@ import {
     VoltTabsList,
     VoltTabsTrigger,
     VoltTabsContent,
-    VoltSelect,
-    VoltSelectItem,
-    VoltSelectContent,
-    VoltSwitch,
   ],
   template: `
     <div class="space-y-6">
@@ -101,7 +93,8 @@ import {
                     >
                     <select
                       id="wifiEncryption"
-                      [(ngModel)]="wifiEncryption"
+                      [ngModel]="wifiEncryption()"
+                      (ngModelChange)="wifiEncryption.set($event)"
                       class="w-full h-10 rounded-md border border-border bg-background px-3 text-sm"
                     >
                       <option value="WPA">WPA/WPA2/WPA3</option>
@@ -114,7 +107,8 @@ import {
                     <input
                       type="checkbox"
                       id="hiddenWifi"
-                      [(ngModel)]="wifiHidden"
+                      [ngModel]="wifiHidden()"
+                      (ngModelChange)="wifiHidden.set($event)"
                       class="rounded border-border"
                     />
                     <label for="hiddenWifi" class="text-sm select-none"
@@ -140,7 +134,8 @@ import {
                   <input
                     id="fgColor"
                     type="color"
-                    [(ngModel)]="fgColor"
+                    [ngModel]="fgColor()"
+                    (ngModelChange)="fgColor.set($event)"
                     class="w-full h-10 rounded cursor-pointer"
                   />
                 </div>
@@ -151,7 +146,8 @@ import {
                   <input
                     id="bgColor"
                     type="color"
-                    [(ngModel)]="bgColor"
+                    [ngModel]="bgColor()"
+                    (ngModelChange)="bgColor.set($event)"
                     class="w-full h-10 rounded cursor-pointer"
                   />
                 </div>
