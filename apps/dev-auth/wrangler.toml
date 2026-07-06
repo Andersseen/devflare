@@ -32,7 +32,7 @@ new_classes = []
 
 # Build configuration
 [build]
-command = ""
+command = "node scripts/compile-flow.mjs"
 
 # Production environment overrides
 [env.production]

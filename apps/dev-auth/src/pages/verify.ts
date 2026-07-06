@@ -1,36 +1,5 @@
-export function renderVerifyPage(error?: string): string {
-  const errorHtml = error
-    ? `<div style="color:#ef4444;margin-bottom:1rem;text-align:center">${error}</div>`
-    : '';
+import { render as renderVerifyBody } from './verify.flow.js';
 
-  return `<!DOCTYPE html>
-<html lang="en" data-color="devflare">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verify Email — DevFlare Auth</title>
-    <link rel="stylesheet" href="https://unpkg.com/@andersseen/web-components@latest/dist/and-web-components/and-web-components.css">
-    <script type="module" src="https://unpkg.com/@andersseen/web-components@latest/dist/and-web-components/and-web-components.esm.js"></script>
-    <script src="https://unpkg.com/@andersseen/icon@latest" type="module"></script>
-    <style>
-      body { font-family: system-ui, -apple-system, sans-serif; margin: 0; min-height: 100vh; }
-    </style>
-  </head>
-  <body and-layout="vertical justify:center align:center gap:lg" style="min-height:100vh;background:hsl(var(--background))">
-    <div and-layout="horizontal gap:sm align:center">
-      <and-icon name="mail" size="24"></and-icon>
-      <span and-text="h6 weight:bold color:foreground">DevFlare Auth</span>
-    </div>
-    <and-card variant="elevated" padded and-motion="fade-in slide-in-up" and-motion-trigger="enter">
-      <h1 and-text="h4 align:center color:foreground">Verify your email</h1>
-      <p and-text="p-sm align:center color:muted">Please check your inbox and click the verification link.</p>
-      ${errorHtml}
-      <div and-layout="vertical gap:sm">
-        <p and-text="p-sm align:center color:muted">
-          Didn't receive it? <a href="/login">Try logging in</a> to resend.
-        </p>
-      </div>
-    </and-card>
-  </body>
-</html>`;
+export function renderVerifyPage(error?: string): string {
+  return renderVerifyBody({ error });
 }

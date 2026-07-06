@@ -45,6 +45,26 @@ wrangler dev --local
 
 The service will be available at `http://localhost:8787`.
 
+### Flowmark templates
+
+Auth pages live in `src/pages/*.flow` and are precompiled to `.flow.js` by the
+`[build] command` in `wrangler.toml`.
+
+```bash
+# One-shot compilation (also run automatically by wrangler deploy/build)
+pnpm build:flow
+
+# Watch mode — recompile .flow files as you edit them.
+# Run this in a separate terminal alongside `wrangler dev`.
+pnpm watch:flow
+```
+
+> ⚠️ **Temporary limitation (until Phase 4)**: the build requires the
+> `flowmark` binary available on this machine. Install it from the flowmark
+> repo with `cargo install --path crates/flowmark-cli`.
+>
+> Generated `.flow.js` files import `@flowview/runtime`.
+
 ### Environment Variables
 
 Create `apps/dev-auth/.dev.vars` for local secrets:
