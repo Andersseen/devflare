@@ -1,0 +1,28 @@
+import { describe, it, expect, beforeEach } from 'vitest';
+import { __CLASS_NAME__ } from './__SLUG__.service';
+
+describe('__CLASS_NAME__', () => {
+  let service: __CLASS_NAME__;
+
+  // The service has no Angular dependencies, so plain instantiation is enough.
+  // Use TestBed only if it starts injecting something.
+  beforeEach(() => {
+    service = new __CLASS_NAME__();
+  });
+
+  describe('run', () => {
+    it('transforms valid input', () => {
+      const result = service.run({ input: 'example' });
+      expect(result.output).toBe('example');
+    });
+
+    it('throws a readable error on empty input', () => {
+      expect(() => service.run({ input: '   ' })).toThrow('Input is empty');
+    });
+
+    it('throws on malformed input', () => {
+      // TODO: replace with the tool's real failure mode
+      expect(() => service.run({ input: '' })).toThrow();
+    });
+  });
+});

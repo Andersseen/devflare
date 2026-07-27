@@ -1,0 +1,43 @@
+import { Injectable } from '@angular/core';
+
+export interface __CLASS_NAME__Options {
+  // Tool inputs the page passes in. Keep primitives; pass DOM elements
+  // (canvas, File, Blob) as separate arguments rather than storing them.
+  input: string;
+}
+
+export interface __CLASS_NAME__Result {
+  output: string;
+}
+
+@Injectable({
+  providedIn: 'root',
+})
+export class __CLASS_NAME__ {
+  /**
+   * Core transformation. Runs entirely in the browser — no network calls.
+   * Throw a plain Error with a user-readable message on invalid input; the
+   * page catches it and renders the message.
+   */
+  run(options: __CLASS_NAME__Options): __CLASS_NAME__Result {
+    if (!options.input.trim()) {
+      throw new Error('Input is empty');
+    }
+
+    // TODO: implement
+    return { output: options.input };
+  }
+
+  /**
+   * Optional download helper — mirrors QrGenerator.downloadQR.
+   */
+  download(content: string, filename: string, mime = 'text/plain'): void {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = filename;
+    link.href = url;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+}

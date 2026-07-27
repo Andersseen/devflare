@@ -1,0 +1,120 @@
+import { Component, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { __CLASS_NAME__ } from '@org/core';
+import { LucideAngularModule } from 'lucide-angular';
+import {
+  VoltCard,
+  VoltCardHeader,
+  VoltCardTitle,
+  VoltCardContent,
+  VoltButton,
+  VoltTextarea,
+} from '@voltui/components';
+
+@Component({
+  selector: 'app-__SLUG__-page',
+  imports: [
+    FormsModule,
+    LucideAngularModule,
+    VoltCard,
+    VoltCardHeader,
+    VoltCardTitle,
+    VoltCardContent,
+    VoltButton,
+    VoltTextarea,
+  ],
+  template: `
+    <div class="space-y-6">
+      <div>
+        <h1 class="text-3xl font-bold tracking-tight">__TITLE__</h1>
+        <p class="text-muted-foreground mt-1">__DESCRIPTION__</p>
+      </div>
+
+      <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <!-- Controls -->
+        <div class="space-y-4">
+          <volt-card>
+            <volt-card-header>
+              <volt-card-title>Input</volt-card-title>
+            </volt-card-header>
+            <volt-card-content class="space-y-4">
+              <volt-textarea
+                [(value)]="input"
+                placeholder="Paste your input here…"
+                rows="10"
+              />
+
+              <div class="flex gap-2">
+                <volt-button (click)="run()" [disabled]="!input().trim()">
+                  <lucide-icon name="play" class="w-4 h-4 mr-2" />
+                  Run
+                </volt-button>
+                <volt-button variant="outline" (click)="reset()">
+                  Reset
+                </volt-button>
+              </div>
+
+              @if (error()) {
+                <p class="text-sm text-destructive">{{ error() }}</p>
+              }
+            </volt-card-content>
+          </volt-card>
+        </div>
+
+        <!-- Output -->
+        <div class="space-y-4">
+          <volt-card>
+            <volt-card-header>
+              <volt-card-title>Result</volt-card-title>
+            </volt-card-header>
+            <volt-card-content class="space-y-4">
+              @if (output()) {
+                <pre
+                  class="text-sm overflow-x-auto rounded-md bg-muted p-4"
+                >{{ output() }}</pre>
+                <volt-button variant="outline" (click)="download()">
+                  <lucide-icon name="download" class="w-4 h-4 mr-2" />
+                  Download
+                </volt-button>
+              } @else {
+                <p class="text-muted-foreground text-sm">
+                  Run the tool to see the result.
+                </p>
+              }
+            </volt-card-content>
+          </volt-card>
+        </div>
+      </div>
+    </div>
+  `,
+})
+export default class __PASCAL__Page {
+  #__CAMEL__ = inject(__CLASS_NAME__);
+
+  input = signal('');
+  output = signal('');
+  error = signal('');
+
+  hasResult = computed(() => this.output().length > 0);
+
+  run(): void {
+    this.error.set('');
+    try {
+      const result = this.#__CAMEL__.run({ input: this.input() });
+      this.output.set(result.output);
+    } catch (e) {
+      this.output.set('');
+      this.error.set(e instanceof Error ? e.message : 'Something went wrong');
+    }
+  }
+
+  reset(): void {
+    this.input.set('');
+    this.output.set('');
+    this.error.set('');
+  }
+
+  download(): void {
+    this.#__CAMEL__.download(this.output(), '__SLUG__.txt');
+  }
+}

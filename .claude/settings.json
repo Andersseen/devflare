@@ -1,0 +1,51 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx ng:*)",
+      "Bash(mkdir -p /Users/andriipap/Andersseen/Web/Projects/volt-ui/projects/volt/src/lib/sidebar)",
+      "Bash(cp /Users/andriipap/Andersseen/Web/Projects/volt-ui/src/app/layout/sidebar/sidebar.ts /Users/andriipap/Andersseen/Web/Projects/volt-ui/projects/volt/src/lib/sidebar/sidebar.ts)",
+      "Bash(cp /Users/andriipap/Andersseen/Web/Projects/volt-ui/src/app/layout/sidebar/sidebar.service.ts /Users/andriipap/Andersseen/Web/Projects/volt-ui/projects/volt/src/lib/sidebar/sidebar.service.ts)",
+      "Bash(mkdir -p components layouts/sidebar)",
+      "Bash(mv accordion:*)",
+      "Bash(cp /Users/andriipap/Andersseen/Web/Projects/volt-ui/src/app/layout/sidebar/sidebar.ts /Users/andriipap/Andersseen/Web/Projects/volt-ui/projects/volt/src/lib/layouts/sidebar/sidebar.ts)",
+      "Bash(cp /Users/andriipap/Andersseen/Web/Projects/volt-ui/src/app/layout/sidebar/sidebar.service.ts /Users/andriipap/Andersseen/Web/Projects/volt-ui/projects/volt/src/lib/layouts/sidebar/sidebar.service.ts)",
+      "Bash(rm -rf /Users/andriipap/Andersseen/Web/Projects/volt-ui/projects/volt/src/lib/sidebar)",
+      "Bash(cat /Users/andriipap/Andersseen/Web/Projects/volt-ui/projects/volt/src/lib/components/tooltip/*.ts)",
+      "Bash(cat /Users/andriipap/Andersseen/Web/Projects/volt-ui/projects/volt/src/lib/components/dialog/*.ts)",
+      "Bash(ls *.config.* tsconfig*)",
+      "Bash(pnpm nx:*)",
+      "Read(//Users/andriipap/Andersseen/Web/Projects/volt-ui/projects/volt/src/**)",
+      "Read(//Users/andriipap/Andersseen/Web/Projects/volt-ui/projects/volt/**)",
+      "WebFetch(domain:volt-ui.pages.dev)",
+      "WebFetch(domain:volt-ui.andersseen.dev)",
+      "Bash(ls /Users/andriipap/Andersseen/Web/Projects/devflare/*.md)",
+      "Bash(ls /Users/andriipap/Andersseen/Web/Projects/devflare/README*)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d.get\\('npmScope',''\\), d.get\\('workspaceLayout',''\\)\\)\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({k:d.get\\(k\\) for k in ['name','tags','targets']}, indent=2\\)\\)\")"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/block-protected-edits.sh\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/compile-flow.sh\""
+          }
+        ]
+      }
+    ]
+  }
+}
