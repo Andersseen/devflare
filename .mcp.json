@@ -11,8 +11,13 @@
       "args": ["nx", "mcp"]
     },
     "volt-ui": {
-      "type": "url",
+      "type": "http",
       "url": "https://volt-ui.pages.dev/api/mcp"
+    },
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"]
     },
     "ngp-mcp": {
       "type": "stdio",
