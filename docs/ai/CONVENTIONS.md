@@ -45,8 +45,10 @@
 ## dev-auth (apps/dev-auth)
 
 - Page HTML lives in `.flow` templates; the compiled `.flow.js` is **generated —
-  never edit it** (`*.flow.js` is gitignored in `apps/dev-auth/.gitignore`).
-  After editing a `.flow`, run `pnpm --filter @devflare/dev-auth build:flow`.
+  never edit it**, but it _is_ committed, so CI can build without the Rust CLI.
+  After editing a `.flow`, run `pnpm --filter @devflare/dev-auth build:flow` and
+  commit the regenerated `.flow.js` **and** `apps/dev-auth/flow-manifest.json`
+  (it records each source's hash; the build fails if they drift apart).
 - `.flow` files use `@andersseen/web-components`: `<and-card>`, `<and-input>`,
   `<and-button>`, `<and-icon>` plus attribute-driven layout (`and-layout=`,
   `and-text=`, `and-motion=`). Client-side behavior is a plain inline

@@ -11,6 +11,8 @@ export default [
       '**/vitest.config.*.timestamp*',
       '**/.wrangler',
       '**/*.d.ts',
+      // Compiled by flowmark from the sibling .flow templates — machine output.
+      '**/*.flow.js',
     ],
   },
   {

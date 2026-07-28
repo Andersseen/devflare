@@ -100,12 +100,15 @@ dev-auth's auth pages were migrated from inline HTML-in-TypeScript strings
   `scripts/watch-flow.mjs`, `src/types/flowmark.d.ts`, `@flowview/runtime` dep.
 - Modified: `pages/*.ts` are now thin wrappers calling the compiled
   `render()` from `*.flow.js`; `wrangler.toml` gained a `[build] command`.
-- **Known limitation ("until Phase 4" of the flowmark project)**: compiling
+- **Known limitation ("until Phase 4" of the flowmark project)**: _recompiling_
   requires the `flowmark` Rust binary on the machine
   (`cargo install --path crates/flowmark-cli` from the author's flowmark repo).
-  CI/other machines without it cannot build dev-auth. This is the main open risk
-  of the migration.
-- Status: compiles locally (`.flow.js` files exist).
+  Building without it works, because the `.flow.js` outputs are committed.
+- Staleness is guarded by `apps/dev-auth/flow-manifest.json`, which records the
+  SHA-256 of each `.flow`. If a source no longer matches its recorded hash and
+  the CLI is absent, the build fails rather than shipping outdated pages.
+- Status: `dev-auth:build` verified green both with and without the binary
+  on `PATH` (2026-07-28).
 
 ## What works today
 
@@ -125,6 +128,12 @@ dev-auth's auth pages were migrated from inline HTML-in-TypeScript strings
 - **Nothing is deployed to Cloudflare yet.** Code, config and databases are
   ready and `wrangler deploy --dry-run` passes for the app, but no production
   deploy has run and Vercel is still serving the live site.
+- **The `CLOUDFLARE_API_TOKEN` GitHub secret is not authorized.** Both deploy
+  workflows fail at "Apply D1 migrations" with `The given account is not valid
+or is not authorized to access this service [code: 7403]`. The token needs
+  `D1:Edit` and `Workers Scripts:Edit` on account
+  `c32a93ee83fe9b5d53c63fcc73b90bb9`, and `CLOUDFLARE_ACCOUNT_ID` must match it.
+  Not fixable from the repo — regenerate the token in the Cloudflare dashboard.
 - **Secrets are not set.** `BETTER_AUTH_SECRET` (and `GITHUB_CLIENT_SECRET` if
   GitHub OAuth is wanted) must be set with `wrangler secret put --env production`
   before dev-auth will work deployed.
@@ -145,6 +154,15 @@ dev-auth's auth pages were migrated from inline HTML-in-TypeScript strings
 
 ## Session log
 
+- **2026-07-28** — Fixed the red CI. Every run since the flowmark migration
+  failed on `dev-auth:build`: the `.flow.js` outputs were gitignored, so CI had
+  none of them, while `compile-flow.mjs` assumed they were committed. Also its
+  staleness check compared mtimes, which git does not preserve, so it was
+  non-deterministic on a fresh checkout. Un-gitignored and committed the 6
+  outputs, replaced the mtime check with a SHA-256 manifest, and ignored
+  `*.flow.js` in ESLint. `devflare` itself was already green — `dev-auth` was
+  the only failed task. Deploy workflows remain red for an unrelated reason:
+  the Cloudflare API token is rejected with `code 7403` (see Known gaps).
 - **2026-07-28** — Migrated hosting from Vercel to Cloudflare: Nitro
   `cloudflare-module` preset, app DB on D1, provisioned 3 D1 + 2 KV and applied
   all migrations, rewrote both deploy workflows (fixing a pre-existing bug where

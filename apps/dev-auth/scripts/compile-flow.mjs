@@ -7,7 +7,8 @@
  * (p. ej. `cargo install --path crates/flowmark-cli` en el repo flowmark).
  */
 import { execFile } from 'node:child_process';
-import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { extname, join, relative, resolve, sep } from 'node:path';
 import { promisify } from 'node:util';
 
@@ -16,23 +17,59 @@ const execFileAsync = promisify(execFile);
 const ROOT = resolve(process.cwd());
 const SRC_DIR = join(ROOT, 'src');
 const RUNTIME_MODULE = '@flowview/runtime';
+const MANIFEST_PATH = join(ROOT, 'flow-manifest.json');
+
+function manifestKey(flowPath) {
+  return relative(ROOT, flowPath).replaceAll(sep, '/');
+}
+
+function hashSource(flowPath) {
+  return createHash('sha256').update(readFileSync(flowPath)).digest('hex');
+}
 
 /**
- * Is every .flow.js present and at least as new as its .flow source?
+ * Record the hash of every .flow source that produced the current .flow.js
+ * outputs. Committed alongside them so a machine without the CLI can tell
+ * whether those outputs still match their sources.
+ */
+function writeManifest(flowFiles) {
+  const sources = {};
+  for (const flowPath of [...flowFiles].sort()) {
+    sources[manifestKey(flowPath)] = hashSource(flowPath);
+  }
+  writeFileSync(MANIFEST_PATH, `${JSON.stringify({ sources }, null, 2)}\n`);
+}
+
+/**
+ * Does every .flow.js exist and match the source it was compiled from?
  *
  * This lets a machine without the `flowmark` binary (CI, a fresh clone) still
  * build, because the compiled .flow.js files are committed. It is a staleness
  * check, not a blanket skip: if a .flow was edited without recompiling, the
  * outputs are stale and we must fail rather than silently deploy old pages.
+ *
+ * Staleness is decided by content hash, not mtime: git does not preserve
+ * mtimes, so on a fresh checkout an output can easily land older than its
+ * source and a timestamp comparison would fail at random.
  */
 function outputsAreCurrent(flowFiles) {
-  return flowFiles.every((flowPath) => {
-    try {
-      return statSync(`${flowPath}.js`).mtimeMs >= statSync(flowPath).mtimeMs;
-    } catch {
-      return false;
-    }
-  });
+  let manifest;
+  try {
+    manifest = JSON.parse(readFileSync(MANIFEST_PATH, 'utf8')).sources;
+  } catch {
+    return false;
+  }
+
+  // A source added or removed since the manifest was written also makes it stale.
+  if (!manifest || Object.keys(manifest).length !== flowFiles.length) {
+    return false;
+  }
+
+  return flowFiles.every(
+    (flowPath) =>
+      existsSync(`${flowPath}.js`) &&
+      manifest[manifestKey(flowPath)] === hashSource(flowPath),
+  );
 }
 
 async function flowmarkAvailable() {
@@ -107,7 +144,7 @@ if (files.length === 0) {
 if (!(await flowmarkAvailable())) {
   if (outputsAreCurrent(files)) {
     console.log(
-      `[flowmark] binary not found — using the ${files.length} committed .flow.js files (all newer than their sources).`,
+      `[flowmark] binary not found — using the ${files.length} committed .flow.js files (all matching their sources).`,
     );
     process.exit(0);
   }
@@ -152,3 +189,6 @@ const results = await Promise.all(
 if (results.some((r) => !r.ok)) {
   process.exit(1);
 }
+
+// Only now that every output is known-good does the manifest describe reality.
+writeManifest(files);

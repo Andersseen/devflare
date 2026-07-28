@@ -5,8 +5,5 @@
 # Build output
 dist/
 
-# Flowmark generated artifacts
-*.flow.js
-
 # Logs
 *.log
