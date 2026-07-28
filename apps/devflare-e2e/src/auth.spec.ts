@@ -33,9 +33,8 @@ test.describe('Auth Pages', () => {
     await context.clearCookies();
     await page.goto('/projects');
 
-    // Should redirect to login or show login page
-    await expect(page.locator('text=Welcome back, text=Sign in')).toBeVisible({
-      timeout: 5000,
-    });
+    // authGuard runs after hydration, so the redirect is client-side.
+    await page.waitForURL('**/login', { timeout: 10000 });
+    await expect(page.locator('text=Welcome back')).toBeVisible();
   });
 });

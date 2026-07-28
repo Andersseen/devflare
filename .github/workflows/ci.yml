@@ -43,8 +43,10 @@ jobs:
       - name: Check lockfile
         run: git diff --exit-code pnpm-lock.yaml || (echo "Lockfile is out of date. Run 'pnpm install' locally." && exit 1)
 
-      # Install Playwright browsers
-      - run: pnpm exec playwright install --with-deps chromium
+      # Install Playwright browsers. Must cover every project declared in
+      # apps/devflare-e2e/playwright.config.ts — installing chromium alone made
+      # the firefox and webkit projects fail with "Executable doesn't exist".
+      - run: pnpm exec playwright install --with-deps chromium firefox webkit
 
       # Nx set SHAs for affected commands
       - uses: nrwl/nx-set-shas@v4

@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, afterNextRender, inject, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   VoltCard,
@@ -186,7 +186,9 @@ export default class ProjectsPage {
   createError = signal('');
 
   constructor() {
-    this.loadProjects();
+    // Browser-only: the service fetches a relative URL, which throws
+    // `ERR_INVALID_URL` under SSR.
+    afterNextRender(() => this.loadProjects());
   }
 
   async loadProjects() {

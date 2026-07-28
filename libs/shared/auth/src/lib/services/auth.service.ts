@@ -23,12 +23,24 @@ export class Auth {
   readonly loading = this.#_loading.asReadonly();
   readonly isAuthenticated = computed(() => !!this.#_user());
 
+  #sessionReady: Promise<void>;
+
   constructor() {
     if (isPlatformBrowser(this.#platformId)) {
-      this.#loadSession();
+      this.#sessionReady = this.#loadSession();
     } else {
       this.#_loading.set(false);
+      this.#sessionReady = Promise.resolve();
     }
+  }
+
+  /**
+   * Resolves once the initial session lookup has settled. Anything that reads
+   * `isAuthenticated()` to make a decision (route guards) must await this
+   * first, otherwise it sees `false` for a logged-in user on a hard reload.
+   */
+  ready(): Promise<void> {
+    return this.#sessionReady;
   }
 
   async #loadSession(): Promise<void> {

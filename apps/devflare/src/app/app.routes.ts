@@ -1,4 +1,5 @@
 import { Route } from '@angular/router';
+import { authGuard } from '@org/auth';
 import { LayoutComponent } from './components/layout.component';
 
 export const appRoutes: Route[] = [
@@ -12,10 +13,12 @@ export const appRoutes: Route[] = [
       },
       {
         path: 'deploy',
+        canActivate: [authGuard],
         loadComponent: () => import('./pages/deploy.page'),
       },
       {
         path: 'projects',
+        canActivate: [authGuard],
         loadComponent: () => import('./pages/projects.page'),
       },
       {
@@ -64,6 +67,7 @@ export const appRoutes: Route[] = [
       },
       {
         path: 'settings',
+        canActivate: [authGuard],
         loadComponent: () => import('./pages/settings.page'),
       },
     ],

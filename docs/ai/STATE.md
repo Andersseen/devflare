@@ -143,6 +143,12 @@ or is not authorized to access this service [code: 7403]`. The token needs
   implemented in `auth.config.ts`.
 - `deployments` table exists but the deploy feature (`libs/deploy`,
   `deploy.page.ts`) is skeletal.
+- ng-primitives 0.110.2 logs `nativeElement.addEventListener is not a function`
+  (from `NgpLabel`) on every SSR render of a page with a Volt form field. Noisy
+  but non-fatal — the HTML still renders and e2e is green. Upstream issue.
+- Routing is a **manual `app.routes.ts`**, not Analog's file-based router,
+  despite the `*.page.ts` naming. `routeMeta` exports are therefore ignored;
+  guards and route config go in `app.routes.ts`.
 
 ## Next steps (owner's apparent intent — confirm before large work)
 
@@ -154,6 +160,20 @@ or is not authorized to access this service [code: 7403]`. The token needs
 
 ## Session log
 
+- **2026-07-28** — Fixed the red `CI` workflow (e2e was the only failing task;
+  lint/typecheck/test/build were green). Three causes: (1) the workflow
+  installed only chromium while `playwright.config.ts` declares chromium +
+  firefox + webkit, so 12 of 21 tests died with "Executable doesn't exist";
+  (2) `index.html` still said `<title>devflare</title>` against a `/DevFlare/`
+  assertion; (3) `/projects` was never protected — `authGuard` existed in
+  `libs/shared/auth` but no route used it. Wired `authGuard` into `/projects`,
+  `/deploy` and `/settings` in `app.routes.ts`, and made it correct: it now
+  awaits `Auth.ready()` (the old synchronous version would have bounced a
+  logged-in user on any hard reload, since the session loads async) and is a
+  no-op during SSR. `projects.page.ts` now loads via `afterNextRender`, killing
+  the `Failed to parse URL from /api/v1/projects` SSR error. 21/21 e2e green
+  locally across all three browsers. Deploy workflows still red — same
+  unrelated `code 7403` token problem (see Known gaps).
 - **2026-07-28** — Fixed the red CI. Every run since the flowmark migration
   failed on `dev-auth:build`: the `.flow.js` outputs were gitignored, so CI had
   none of them, while `compile-flow.mjs` assumed they were committed. Also its
