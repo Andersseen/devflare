@@ -1,38 +1,21 @@
 import { createDatabase } from 'db0';
-import sqlite from 'db0/connectors/better-sqlite3';
-import { resolve } from 'node:path';
+import cloudflareD1 from 'db0/connectors/cloudflare-d1';
 
-function getDbPath(): string {
-  const cwd = process.cwd();
-  return cwd.includes('apps/devflare')
-    ? resolve(cwd, '../../data/devflare.db')
-    : resolve(cwd, 'data/devflare.db');
-}
-
+/**
+ * App database — Cloudflare D1, bound as `DB` in apps/devflare/wrangler.toml.
+ *
+ * The connector resolves the binding lazily from `globalThis.__env__` on every
+ * query, so this module-level instance is safe: Nitro's Cloudflare runtime sets
+ * `__env__` per request in production, and its dev plugin sets the same global
+ * from wrangler's `getPlatformProxy()` (local miniflare, state persisted under
+ * .wrangler/state/v3). One code path for both.
+ *
+ * Schema lives in ./migrations and is applied with
+ * `wrangler d1 migrations apply` — not with DDL at import time, which used to
+ * run on every request/cold start and could not be rolled back.
+ */
 export const db = createDatabase(
-  sqlite({
-    path: getDbPath(),
+  cloudflareD1({
+    bindingName: 'DB',
   }),
 );
-
-export async function initDatabase() {
-  await db.sql`CREATE TABLE IF NOT EXISTS projects (
-    id TEXT PRIMARY KEY,
-    userId TEXT NOT NULL,
-    name TEXT NOT NULL,
-    repoUrl TEXT,
-    createdAt TEXT NOT NULL
-  )`;
-
-  await db.sql`CREATE TABLE IF NOT EXISTS deployments (
-    id TEXT PRIMARY KEY,
-    projectId TEXT NOT NULL,
-    status TEXT NOT NULL,
-    commitSha TEXT,
-    previewUrl TEXT,
-    createdAt TEXT NOT NULL,
-    FOREIGN KEY (projectId) REFERENCES projects(id)
-  )`;
-}
-
-initDatabase().catch(console.error);

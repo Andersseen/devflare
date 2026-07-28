@@ -6,9 +6,9 @@
 ## Big picture
 
 ```
-Browser ──► devflare (AnalogJS/Nitro, :4200)
+Browser ──► devflare (Analog/Nitro Worker, :4200 dev)
               │  /api/auth/*  ── catch-all proxy ──► dev-auth (Hono Worker, :8787)
-              │  /api/v1/*    ── h3 handlers ─────► SQLite (data/devflare.db via db0)
+              │  /api/v1/*    ── h3 handlers ─────► Cloudflare D1 `devflare-db` (via db0)
               │
               └─ session check: server calls GET {DEV_AUTH_URL}/api/auth/get-session
                  forwarding the request cookies (see auth-remote.ts)
@@ -17,9 +17,9 @@ dev-auth ──► Cloudflare D1 (users/sessions, Drizzle schema)
          ──► Cloudflare KV  (rate limiting)
 ```
 
-Two databases, on purpose: **auth data** lives in dev-auth's D1; **app data**
-(projects, deployments) lives in the main app's SQLite. They only share the
-`userId` string.
+Two databases, on purpose: **auth data** lives in dev-auth's D1
+(`dev-auth-db-prod`); **app data** (projects, deployments) lives in the app's own
+D1 (`devflare-db`). They only share the `userId` string.
 
 ## Monorepo layout (Nx 22, pnpm)
 
@@ -49,10 +49,13 @@ Two databases, on purpose: **auth data** lives in dev-auth's D1; **app data**
 - **Server auth**: `src/server/lib/auth-remote.ts` → `getRemoteSession(event)`
   (calls dev-auth `get-session` with forwarded cookies, returns `null` on any
   failure) and `requireAuth(session)` (throws 401).
-- **Server DB**: `src/server/db/index.ts` — db0 + better-sqlite3, file
-  `data/devflare.db` at repo root. Tables `projects` and `deployments`, created
-  on module import. No migration system — schema changes are edits to
-  `initDatabase()`.
+- **Server DB**: `src/server/db/index.ts` — db0 + the `cloudflare-d1` connector,
+  bound as `DB` in `apps/devflare/wrangler.toml`. Tables `projects` and
+  `deployments`. The binding is resolved lazily from `globalThis.__env__`, which
+  Nitro sets per request in production and, in dev, from wrangler's
+  `getPlatformProxy()` (local miniflare under `.wrangler/state`) — so there is a
+  single code path. Schema lives in `src/server/db/migrations/`; apply it with
+  `pnpm db:migrate:local` / `pnpm db:migrate`.
 - **UI stack**: `@voltui/components` (`<volt-card>`, `<volt-button>`, `<volt-tabs>`,
   … imported as standalone classes), Tailwind CSS 4, `lucide-angular` icons.
 

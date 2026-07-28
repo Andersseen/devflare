@@ -55,29 +55,51 @@ Scoped/faster variants: `nx test devflare`, `nx lint dev-auth`,
 
 ## Database
 
-- **App DB**: `data/devflare.db` (SQLite). Schema is created on server start in
-  `apps/devflare/src/server/db/index.ts`. To reset: stop the app, delete the file.
-- **Auth DB (local)**: wrangler's local D1 under `apps/dev-auth/.wrangler/state`.
-  Migrations: `cd apps/dev-auth && npx wrangler d1 migrations apply dev-auth-db --local`.
+Both apps use Cloudflare D1. Locally that is wrangler's miniflare state under
+`apps/<app>/.wrangler/state` — there is no SQLite file to delete any more.
+
+```bash
+pnpm db:migrate:local    # apply migrations to both local D1s
+pnpm db:migrate          # both, production, remote
+```
+
+- **App DB** (`devflare-db`): migrations in
+  `apps/devflare/src/server/db/migrations/`.
+- **Auth DB** (`dev-auth-db*`): migrations in `apps/dev-auth/src/db/migrations/`.
+
+Migration commands take the **binding** (`DB`), not a database name — under
+`--env production` the bound database is `dev-auth-db-prod`, so a bare
+`dev-auth-db` will not resolve.
 
 ## Deploy
 
-Push to `main` triggers `.github/workflows/deploy.yml`. Manual deploy and full
-production setup (D1/KV creation, secrets, domains, security checklist):
-see [/DEPLOY.md](../../DEPLOY.md). Summary:
+Everything is on Cloudflare Workers: the app at `devflare.andersseen.dev`, the
+auth service at `auth-devflare.andersseen.dev`. Push to `main` triggers
+`.github/workflows/deploy.yml`.
+
+All scripts run **from the repo root** (they wrap `wrangler --cwd`, so no `cd`):
 
 ```bash
-cd apps/dev-auth && npx wrangler deploy --env production   # auth service
-pnpm build:prod                                            # main app bundle
+pnpm deploy:dry       # build + validate both workers, ships nothing
+pnpm deploy:all       # auth then app, each migrating its D1 first
+pnpm deploy:auth      # just the auth worker
+pnpm deploy:app       # build:prod + migrate + deploy the app worker
+pnpm deploy:staging   # auth service only — the app has no staging env
+pnpm cf:tail:app      # live logs
 ```
+
+`deploy:app` builds first on purpose: `apps/devflare/wrangler.toml` points
+`main` and `[assets]` at `dist/`, so deploying without a fresh build ships stale
+output. Full production setup (resources, secrets, domains, Vercel teardown):
+see [/DEPLOY.md](../../DEPLOY.md).
 
 ## Troubleshooting quick hits
 
-| Symptom                                    | Likely cause / fix                                                               |
-| ------------------------------------------ | -------------------------------------------------------------------------------- |
-| dev-auth build fails: `flowmark` not found | The Rust CLI isn't installed — see STATE.md. Don't hand-write `.flow.js`.        |
-| Login returns "Invalid origin"             | `BETTER_AUTH_URL` mismatch, or missing `Origin` header on direct curl calls.     |
-| Session not visible at :4200               | Both services running? The Nitro catch-all proxies `/api/auth/*` to :8787.       |
-| Cookies lost in staging/prod               | `COOKIE_DOMAIN` must be the root domain (`.yourdomain.com`), same for both apps. |
-| Rate-limited during testing (429)          | KV rate limit ~10 req/min/IP on auth endpoints — wait or restart local state.    |
-| Port already in use                        | A previous `pnpm dev:all` still alive — kill node/wrangler processes.            |
+| Symptom                                    | Likely cause / fix                                                                                                                                            |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| dev-auth build fails: `flowmark` not found | Only fails if a `.flow` is newer than its `.flow.js`; otherwise the committed outputs are used. Install the CLI (see STATE.md) — never hand-write `.flow.js`. |
+| Login returns "Invalid origin"             | `BETTER_AUTH_URL` mismatch, or missing `Origin` header on direct curl calls.                                                                                  |
+| Session not visible at :4200               | Both services running? The Nitro catch-all proxies `/api/auth/*` to :8787.                                                                                    |
+| Cookies lost in staging/prod               | `COOKIE_DOMAIN` must be the root domain (`.yourdomain.com`), same for both apps.                                                                              |
+| Rate-limited during testing (429)          | KV rate limit ~10 req/min/IP on auth endpoints — wait or restart local state.                                                                                 |
+| Port already in use                        | A previous `pnpm dev:all` still alive — kill node/wrangler processes.                                                                                         |
