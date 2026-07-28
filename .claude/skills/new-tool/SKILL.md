@@ -1,14 +1,15 @@
 ---
 name: new-tool
-description: Scaffold a new DevFlare browser tool end to end — @org/core service + spec, the page component, and all four registration points (barrel export, router, home grid, sidebar).
+description: Scaffold a new DevFlare browser tool end to end — @org/core service + spec, the page component, and all four registration points (barrel export, router, shell navigation catalog, lucide icon).
 disable-model-invocation: true
 ---
 
 # New tool
 
-Adds a client-side tool to DevFlare. A tool is **six** files, and the three
-registration points at the end are the ones that get forgotten — a page with no
-route entry is simply unreachable.
+Adds a client-side tool to DevFlare: **3 new files** (service, spec, page) plus
+**4 registration edits** (barrel, route, catalog, icon). The registrations are
+the ones that get forgotten — a page with no route entry is simply unreachable,
+and an unregistered lucide icon renders as empty space with no error.
 
 ## Arguments
 
@@ -61,6 +62,11 @@ tool needs; canvas/file elements are passed in as arguments by the page.
 Use `templates/service.spec.ts.template`. Services require tests (pages do not).
 Cover the real transformation and at least one malformed input.
 
+> **Heads up:** `libs/shared/core` has no `test` target yet, so this spec will
+> not actually run — `pnpm exec nx show projects --with-target test` lists only
+> `auth`, `dev-auth`, `devflare`. Still write it; see step 0 of the
+> `test-writer` agent for how to wire the target when you want it executing.
+
 **3. Barrel export** → `libs/shared/core/src/index.ts`
 
 Append under the `// Tool Services` block:
@@ -90,9 +96,14 @@ Routing is **explicit**, not file-based — `provideRouter(appRoutes)` in
 },
 ```
 
-**6. Home card** → `apps/devflare/src/app/pages/(home).page.ts`
+**6. Catalog entry** → `apps/devflare/src/app/components/shell-navigation.ts`
 
-Add to the tools array, picking a Tailwind color not already used by a neighbour:
+This one entry drives the home grid, the `/tools` grid **and** the sidebar link —
+they are all derived from `TOOLS`. Do not edit `(home).page.ts` or
+`sidebar.component.ts`; they no longer hold per-tool markup.
+
+Add to the `TOOLS` array, picking a Tailwind color not already used by a
+neighbour:
 
 ```ts
 {
@@ -105,13 +116,15 @@ Add to the tools array, picking a Tailwind color not already used by a neighbour
 },
 ```
 
-**7. Sidebar link** → `apps/devflare/src/app/components/sidebar.component.ts`
+Add `navLabel` only if `title` is too long for the sidebar (compare against the
+neighbours — `'QR Code Studio'` ships `navLabel: 'QR Generator'`).
 
-```html
-<volt-sidebar-item routerLink="/tools/<slug>" label="<Title>">
-  <lucide-icon slot="icon" name="<icon>" class="w-5 h-5" />
-</volt-sidebar-item>
-```
+**7. Register the icon** → `apps/devflare/src/app/app.config.ts`
+
+Icons are explicitly picked, not bundled wholesale:
+`LucideAngularModule.pick({ … })`. An unregistered `<icon>` renders as nothing —
+silently, with no build error. Import the PascalCase name from `lucide-angular`
+and add it to the `pick({ … })` object.
 
 ## Verify before reporting done
 
@@ -122,8 +135,16 @@ pnpm format:write && pnpm lint && pnpm typecheck && pnpm test
 Then confirm all four registration points are wired:
 
 ```
-grep -rn "<slug>" libs/shared/core/src/index.ts apps/devflare/src/app/app.routes.ts "apps/devflare/src/app/pages/(home).page.ts" apps/devflare/src/app/components/sidebar.component.ts
+grep -rn "<slug>" libs/shared/core/src/index.ts apps/devflare/src/app/app.routes.ts apps/devflare/src/app/components/shell-navigation.ts
 ```
 
-Four hits expected — one per file. Report the route the user can now open
-(`/tools/<slug>`) and anything you had to guess.
+Three hits expected — one per file — plus the icon in `app.config.ts`, which is
+keyed by icon name rather than slug:
+
+```
+grep -n "<IconName>" apps/devflare/src/app/app.config.ts
+```
+
+Report the route the user can now open (`/tools/<slug>`) and anything you had to
+guess. The tool should appear in the home grid, at `/tools`, and in the sidebar
+under the DevTools section without any further edits.

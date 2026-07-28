@@ -19,6 +19,10 @@ export const appRoutes: Route[] = [
         loadComponent: () => import('./pages/projects.page'),
       },
       {
+        path: 'tools',
+        loadComponent: () => import('./pages/tools/(tools).page'),
+      },
+      {
         path: 'tools/image-compressor',
         loadComponent: () => import('./pages/tools/image-compressor.page'),
       },

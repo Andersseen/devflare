@@ -13,6 +13,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
 jobs:
   # Build and verify before deploying
   verify:
@@ -32,7 +36,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
 
-  # Deploy auth service to Cloudflare Workers
+  # Auth service -> Cloudflare Workers (auth-devflare.andersseen.dev)
   deploy-auth:
     needs: verify
     runs-on: ubuntu-latest
@@ -51,22 +55,22 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Target the DB *binding*, not a database name: under `--env production`
+      # the bound database is `dev-auth-db-prod`, so passing `dev-auth-db` (as
+      # this workflow previously did) fails to resolve.
       - name: Apply D1 migrations
-        run: cd apps/dev-auth && npx wrangler d1 migrations apply dev-auth-db --env production --remote
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        working-directory: apps/dev-auth
+        run: npx wrangler d1 migrations apply DB --env production --remote
 
       - name: Deploy auth service
-        run: cd apps/dev-auth && npx wrangler deploy --env production
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        working-directory: apps/dev-auth
+        run: npx wrangler deploy --env production
 
-  # Build frontend (deploy to your preferred platform separately)
-  build-frontend:
+  # Analog app -> Cloudflare Workers + Static Assets (devflare.andersseen.dev)
+  deploy-app:
     needs: verify
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - uses: actions/checkout@v4
 
@@ -80,10 +84,17 @@ jobs:
           cache: 'pnpm'
 
       - run: pnpm install --frozen-lockfile
-      - run: pnpm nx build devflare --configuration production
 
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: devflare-build
-          path: dist/apps/devflare
+      - name: Apply D1 migrations
+        working-directory: apps/devflare
+        run: npx wrangler d1 migrations apply DB --env production --remote
+
+      # Emits dist/apps/devflare/analog/{server,public} plus the merged
+      # server/wrangler.json, and writes apps/devflare/.wrangler/deploy/config.json
+      # pointing at it. The deploy step below follows that redirect.
+      - name: Build
+        run: pnpm nx build devflare --configuration production
+
+      - name: Deploy app
+        working-directory: apps/devflare
+        run: npx wrangler deploy --env production

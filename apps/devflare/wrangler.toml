@@ -1,0 +1,58 @@
+# DevFlare app — Cloudflare Worker with Static Assets.
+#
+# Single source of truth for the app worker. Paths are relative to this file and
+# point at the Nitro build output, so `pnpm nx build devflare` must run before
+# `wrangler deploy`.
+#
+# This same file feeds local dev: Nitro's cloudflare dev plugin hands it to
+# wrangler's getPlatformProxy(), so `pnpm dev:app` gets a local miniflare D1
+# under .wrangler/state/v3 with the bindings below. Because getPlatformProxy
+# reads the top level (not [env.production]), the top-level values here are the
+# development ones.
+
+name = "devflare"
+compatibility_date = "2026-05-23"
+compatibility_flags = ["nodejs_compat"]
+
+main = "../../dist/apps/devflare/analog/server/index.mjs"
+
+[assets]
+binding = "ASSETS"
+directory = "../../dist/apps/devflare/analog/public"
+
+# App database (projects, deployments). Created 2026-07-28.
+[[d1_databases]]
+binding = "DB"
+database_name = "devflare-db"
+database_id = "399d5c02-d2b0-4537-9899-b28771b2c645"
+migrations_dir = "src/server/db/migrations"
+
+[vars]
+# Base URL of the dev-auth Worker that validates sessions (see
+# src/server/lib/auth-remote.ts). Local dev falls back to :8787 when unset.
+DEV_AUTH_URL = "http://localhost:8787"
+
+[observability]
+enabled = true
+
+# ---------------------------------------------------------------------------
+# Production
+# ---------------------------------------------------------------------------
+[env.production]
+name = "devflare"
+
+[[env.production.routes]]
+pattern = "devflare.andersseen.dev"
+custom_domain = true
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "devflare-db"
+database_id = "399d5c02-d2b0-4537-9899-b28771b2c645"
+migrations_dir = "src/server/db/migrations"
+
+[env.production.vars]
+DEV_AUTH_URL = "https://auth-devflare.andersseen.dev"
+
+[env.production.observability]
+enabled = true

@@ -38,37 +38,57 @@ command = "node scripts/compile-flow.mjs"
 [env.production]
 name = "dev-auth-prod"
 
+[[env.production.routes]]
+pattern = "auth-devflare.andersseen.dev"
+custom_domain = true
+
 [[env.production.d1_databases]]
 binding = "DB"
 database_name = "dev-auth-db-prod"
-# Replace with your real production D1 database ID
-# database_id = "your-production-d1-database-id"
+database_id = "6028a3b7-c545-46fb-aba2-b8b444d2dce0"
+migrations_dir = "src/db/migrations"
 
 [[env.production.kv_namespaces]]
 binding = "RATE_LIMIT_KV"
-# Replace with your real production KV namespace ID
-# id = "your-production-kv-namespace-id"
+id = "2a96a69362c9460fbf1dc6715ab0ed38"
 
 [env.production.vars]
-BETTER_AUTH_URL = "https://auth.yourdomain.com"
+BETTER_AUTH_URL = "https://auth-devflare.andersseen.dev"
+# Gates the CORS middleware's production rules (see src/middleware/cors.ts).
+# Without this it falls back to the localhost allow-list and the deployed app
+# gets no CORS headers at all.
+ENVIRONMENT = "production"
+DEV_AUTH_CORS_ORIGINS = "https://devflare.andersseen.dev"
+# REQUIRED, not optional: enables better-auth's crossSubDomainCookie
+# (auth.config.ts keys off `!!env.COOKIE_DOMAIN`). The app and the auth service
+# are different subdomains, so without this the session cookie is host-only to
+# auth-devflare.andersseen.dev and the browser never sends it to
+# devflare.andersseen.dev — login would appear to succeed and every subsequent
+# request would still be 401.
+COOKIE_DOMAIN = ".andersseen.dev"
 # GITHUB_CLIENT_ID = "your-github-oauth-app-id"
 
 # Staging environment
 [env.staging]
 name = "dev-auth-staging"
 
+[[env.staging.routes]]
+pattern = "auth-devflare-staging.andersseen.dev"
+custom_domain = true
+
 [[env.staging.d1_databases]]
 binding = "DB"
 database_name = "dev-auth-db-staging"
-# Replace with your real staging D1 database ID
-# database_id = "your-staging-d1-database-id"
+database_id = "fccd953b-0780-40d5-80b1-e9444c01cfe7"
+migrations_dir = "src/db/migrations"
 
 [[env.staging.kv_namespaces]]
 binding = "RATE_LIMIT_KV"
-# Replace with your real staging KV namespace ID
-# id = "your-staging-kv-namespace-id"
+id = "38f688fba9d1466ea801902f36dbe2d2"
 
 [env.staging.vars]
-BETTER_AUTH_URL = "https://auth-staging.yourdomain.com"
+BETTER_AUTH_URL = "https://auth-devflare-staging.andersseen.dev"
 ENVIRONMENT = "staging"
+DEV_AUTH_CORS_ORIGINS = "https://devflare-staging.andersseen.dev"
+COOKIE_DOMAIN = ".andersseen.dev"
 # GITHUB_CLIENT_ID = "your-github-oauth-app-id"

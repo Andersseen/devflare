@@ -1,38 +1,27 @@
-import { Component, inject } from '@angular/core';
+import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { LucideAngularModule } from 'lucide-angular';
-import { VoltSidebarService } from '@voltui/components';
+import { NavbarComponent } from './navbar.component';
 import { SidebarComponent } from './sidebar.component';
 
 @Component({
   selector: 'app-layout',
-  imports: [RouterOutlet, SidebarComponent, LucideAngularModule],
+  imports: [RouterOutlet, NavbarComponent, SidebarComponent],
   template: `
-    <div class="flex min-h-screen bg-background">
-      <app-sidebar />
+    <!--
+      App shell: the navbar and sidebar stay put, only <main> scrolls.
+      h-screen + min-h-0 is what keeps the sidebar footer pinned to the bottom.
+    -->
+    <div class="flex h-screen flex-col overflow-hidden bg-background">
+      <app-navbar />
 
-      <div class="flex flex-1 flex-col min-w-0">
-        <!-- Mobile topbar -->
-        <header
-          class="flex h-14 items-center gap-4 border-b border-border px-4 md:hidden"
-        >
-          <button
-            (click)="sidebarService.toggleMobile()"
-            class="flex items-center justify-center rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-            aria-label="Open sidebar"
-          >
-            <lucide-icon name="menu" class="w-5 h-5" />
-          </button>
-          <span class="font-semibold">DevFlare</span>
-        </header>
+      <div class="flex min-h-0 flex-1">
+        <app-sidebar />
 
-        <main class="flex-1 p-6 md:p-8 overflow-auto">
+        <main class="min-w-0 flex-1 overflow-y-auto p-6 md:p-8">
           <router-outlet />
         </main>
       </div>
     </div>
   `,
 })
-export class LayoutComponent {
-  protected readonly sidebarService = inject(VoltSidebarService);
-}
+export class LayoutComponent {}

@@ -1,5 +1,31 @@
 @import 'tailwindcss';
 
+/*
+ * Volt design system. This import is required, not cosmetic: it carries an
+ * `@source` pointing at the compiled component bundle so Tailwind emits the
+ * utility classes used *inside* Volt's templates (w-72, bg-surface, h-10, …).
+ * Without it Tailwind never scans node_modules and every Volt component
+ * renders without its layout classes.
+ *
+ * It also supplies the tokens the components read but this app never defined
+ * (--surface-foreground, --scrollbar-thumb, --color-foreground).
+ * Our own palette below is loaded after it and intentionally wins.
+ */
+@import '@voltui/components/themes.css';
+
+/*
+ * Volt keys `dark:` off a `.dark` class; this app has always been driven by the
+ * OS preference. Accept both so existing `dark:` utilities keep working.
+ */
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    @slot;
+  }
+  &:where(.dark, .dark *) {
+    @slot;
+  }
+}
+
 @theme {
   /* Semantic Colors - mapped to CSS variables */
   --color-primary: var(--primary);
@@ -19,9 +45,15 @@
 
   --color-background: var(--background);
   --color-surface: var(--surface);
+  --color-surface-foreground: var(--surface-foreground);
   --color-border: var(--border);
 
+  --color-foreground: var(--foreground);
   --color-text: var(--foreground);
+
+  /* Volt's preset drops `bold` to 600; keep this app's heavier headings. */
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
 
   /* Shadcn/ui compatible colors */
   --color-muted: var(--muted);
@@ -77,6 +109,7 @@
   --text: #0f172a;
   --text-muted: #64748b;
   --surface: #ffffff;
+  --surface-foreground: #0f172a;
   --success: #16a34a;
   --success-foreground: #ffffff;
 }
@@ -119,6 +152,7 @@
     --text: #f8fafc;
     --text-muted: #94a3b8;
     --surface: #1e293b;
+    --surface-foreground: #f8fafc;
     --success: #22c55e;
     --success-foreground: #ffffff;
   }
