@@ -125,15 +125,29 @@ dev-auth's auth pages were migrated from inline HTML-in-TypeScript strings
 
 ## Known gaps / not production-ready
 
-- **Nothing is deployed to Cloudflare yet.** Code, config and databases are
-  ready and `wrangler deploy --dry-run` passes for the app, but no production
-  deploy has run and Vercel is still serving the live site.
-- **The `CLOUDFLARE_API_TOKEN` GitHub secret is not authorized.** Both deploy
-  workflows fail at "Apply D1 migrations" with `The given account is not valid
-or is not authorized to access this service [code: 7403]`. The token needs
-  `D1:Edit` and `Workers Scripts:Edit` on account
-  `c32a93ee83fe9b5d53c63fcc73b90bb9`, and `CLOUDFLARE_ACCOUNT_ID` must match it.
-  Not fixable from the repo — regenerate the token in the Cloudflare dashboard.
+- **Nothing is deployed to Cloudflare yet, and the site is down.** Verified
+  2026-07-30: `devflare.andersseen.dev` and `auth-devflare.andersseen.dev` both
+  resolve to Cloudflare and return **404** (custom domains exist, no Worker
+  behind them), and `devflare.vercel.app` returns 451 — Vercel is _not_ serving
+  the live site any more, contrary to what this doc said before.
+- **`CLOUDFLARE_API_TOKEN` still lacks Workers permissions.** The token was
+  rotated 2026-07-30 and D1 now works — "Apply D1 migrations" passes in both
+  jobs (the old `code 7403` is gone). Both jobs now fail one step later, at
+  `wrangler deploy`, with `Authentication error [code: 10000]` on
+  `/accounts/…/workers/services/{devflare,dev-auth-prod}`. Missing: account
+  **Workers Scripts: Edit**, plus zone **Workers Routes: Edit** on
+  `andersseen.dev` — both wrangler.toml files declare `custom_domain = true`
+  routes, which are attached at deploy time. Easiest fix: the dashboard's "Edit
+  Cloudflare Workers" template + `D1:Edit` + `Workers KV Storage:Edit`.
+  The trailing `/memberships … [code: 9106]` error is noise: an Account API
+  Token cannot list memberships, wrangler just tries during its whoami dump.
+  Not fixable from the repo.
+- **The Vercel GitHub App is still installed** and posts a failing `Vercel`
+  commit status on every push to the `andersseens-projects/devflare` project.
+  Not removable with `gh` (commit statuses have no DELETE endpoint, and
+  `/user/installations` 403s for a non-App token) — uninstall or drop this repo
+  at <https://github.com/settings/installations>, or disconnect Git in the
+  Vercel dashboard.
 - **Secrets are not set.** `BETTER_AUTH_SECRET` (and `GITHUB_CLIENT_SECRET` if
   GitHub OAuth is wanted) must be set with `wrangler secret put --env production`
   before dev-auth will work deployed.

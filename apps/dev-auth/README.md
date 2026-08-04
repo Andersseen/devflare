@@ -45,7 +45,7 @@ wrangler dev --local
 
 The service will be available at `http://localhost:8787`.
 
-### Flowmark templates
+### Flowview templates
 
 Auth pages live in `src/pages/*.flow` and are precompiled to `.flow.js` by the
 `[build] command` in `wrangler.toml`.
@@ -60,8 +60,8 @@ pnpm watch:flow
 ```
 
 > ⚠️ **Temporary limitation (until Phase 4)**: the build requires the
-> `flowmark` binary available on this machine. Install it from the flowmark
-> repo with `cargo install --path crates/flowmark-cli`.
+> `flowview` binary available on this machine. Install it from the flowview
+> repo with `cargo install --path crates/flowview-cli`.
 >
 > Generated `.flow.js` files import `@flowview/runtime`.
 

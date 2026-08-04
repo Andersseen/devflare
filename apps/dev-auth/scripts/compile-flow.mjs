@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
  * Precompila todos los ficheros .flow de dev-auth a .flow.js usando el CLI
- * de flowmark. Se engancha en [build] command de wrangler.toml.
+ * de flowview. Se engancha en [build] command de wrangler.toml.
  *
- * Limitación temporal (hasta Fase 4): requiere el binario `flowmark` instalado
- * (p. ej. `cargo install --path crates/flowmark-cli` en el repo flowmark).
+ * Limitación temporal (hasta Fase 4): requiere el binario `flowview` instalado
+ * (p. ej. `cargo install --path crates/flowview-cli` en el repo flowview).
  */
 import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -43,7 +43,7 @@ function writeManifest(flowFiles) {
 /**
  * Does every .flow.js exist and match the source it was compiled from?
  *
- * This lets a machine without the `flowmark` binary (CI, a fresh clone) still
+ * This lets a machine without the `flowview` binary (CI, a fresh clone) still
  * build, because the compiled .flow.js files are committed. It is a staleness
  * check, not a blanket skip: if a .flow was edited without recompiling, the
  * outputs are stale and we must fail rather than silently deploy old pages.
@@ -72,9 +72,9 @@ function outputsAreCurrent(flowFiles) {
   );
 }
 
-async function flowmarkAvailable() {
+async function flowviewAvailable() {
   try {
-    await execFileAsync('flowmark', ['--version'], { encoding: 'utf8' });
+    await execFileAsync('flowview', ['--version'], { encoding: 'utf8' });
     return true;
   } catch {
     return false;
@@ -99,7 +99,7 @@ async function compileFile(flowPath) {
   const displayName = relative(ROOT, flowPath).replaceAll(sep, '/');
 
   const { stdout } = await execFileAsync(
-    'flowmark',
+    'flowview',
     [
       'compile',
       flowPath,
@@ -130,34 +130,34 @@ let files;
 try {
   files = findFlowFiles(SRC_DIR);
 } catch (error) {
-  console.error('[flowmark] Failed to scan src/', error.message);
+  console.error('[flowview] Failed to scan src/', error.message);
   process.exit(1);
 }
 
 if (files.length === 0) {
-  console.log('[flowmark] No .flow files found in src/');
+  console.log('[flowview] No .flow files found in src/');
   process.exit(0);
 }
 
 // wrangler runs this as its [build] command, so it also executes on CI and on
 // any machine without the Rust CLI installed.
-if (!(await flowmarkAvailable())) {
+if (!(await flowviewAvailable())) {
   if (outputsAreCurrent(files)) {
     console.log(
-      `[flowmark] binary not found — using the ${files.length} committed .flow.js files (all matching their sources).`,
+      `[flowview] binary not found — using the ${files.length} committed .flow.js files (all matching their sources).`,
     );
     process.exit(0);
   }
 
   console.error(
-    '[flowmark] binary not found AND the .flow.js outputs are stale.',
+    '[flowview] binary not found AND the .flow.js outputs are stale.',
   );
   console.error(
     'A .flow file changed without being recompiled, so building now',
   );
   console.error('would ship outdated pages. Either install the CLI:');
   console.error(
-    '  cargo install --path crates/flowmark-cli   # in the flowmark repo',
+    '  cargo install --path crates/flowview-cli   # in the flowview repo',
   );
   console.error(
     'then run `pnpm --filter @devflare/dev-auth build:flow`, or commit the',
@@ -173,13 +173,13 @@ const results = await Promise.all(
       const { outputPath, changed } = await compileFile(flowPath);
       const outputRelative = relative(ROOT, outputPath).replaceAll(sep, '/');
       if (changed) {
-        console.log(`[flowmark] ${displayName} -> ${outputRelative}`);
+        console.log(`[flowview] ${displayName} -> ${outputRelative}`);
       } else {
-        console.log(`[flowmark] ${displayName} (up to date)`);
+        console.log(`[flowview] ${displayName} (up to date)`);
       }
       return { ok: true };
     } catch (error) {
-      console.error(`[flowmark] Failed to compile ${displayName}`);
+      console.error(`[flowview] Failed to compile ${displayName}`);
       console.error(error.stderr || error.message);
       return { ok: false };
     }

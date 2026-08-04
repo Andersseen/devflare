@@ -19,7 +19,7 @@ function compileAll() {
   }
 }
 
-console.log('[flowmark:watch] Starting watcher on src/...');
+console.log('[flowview:watch] Starting watcher on src/...');
 compileAll();
 
 let debounceTimer;
@@ -29,13 +29,13 @@ const watcher = watch(SRC_DIR, { recursive: true }, (eventType, filename) => {
   }
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(() => {
-    console.log(`[flowmark:watch] ${eventType}: ${filename}`);
+    console.log(`[flowview:watch] ${eventType}: ${filename}`);
     compileAll();
   }, 100);
 });
 
 process.on('SIGINT', () => {
-  console.log('\n[flowmark:watch] Stopping watcher');
+  console.log('\n[flowview:watch] Stopping watcher');
   watcher.close();
   process.exit(0);
 });
