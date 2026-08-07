@@ -15,11 +15,13 @@ runs:
         fail() {
           echo "::error::$*"
           echo
-          echo "Fix: create a token at https://dash.cloudflare.com/profile/api-tokens"
-          echo "  Permissions : Account -> D1 -> Edit"
-          echo "                Account -> Workers Scripts -> Edit"
-          echo "                Account -> Workers KV Storage -> Edit"
-          echo "                Zone    -> Workers Routes -> Edit  (andersseen.dev)"
+          echo "Fix: https://dash.cloudflare.com/profile/api-tokens -> Create Token."
+          echo "  Use the 'Edit Cloudflare Workers' TEMPLATE, not a custom token."
+          echo "  Cloudflare's own GitHub Actions guide recommends it, and it"
+          echo "  pre-fills the Workers Scripts / Workers KV / Workers Routes rows"
+          echo "  plus the zone resource row that a custom token makes you hunt for."
+          echo "  Then confirm the list contains Account -> D1 -> Edit; if it does"
+          echo "  not, add that one row by hand (older templates predate D1)."
           echo "  Account resources: include the account that owns devflare-db,"
           echo "                     dev-auth-db-prod and dev-auth-db-staging."
           echo "Then set it as the CLOUDFLARE_API_TOKEN repository secret, and set"
