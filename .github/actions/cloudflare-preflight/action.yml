@@ -1,0 +1,77 @@
+name: Cloudflare preflight
+description: >
+  Validates CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID before any wrangler
+  command runs, so a bad credential fails in seconds with an actionable message
+  instead of surfacing as wrangler's opaque "[code: 7403]" mid-deploy.
+
+runs:
+  using: composite
+  steps:
+    - name: Verify Cloudflare credentials
+      shell: bash
+      run: |
+        api="https://api.cloudflare.com/client/v4"
+
+        fail() {
+          echo "::error::$*"
+          echo
+          echo "Fix: https://dash.cloudflare.com/profile/api-tokens -> Create Token."
+          echo "  Use the 'Edit Cloudflare Workers' TEMPLATE, not a custom token."
+          echo "  Cloudflare's own GitHub Actions guide recommends it, and it"
+          echo "  pre-fills the Workers Scripts / Workers KV / Workers Routes rows"
+          echo "  plus the zone resource row that a custom token makes you hunt for."
+          echo "  Then confirm the list contains Account -> D1 -> Edit; if it does"
+          echo "  not, add that one row by hand (older templates predate D1)."
+          echo "  Account resources: include the account that owns devflare-db,"
+          echo "                     dev-auth-db-prod and dev-auth-db-staging."
+          echo "Then set it as the CLOUDFLARE_API_TOKEN repository secret, and set"
+          echo "CLOUDFLARE_ACCOUNT_ID to that same account's id."
+          exit 1
+        }
+
+        # 1. Secrets actually reached the job.
+        [ -n "${CLOUDFLARE_API_TOKEN:-}" ] || fail "CLOUDFLARE_API_TOKEN is empty — the repository secret is unset or not visible to this environment."
+        [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ] || fail "CLOUDFLARE_ACCOUNT_ID is empty — the repository secret is unset or not visible to this environment."
+
+        # 2. Shape check. Catches the classic trailing-newline paste and someone
+        #    storing an account *name* or a dashboard URL instead of the id.
+        #    Uses bash's own =~ rather than grep: grep is line-based, so it
+        #    happily matches a value with a trailing newline still attached —
+        #    which is precisely the failure this check exists to catch.
+        if [[ ! "$CLOUDFLARE_ACCOUNT_ID" =~ ^[0-9a-f]{32}$ ]]; then
+          fail "CLOUDFLARE_ACCOUNT_ID is not a 32-character lowercase hex id (it is ${#CLOUDFLARE_ACCOUNT_ID} characters). Re-paste it with no surrounding whitespace or newline."
+        fi
+
+        # 3. Is the token itself valid and active?
+        verify=$(curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/user/tokens/verify")
+        if [ "$(jq -r '.success' <<<"$verify")" != "true" ]; then
+          jq -r '.errors[]? | "  - [\(.code)] \(.message)"' <<<"$verify"
+          fail "CLOUDFLARE_API_TOKEN was rejected by Cloudflare — it is invalid, revoked or expired."
+        fi
+        token_status=$(jq -r '.result.status' <<<"$verify")
+        [ "$token_status" = "active" ] || fail "CLOUDFLARE_API_TOKEN status is '$token_status', expected 'active'."
+
+        # 4. Does that token reach *this* account? A mismatch here is the usual
+        #    cause of 7403: valid token, but scoped to a different account than
+        #    the one holding the D1 databases.
+        account=$(curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID")
+        if [ "$(jq -r '.success' <<<"$account")" != "true" ]; then
+          jq -r '.errors[]? | "  - [\(.code)] \(.message)"' <<<"$account"
+          fail "The token cannot read the account in CLOUDFLARE_ACCOUNT_ID. The two secrets belong to different Cloudflare accounts, or the token's 'Account resources' does not include this one."
+        fi
+
+        # 5. D1 permission — the exact call `wrangler d1 migrations apply` needs.
+        d1=$(curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database?per_page=1")
+        if [ "$(jq -r '.success' <<<"$d1")" != "true" ]; then
+          jq -r '.errors[]? | "  - [\(.code)] \(.message)"' <<<"$d1"
+          fail "The token can reach the account but has no D1 access. Add the 'D1 -> Edit' permission."
+        fi
+
+        # 6. Workers permission — needed by the `wrangler deploy` step that follows.
+        workers=$(curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts")
+        if [ "$(jq -r '.success' <<<"$workers")" != "true" ]; then
+          jq -r '.errors[]? | "  - [\(.code)] \(.message)"' <<<"$workers"
+          fail "The token can reach the account but cannot list Workers scripts. Add the 'Workers Scripts -> Edit' permission."
+        fi
+
+        echo "Cloudflare preflight OK — token active, account reachable, D1 and Workers Scripts permissions present."
