@@ -42,14 +42,16 @@ runs:
           fail "CLOUDFLARE_ACCOUNT_ID is not a 32-character lowercase hex id (it is ${#CLOUDFLARE_ACCOUNT_ID} characters). Re-paste it with no surrounding whitespace or newline."
         fi
 
-        # 3. Is the token itself valid and active?
-        verify=$(curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/user/tokens/verify")
-        if [ "$(jq -r '.success' <<<"$verify")" != "true" ]; then
-          jq -r '.errors[]? | "  - [\(.code)] \(.message)"' <<<"$verify"
-          fail "CLOUDFLARE_API_TOKEN was rejected by Cloudflare — it is invalid, revoked or expired."
+        # 3. Token shape. A token that is empty, truncated or carries stray
+        #    whitespace makes the Authorization header itself unparseable, which
+        #    Cloudflare reports as [6003] "Invalid request headers" — a message
+        #    that says nothing about which secret is at fault.
+        if [[ "$CLOUDFLARE_API_TOKEN" =~ [[:space:]] ]]; then
+          fail "CLOUDFLARE_API_TOKEN contains whitespace (a space, tab or trailing newline). Re-paste it with nothing around it."
         fi
-        token_status=$(jq -r '.result.status' <<<"$verify")
-        [ "$token_status" = "active" ] || fail "CLOUDFLARE_API_TOKEN status is '$token_status', expected 'active'."
+        if [ "${#CLOUDFLARE_API_TOKEN}" -lt 30 ]; then
+          fail "CLOUDFLARE_API_TOKEN is only ${#CLOUDFLARE_API_TOKEN} characters — it looks truncated. Cloudflare API tokens are ~40 characters. Note this is an API *token*, not the Global API Key."
+        fi
 
         # 4. Does that token reach *this* account? A mismatch here is the usual
         #    cause of 7403: valid token, but scoped to a different account than
@@ -74,4 +76,17 @@ runs:
           fail "The token can reach the account but cannot list Workers scripts. Add the 'Workers Scripts -> Edit' permission."
         fi
 
-        echo "Cloudflare preflight OK — token active, account reachable, D1 and Workers Scripts permissions present."
+        # Deliberately NOT a gate: /user/tokens/verify answers "can this token
+        # introspect its own user record", which is a permission a deploy token
+        # has no reason to hold. Account-owned tokens, and user tokens built from
+        # the "Edit Cloudflare Workers" template, both return [10000] here while
+        # being perfectly able to deploy. Gating on it fails healthy tokens, so
+        # it is reported only as a note.
+        verify=$(curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/user/tokens/verify")
+        if [ "$(jq -r '.success' <<<"$verify")" = "true" ]; then
+          echo "Note: token introspects as status '$(jq -r '.result.status' <<<"$verify")'."
+        else
+          echo "Note: this token cannot call /user/tokens/verify ($(jq -r '[.errors[]?.code] | join(",")' <<<"$verify")). Expected for account-owned and template-built tokens; harmless."
+        fi
+
+        echo "Cloudflare preflight OK — account reachable, D1 and Workers Scripts permissions present."
