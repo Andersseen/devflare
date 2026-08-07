@@ -27,7 +27,9 @@ node_modules
 # misc
 /.sass-cache
 /connect.lock
-/coverage
+# Unanchored: vitest writes per-project reports to apps/*/coverage too, which a
+# leading-slash pattern would miss.
+coverage
 /libpeerconnection.log
 npm-debug.log
 yarn-error.log

@@ -23,16 +23,16 @@ jobs:
     name: Nx Cloud - Main Job
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       # Install pnpm (pinned version, compatible with Node 20/22)
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: 'pnpm'
@@ -49,7 +49,7 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium firefox webkit
 
       # Nx set SHAs for affected commands
-      - uses: nrwl/nx-set-shas@v4
+      - uses: nrwl/nx-set-shas@v5
 
       # Run all checks in order: format → lint → typecheck → test → build → e2e
       - name: Format Check
@@ -70,11 +70,13 @@ jobs:
       - name: E2E Tests
         run: pnpm nx run-many -t e2e --parallel=1
 
-      # Upload coverage reports
+      # Upload coverage reports. Vitest writes one report per project under
+      # apps/*/coverage (clover.xml + coverage-final.json), not into a single
+      # root ./coverage — pointing at the root uploaded nothing.
       - name: Upload coverage to Codecov
         if: always()
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
-          directory: ./coverage
+          files: ./apps/devflare/coverage/clover.xml,./apps/dev-auth/coverage/clover.xml,./coverage/libs/shared/auth/clover.xml
           fail_ci_if_error: false
           verbose: true

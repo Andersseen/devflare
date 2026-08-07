@@ -59,11 +59,10 @@ pnpm build:flow
 pnpm watch:flow
 ```
 
-> ⚠️ **Temporary limitation (until Phase 4)**: the build requires the
-> `flowview` binary available on this machine. Install it from the flowview
-> repo with `cargo install --path crates/flowview-cli`.
->
-> Generated `.flow.js` files import `@flowview/runtime`.
+> Compilation runs through `@flowview/compiler` (the WASM compiler on npm), so
+> `pnpm install` is the only prerequisite — no Rust toolchain. Generated
+> `.flow.js` files import `@flowview/runtime` and are committed, because the
+> page wrappers import them.
 
 ### Environment Variables
 

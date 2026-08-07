@@ -56,7 +56,7 @@
           <span and-text="p-sm color:foreground">Node.js 18+</span>
         </div>
       </div>
-      <and-button id="btn-step-1" variant="default" style="width:100%;">
+      <and-button id="btn-step-1" variant="default" data-full>
         Start Setup
         <and-icon slot="end" name="arrow-right" size="16"></and-icon>
       </and-button>
@@ -92,7 +92,7 @@
 
       <div and-layout="horizontal gap:sm">
         <and-button id="btn-back-2" variant="outline">Back</and-button>
-        <and-button id="btn-step-2" variant="default" style="flex:1;">
+        <and-button id="btn-step-2" variant="default" style="flex:1;" data-full>
           Next
           <and-icon slot="end" name="arrow-right" size="16"></and-icon>
         </and-button>
@@ -115,7 +115,7 @@
       </div>
 
       <div and-layout="horizontal gap:sm">
-        <and-button id="btn-create-d1" variant="default" style="flex:1;">
+        <and-button id="btn-create-d1" variant="default" style="flex:1;" data-full>
           <and-icon slot="start" name="plus" size="16"></and-icon>
           Auto-create D1
         </and-button>
@@ -132,7 +132,7 @@
 
       <div and-layout="horizontal gap:sm">
         <and-button id="btn-back-3" variant="outline">Back</and-button>
-        <and-button id="btn-step-3" variant="default" style="flex:1;" disabled>
+        <and-button id="btn-step-3" variant="default" style="flex:1;" data-full disabled>
           Next
           <and-icon slot="end" name="arrow-right" size="16"></and-icon>
         </and-button>
@@ -164,7 +164,7 @@
 
       <div and-layout="horizontal gap:sm">
         <and-button id="btn-back-4" variant="outline">Back</and-button>
-        <and-button id="btn-download" variant="default" style="flex:1;">
+        <and-button id="btn-download" variant="default" style="flex:1;" data-full>
           <and-icon slot="start" name="download" size="16"></and-icon>
           Download wrangler.toml
         </and-button>
@@ -210,7 +210,7 @@
 
       <div and-layout="horizontal gap:sm">
         <and-button id="btn-back-5" variant="outline">Back</and-button>
-        <and-button onclick="window.location.href='/login'" variant="default" style="flex:1;">
+        <and-button onclick="window.location.href='/login'" variant="default" style="flex:1;" data-full>
           Go to Login
         </and-button>
       </div>
@@ -223,15 +223,25 @@
   (function() {
     let currentStep = 1;
     const totalSteps = 5;
-    const values = {};
     let d1Data = null;
 
-    // Capture input values
-    document.querySelectorAll('and-input[data-field]').forEach(function(input) {
-      input.addEventListener('andInput', function(e) {
-        values[input.dataset.field] = e.detail;
-      });
-    });
+    // Filled in from the D1 API response, not from any input.
+    const created = {};
+
+    /**
+     * Read a wizard field straight off the element.
+     *
+     * `and-input` exposes its current text as a reflected `value` prop, which
+     * also covers the fields rendered with a default (`dbName`, `workerName`,
+     * `baseUrl`). The old code accumulated `andInput` events into an object,
+     * but the component emits `andInputChange` — so nothing was ever captured
+     * and every field fell back to its hardcoded default.
+     */
+    function field(name, fallback) {
+      const input = document.querySelector('and-input[data-field="' + name + '"]');
+      const value = input ? (input.value || '').trim() : '';
+      return value || fallback || '';
+    }
 
     function showStep(n) {
       for (let i = 1; i <= totalSteps; i++) {
@@ -268,12 +278,12 @@
     document.getElementById('btn-create-d1').addEventListener('click', async function() {
       const btn = document.getElementById('btn-create-d1');
       const toaster = document.getElementById('toaster');
-      const accountId = values.accountId || '';
-      const apiToken = values.apiToken || '';
-      const dbName = values.dbName || 'dev-auth-db';
+      const accountId = field('accountId');
+      const apiToken = field('apiToken');
+      const dbName = field('dbName', 'dev-auth-db');
 
       if (!accountId || !apiToken) {
-        toaster.present('Please enter Account ID and API Token first', 'destructive');
+        toaster.present('Please enter Account ID and API Token first', 'error');
         return;
       }
 
@@ -293,8 +303,8 @@
         }
 
         d1Data = data.result;
-        values.databaseId = d1Data.uuid;
-        values.databaseName = d1Data.name;
+        created.databaseId = d1Data.uuid;
+        created.databaseName = d1Data.name;
 
         const resultDiv = document.getElementById('d1-result');
         resultDiv.style.display = '';
@@ -303,7 +313,7 @@
         document.getElementById('btn-step-3').disabled = false;
         toaster.present('D1 database created successfully', 'success');
       } catch (err) {
-        toaster.present(err.message || 'Failed to create D1. Try manual creation.', 'destructive');
+        toaster.present(err.message || 'Failed to create D1. Try manual creation.', 'error');
       } finally {
         btn.loading = false;
       }
@@ -311,10 +321,10 @@
 
     // Download wrangler.toml
     document.getElementById('btn-download').addEventListener('click', function() {
-      const workerName = values.workerName || 'my-dev-auth';
-      const baseUrl = values.baseUrl || 'https://' + workerName + '.workers.dev';
-      const dbName = values.databaseName || values.dbName || 'dev-auth-db';
-      const dbId = values.databaseId || 'YOUR_DATABASE_ID';
+      const workerName = field('workerName', 'my-dev-auth');
+      const baseUrl = field('baseUrl', 'https://' + workerName + '.workers.dev');
+      const dbName = created.databaseName || field('dbName', 'dev-auth-db');
+      const dbId = created.databaseId || 'YOUR_DATABASE_ID';
 
       const toml = 'name = "' + workerName + '"\\n' +
         'main = "src/index.ts"\\n' +

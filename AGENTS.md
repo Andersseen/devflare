@@ -22,7 +22,7 @@ projects/deployments management, backed by a standalone auth microservice
 
 1. **Never edit generated files**: `apps/dev-auth/src/pages/*.flow.js` are compiled
    from the sibling `.flow` files. Edit the `.flow` file, then run `pnpm --filter
-@devflare/dev-auth build:flow` (requires the `flowmark` binary — see STATE.md).
+@devflare/dev-auth build:flow` (pure npm — `@flowview/compiler`; no Rust binary).
 2. **Standalone Angular only** — no NgModules. Pages use `export default class`.
 3. **Signals over RxJS** for component state. `inject()` over constructor injection.
 4. **Business logic lives in `libs/shared/core`** (`@org/core`) services; page

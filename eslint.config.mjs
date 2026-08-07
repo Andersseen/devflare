@@ -7,11 +7,15 @@ export default [
   {
     ignores: [
       '**/dist',
+      // Vitest's HTML reporter emits <name>.ts.html files that the Angular
+      // template parser then chokes on, plus its own bundled .js assets. Only
+      // masked in CI because lint runs before test on a clean checkout.
+      '**/coverage',
       '**/vite.config.*.timestamp*',
       '**/vitest.config.*.timestamp*',
       '**/.wrangler',
       '**/*.d.ts',
-      // Compiled by flowmark from the sibling .flow templates — machine output.
+      // Compiled by flowview from the sibling .flow templates — machine output.
       '**/*.flow.js',
     ],
   },

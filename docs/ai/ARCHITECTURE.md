@@ -70,7 +70,7 @@ D1 (`devflare-db`). They only share the `userId` string.
 - **Routes**: `src/routes/auth.ts` (better-auth mount), `setup.ts` (Cloudflare
   setup wizard — disabled when `ENVIRONMENT=production`), `admin.ts` (needs
   `ADMIN_SECRET` bearer), `analytics.ts`.
-- **Pages (Flowmark pipeline — important)**: HTML for login/signup/forgot/setup/
+- **Pages (flowview pipeline — important)**: HTML for login/signup/forgot/setup/
   verify/not-found lives in `src/pages/*.flow` templates (custom syntax using
   `@andersseen/web-components` `<and-*>` elements + inline `<script>`).
   `scripts/compile-flow.mjs` compiles each `.flow` → `.flow.js` (an ES module
@@ -78,7 +78,8 @@ D1 (`devflare-db`). They only share the `userId` string.
   in `wrangler.toml`, or manually via `build:flow` / `watch:flow` scripts.
   The `.ts` files next to them (`login.ts`, …) are thin wrappers:
   `renderLayout({ title, body: renderBody({}) })`. **Never hand-edit `.flow.js`.**
-  Compilation requires the `flowmark` CLI binary (Rust; see STATE.md).
+  Compilation goes through `@flowview/compiler` (the WASM compiler on npm), so
+  it works from a plain `pnpm install` — no Rust toolchain anywhere.
 - **Config**: `wrangler.toml` — D1 + KV bindings, `[env.staging]` and
   `[env.production]` blocks (production/staging D1/KV IDs are placeholders until
   filled in).

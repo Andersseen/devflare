@@ -1,84 +1,29 @@
 #!/usr/bin/env node
 /**
- * Precompila todos los ficheros .flow de dev-auth a .flow.js usando el CLI
- * de flowview. Se engancha en [build] command de wrangler.toml.
+ * Precompila todos los ficheros .flow de dev-auth a .flow.js.
+ * Se engancha en [build] command de wrangler.toml.
  *
- * Limitación temporal (hasta Fase 4): requiere el binario `flowview` instalado
- * (p. ej. `cargo install --path crates/flowview-cli` en el repo flowview).
+ * Usa `@flowview/compiler`, el compilador WASM publicado en npm. Antes esto
+ * llamaba al binario Rust `flowview` por execFile, lo que obligaba a
+ * `cargo install` en cada máquina y en CI; para sobrevivir a las máquinas sin
+ * él había que commitear los .flow.js junto a un manifiesto de hashes que
+ * detectase outputs obsoletos. Con el compilador en npm el binario ya no hace
+ * falta en ningún sitio, así que el manifiesto desapareció: cada build compila
+ * de verdad y nunca puede quedarse desincronizado.
+ *
+ * Los .flow.js siguen commiteados porque los importan los módulos de página
+ * (`./login.flow.js`), que es lo que empaqueta wrangler.
  */
-import { execFile } from 'node:child_process';
-import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { compileFlowview, FlowviewCompilerError } from '@flowview/compiler';
+import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { extname, join, relative, resolve, sep } from 'node:path';
-import { promisify } from 'node:util';
-
-const execFileAsync = promisify(execFile);
 
 const ROOT = resolve(process.cwd());
 const SRC_DIR = join(ROOT, 'src');
 const RUNTIME_MODULE = '@flowview/runtime';
-const MANIFEST_PATH = join(ROOT, 'flow-manifest.json');
 
-function manifestKey(flowPath) {
+function displayName(flowPath) {
   return relative(ROOT, flowPath).replaceAll(sep, '/');
-}
-
-function hashSource(flowPath) {
-  return createHash('sha256').update(readFileSync(flowPath)).digest('hex');
-}
-
-/**
- * Record the hash of every .flow source that produced the current .flow.js
- * outputs. Committed alongside them so a machine without the CLI can tell
- * whether those outputs still match their sources.
- */
-function writeManifest(flowFiles) {
-  const sources = {};
-  for (const flowPath of [...flowFiles].sort()) {
-    sources[manifestKey(flowPath)] = hashSource(flowPath);
-  }
-  writeFileSync(MANIFEST_PATH, `${JSON.stringify({ sources }, null, 2)}\n`);
-}
-
-/**
- * Does every .flow.js exist and match the source it was compiled from?
- *
- * This lets a machine without the `flowview` binary (CI, a fresh clone) still
- * build, because the compiled .flow.js files are committed. It is a staleness
- * check, not a blanket skip: if a .flow was edited without recompiling, the
- * outputs are stale and we must fail rather than silently deploy old pages.
- *
- * Staleness is decided by content hash, not mtime: git does not preserve
- * mtimes, so on a fresh checkout an output can easily land older than its
- * source and a timestamp comparison would fail at random.
- */
-function outputsAreCurrent(flowFiles) {
-  let manifest;
-  try {
-    manifest = JSON.parse(readFileSync(MANIFEST_PATH, 'utf8')).sources;
-  } catch {
-    return false;
-  }
-
-  // A source added or removed since the manifest was written also makes it stale.
-  if (!manifest || Object.keys(manifest).length !== flowFiles.length) {
-    return false;
-  }
-
-  return flowFiles.every(
-    (flowPath) =>
-      existsSync(`${flowPath}.js`) &&
-      manifest[manifestKey(flowPath)] === hashSource(flowPath),
-  );
-}
-
-async function flowviewAvailable() {
-  try {
-    await execFileAsync('flowview', ['--version'], { encoding: 'utf8' });
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 function findFlowFiles(dir) {
@@ -94,22 +39,33 @@ function findFlowFiles(dir) {
   return results;
 }
 
-async function compileFile(flowPath) {
-  const outputPath = `${flowPath}.js`;
-  const displayName = relative(ROOT, flowPath).replaceAll(sep, '/');
+function reportDiagnostics(name, diagnostics) {
+  for (const d of diagnostics) {
+    console.error(`[flowview] ${name}:${d.line}:${d.column} ${d.message}`);
+  }
+}
 
-  const { stdout } = await execFileAsync(
-    'flowview',
-    [
-      'compile',
-      flowPath,
-      '--runtime',
-      RUNTIME_MODULE,
-      '--display-name',
-      displayName,
-    ],
-    { encoding: 'utf8' },
-  );
+function compileFile(flowPath) {
+  const name = displayName(flowPath);
+  const outputPath = `${flowPath}.js`;
+
+  let result;
+  try {
+    result = compileFlowview(readFileSync(flowPath, 'utf8'), {
+      filename: name,
+      runtimeImport: RUNTIME_MODULE,
+    });
+  } catch (error) {
+    console.error(`[flowview] Failed to compile ${name}`);
+    if (error instanceof FlowviewCompilerError) {
+      reportDiagnostics(name, error.diagnostics);
+    } else {
+      console.error(error.message);
+    }
+    return false;
+  }
+
+  reportDiagnostics(name, result.warnings);
 
   let existing;
   try {
@@ -118,12 +74,14 @@ async function compileFile(flowPath) {
     existing = undefined;
   }
 
-  if (existing === stdout) {
-    return { outputPath, changed: false };
+  if (existing === result.code) {
+    console.log(`[flowview] ${name} (up to date)`);
+    return true;
   }
 
-  writeFileSync(outputPath, stdout, 'utf8');
-  return { outputPath, changed: true };
+  writeFileSync(outputPath, result.code, 'utf8');
+  console.log(`[flowview] ${name} -> ${displayName(outputPath)}`);
+  return true;
 }
 
 let files;
@@ -139,56 +97,9 @@ if (files.length === 0) {
   process.exit(0);
 }
 
-// wrangler runs this as its [build] command, so it also executes on CI and on
-// any machine without the Rust CLI installed.
-if (!(await flowviewAvailable())) {
-  if (outputsAreCurrent(files)) {
-    console.log(
-      `[flowview] binary not found — using the ${files.length} committed .flow.js files (all matching their sources).`,
-    );
-    process.exit(0);
-  }
-
-  console.error(
-    '[flowview] binary not found AND the .flow.js outputs are stale.',
-  );
-  console.error(
-    'A .flow file changed without being recompiled, so building now',
-  );
-  console.error('would ship outdated pages. Either install the CLI:');
-  console.error(
-    '  cargo install --path crates/flowview-cli   # in the flowview repo',
-  );
-  console.error(
-    'then run `pnpm --filter @devflare/dev-auth build:flow`, or commit the',
-  );
-  console.error('regenerated .flow.js files from a machine that has it.');
+// Secuencial a propósito: son 6 ficheros y el WASM es síncrono, así que
+// paralelizar sólo desordenaría la salida.
+const ok = files.map(compileFile).every(Boolean);
+if (!ok) {
   process.exit(1);
 }
-
-const results = await Promise.all(
-  files.map(async (flowPath) => {
-    const displayName = relative(ROOT, flowPath).replaceAll(sep, '/');
-    try {
-      const { outputPath, changed } = await compileFile(flowPath);
-      const outputRelative = relative(ROOT, outputPath).replaceAll(sep, '/');
-      if (changed) {
-        console.log(`[flowview] ${displayName} -> ${outputRelative}`);
-      } else {
-        console.log(`[flowview] ${displayName} (up to date)`);
-      }
-      return { ok: true };
-    } catch (error) {
-      console.error(`[flowview] Failed to compile ${displayName}`);
-      console.error(error.stderr || error.message);
-      return { ok: false };
-    }
-  }),
-);
-
-if (results.some((r) => !r.ok)) {
-  process.exit(1);
-}
-
-// Only now that every output is known-good does the manifest describe reality.
-writeManifest(files);

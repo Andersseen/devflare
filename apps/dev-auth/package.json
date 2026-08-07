@@ -5,7 +5,10 @@
   "type": "module",
   "main": "src/index.ts",
   "dependencies": {
-    "@flowview/runtime": "^0.1.0"
+    "@flowview/runtime": "^0.1.2"
+  },
+  "devDependencies": {
+    "@flowview/compiler": "^0.1.2"
   },
   "scripts": {
     "dev": "wrangler dev --local",

@@ -22,9 +22,10 @@ authenticated users.
    with signals, Tailwind CSS 4, Nx 22 monorepo — deployed Cloudflare-native.
 3. **Dogfooding the author's ecosystem**: DevFlare is the proving ground for
    `@voltui/components` (the author's Angular UI kit), `@andersseen/web-components`
-   (Stencil web components, used in dev-auth pages), and **flowmark/flowview**
-   (the author's Rust-based HTML template compiler + JS runtime, currently being
-   adopted for dev-auth pages).
+   (Stencil web components, used in dev-auth pages), and **flowview**
+   (the author's Rust HTML template compiler, consumed here as the
+   `@flowview/compiler` WASM build + `@flowview/runtime`, driving dev-auth's
+   pages).
 
 ## The two products inside this repo
 
