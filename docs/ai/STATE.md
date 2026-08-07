@@ -91,24 +91,22 @@ Reworked the shell so the VoltUI adoption keeps the pre-VoltUI look:
   landing page; card grid extracted to `components/tool-grid.component.ts` and
   shared with the home page.
 
-## Flowmark migration of dev-auth pages (merged in `2138796`)
+## flowview pipeline for dev-auth pages (merged in `2138796`)
 
 dev-auth's auth pages were migrated from inline HTML-in-TypeScript strings
-(~800 lines deleted) to **Flowmark `.flow` templates**:
+(~800 lines deleted) to **flowview `.flow` templates**:
 
-- New: `src/pages/*.flow` (6 pages), `scripts/compile-flow.mjs`,
-  `scripts/watch-flow.mjs`, `src/types/flowmark.d.ts`, `@flowview/runtime` dep.
-- Modified: `pages/*.ts` are now thin wrappers calling the compiled
-  `render()` from `*.flow.js`; `wrangler.toml` gained a `[build] command`.
-- **Known limitation ("until Phase 4" of the flowmark project)**: _recompiling_
-  requires the `flowmark` Rust binary on the machine
-  (`cargo install --path crates/flowmark-cli` from the author's flowmark repo).
-  Building without it works, because the `.flow.js` outputs are committed.
-- Staleness is guarded by `apps/dev-auth/flow-manifest.json`, which records the
-  SHA-256 of each `.flow`. If a source no longer matches its recorded hash and
-  the CLI is absent, the build fails rather than shipping outdated pages.
-- Status: `dev-auth:build` verified green both with and without the binary
-  on `PATH` (2026-07-28).
+- `src/pages/*.flow` (6 pages), `scripts/compile-flow.mjs`,
+  `scripts/watch-flow.mjs`, `src/types/flowview.d.ts`, `@flowview/runtime` dep.
+- `pages/*.ts` are thin wrappers calling the compiled `render()` from
+  `*.flow.js`; `wrangler.toml` runs the compile as its `[build] command`.
+- **The Rust-binary requirement is gone** (2026-08-07). `compile-flow.mjs` now
+  calls `@flowview/compiler`, the WASM compiler published on npm, so every
+  machine and CI job can recompile after `pnpm install`. `flow-manifest.json`
+  and its hash-staleness check were deleted along with it — the build always
+  compiles for real, so outputs can no longer drift from their sources.
+  Verified: the npm compiler reproduces the previously committed `.flow.js`
+  byte for byte.
 
 ## What works today
 
@@ -170,9 +168,31 @@ dev-auth's auth pages were migrated from inline HTML-in-TypeScript strings
    workers and verify `devflare.andersseen.dev`.
 2. Disconnect the Vercel project once Cloudflare serves traffic.
 3. Review the shell rework in a browser, then commit it.
-4. Remove the local `flowmark` binary requirement (flowmark "Phase 4").
+4. Release `@andersseen/icon` with the `lock`/`user` fix, then bump `CDN.icon`
+   in `apps/dev-auth/src/pages/layout.ts`.
 
 ## Session log
+
+- **2026-08-07** — Repaired the dev-auth auth pages, which rendered completely
+  unstyled and could not log anyone in (branch `feature/dev-auth-fixes`).
+  Four independent breakages:
+  (1) **CSP**: `style-src` never listed unpkg, only `script-src` did, so the
+  custom elements upgraded while all three CDN stylesheets were blocked —
+  `and-layout`/`and-text` and the light-DOM component styles vanished.
+  (2) **`and-input`**: every page listened for `andInput`, but the component
+  emits `andInputChange`, so all form fields always read as empty and login,
+  signup, forgot and the setup wizard were dead. Now they read `input.value`
+  directly, which also picks up server-rendered defaults.
+  (3) **`verify.flow`** shipped its own HTML shell pointing at two 404 CDN
+  paths (`dist/and-web-components/…`); it is now a fragment rendered through
+  `renderLayout` like every other page.
+  (4) Toast type `'destructive'` is not in the component's union (`error` is),
+  and `and-button` has no `full` prop — full width needs `::part(button)`.
+  Also pinned the four `@andersseen/*` CDN versions (were `@latest`, so any
+  upstream release could break production auth without a commit here) and
+  dropped the no-op `data-color="devflare"`.
+  Verified in a real browser: 0 CSP violations, card renders correctly,
+  `and-input.value` reads back typed text.
 
 - **2026-07-28** — Fixed the red `CI` workflow (e2e was the only failing task;
   lint/typecheck/test/build were green). Three causes: (1) the workflow

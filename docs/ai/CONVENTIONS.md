@@ -45,14 +45,21 @@
 ## dev-auth (apps/dev-auth)
 
 - Page HTML lives in `.flow` templates; the compiled `.flow.js` is **generated —
-  never edit it**, but it _is_ committed, so CI can build without the Rust CLI.
+  never edit it**, but it _is_ committed, because the page wrappers import it.
   After editing a `.flow`, run `pnpm --filter @devflare/dev-auth build:flow` and
-  commit the regenerated `.flow.js` **and** `apps/dev-auth/flow-manifest.json`
-  (it records each source's hash; the build fails if they drift apart).
+  commit the regenerated `.flow.js`. The compiler is `@flowview/compiler` (npm,
+  WASM), so this works anywhere `pnpm install` has run.
 - `.flow` files use `@andersseen/web-components`: `<and-card>`, `<and-input>`,
   `<and-button>`, `<and-icon>` plus attribute-driven layout (`and-layout=`,
   `and-text=`, `and-motion=`). Client-side behavior is a plain inline
   `<script>(function(){…})()</script>` block at the bottom — no framework.
+- The component API is **pinned by version** in `pages/layout.ts` (`CDN`), not
+  `@latest`. When bumping it, re-check the bits that have already bitten:
+  `and-input` emits `andInputChange` (read `input.value` instead of listening),
+  toast types are `default|success|error|info|warning`, and `and-button` has no
+  `full` prop — full width comes from `and-button[data-full]::part(button)`.
+- Anything the pages load from unpkg must be listed in **both** `script-src` and
+  `style-src` in `middleware/security-headers.ts`, or the CSP silently drops it.
 - Hono routes/middleware: keep each concern in its own file under `routes/` or
   `middleware/`. Validation helpers in `src/lib/validation.ts` (has tests —
   extend them when you extend validation).

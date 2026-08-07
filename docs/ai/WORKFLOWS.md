@@ -5,8 +5,6 @@
 ```bash
 pnpm install
 cp .env.sample .env        # fill in at least BETTER_AUTH_SECRET
-# optional, for dev-auth .flow compilation:
-#   install the `flowmark` binary (Rust) — see docs/ai/STATE.md
 ```
 
 ## Daily development
@@ -95,11 +93,12 @@ see [/DEPLOY.md](../../DEPLOY.md).
 
 ## Troubleshooting quick hits
 
-| Symptom                                    | Likely cause / fix                                                                                                                                                                                                                        |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| dev-auth build fails: `flowmark` not found | Only fails if a `.flow`'s content no longer matches the hash in `flow-manifest.json`; otherwise the committed outputs are used. Install the CLI (see STATE.md), rerun `build:flow`, and commit the outputs — never hand-write `.flow.js`. |
-| Login returns "Invalid origin"             | `BETTER_AUTH_URL` mismatch, or missing `Origin` header on direct curl calls.                                                                                                                                                              |
-| Session not visible at :4200               | Both services running? The Nitro catch-all proxies `/api/auth/*` to :8787.                                                                                                                                                                |
-| Cookies lost in staging/prod               | `COOKIE_DOMAIN` must be the root domain (`.yourdomain.com`), same for both apps.                                                                                                                                                          |
-| Rate-limited during testing (429)          | KV rate limit ~10 req/min/IP on auth endpoints — wait or restart local state.                                                                                                                                                             |
-| Port already in use                        | A previous `pnpm dev:all` still alive — kill node/wrangler processes.                                                                                                                                                                     |
+| Symptom                                | Likely cause / fix                                                                                                                                                                                                               |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Auth pages render unstyled             | The `@andersseen/*` CDN hosts must be in **both** `script-src` and `style-src` of the CSP in `apps/dev-auth/src/middleware/security-headers.ts`. With only `script-src`, the components upgrade but every stylesheet is blocked. |
+| An auth form says "fill in all fields" | `and-input` emits `andInputChange`, not `andInput`. Read `input.value` off the element instead of accumulating events. Check the pinned CDN version in `pages/layout.ts` after any upstream bump.                                |
+| Login returns "Invalid origin"         | `BETTER_AUTH_URL` mismatch, or missing `Origin` header on direct curl calls.                                                                                                                                                     |
+| Session not visible at :4200           | Both services running? The Nitro catch-all proxies `/api/auth/*` to :8787.                                                                                                                                                       |
+| Cookies lost in staging/prod           | `COOKIE_DOMAIN` must be the root domain (`.yourdomain.com`), same for both apps.                                                                                                                                                 |
+| Rate-limited during testing (429)      | KV rate limit ~10 req/min/IP on auth endpoints — wait or restart local state.                                                                                                                                                    |
+| Port already in use                    | A previous `pnpm dev:all` still alive — kill node/wrangler processes.                                                                                                                                                            |

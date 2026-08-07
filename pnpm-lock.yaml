@@ -39,8 +39,8 @@ importers:
         specifier: ^1.6.11
         version: 1.6.11(@better-auth/core@1.6.11(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@cloudflare/workers-types@4.20260523.1)(@opentelemetry/api@1.9.1)(better-call@1.3.5(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.0)(drizzle-orm@0.45.2(@cloudflare/workers-types@4.20260523.1)(@opentelemetry/api@1.9.1)(@types/better-sqlite3@7.6.13)(better-sqlite3@12.8.0)(kysely@0.28.17))
       '@flowview/runtime':
-        specifier: ^0.1.1
-        version: 0.1.1
+        specifier: ^0.1.2
+        version: 0.1.2
       '@imgly/background-removal':
         specifier: ^1.7.0
         version: 1.7.0(onnxruntime-web@1.21.0)
@@ -150,6 +150,9 @@ importers:
       '@eslint/js':
         specifier: ^9.8.0
         version: 9.39.4
+      '@flowview/compiler':
+        specifier: ^0.1.2
+        version: 0.1.2
       '@nx/angular':
         specifier: 22.3.1
         version: 22.3.1(92851d0eaac74ec936059585d4caf9d6)
@@ -2420,8 +2423,11 @@ packages:
   '@floating-ui/utils@0.2.11':
     resolution: {integrity: sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg==}
 
-  '@flowview/runtime@0.1.1':
-    resolution: {integrity: sha512-108uOTCC5Ak2yTj3J4AyV3u7f0lMAeddzdsjkJ4mD/c0dWu/HXsM+Epnl+PtPYnQY0stSBMB+L6xl40iEgZOUg==}
+  '@flowview/compiler@0.1.2':
+    resolution: {integrity: sha512-JYtrdHL3YzBD0tpuGNm8n9hXp98P8hbIWz1YKQL3u4oofIZB9jvFutUDcLiIuOZZRN0zqSWPf5x8a3dNp5Maiw==}
+
+  '@flowview/runtime@0.1.2':
+    resolution: {integrity: sha512-79OzOkak0vREgwQB32vcwDZx/m8D3B1vabBAw3JUtGGq8/KrO0wuBBdB/1LvsBugSxzqWKRzQO+vOPLTy74toQ==}
 
   '@gar/promise-retry@1.0.3':
     resolution: {integrity: sha512-GmzA9ckNokPypTg10pgpeHNQe7ph+iIKKmhKu3Ob9ANkswreCx7R3cKmY781K8QK3AqVL3xVh9A42JvIAbkkSA==}
@@ -13327,7 +13333,9 @@ snapshots:
 
   '@floating-ui/utils@0.2.11': {}
 
-  '@flowview/runtime@0.1.1': {}
+  '@flowview/compiler@0.1.2': {}
+
+  '@flowview/runtime@0.1.2': {}
 
   '@gar/promise-retry@1.0.3': {}
 

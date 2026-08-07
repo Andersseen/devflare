@@ -35,7 +35,7 @@
       id="submit-btn"
       type="submit"
       variant="default"
-      style="width: 100%;">
+      data-full>
       <and-icon slot="start" name="arrow-right" size="16"></and-icon>
       Send Reset Link
     </and-button>
@@ -51,21 +51,24 @@
     const form = document.getElementById('forgot-form');
     const submitBtn = document.getElementById('submit-btn');
     const toaster = document.getElementById('toaster');
-    const values = {};
 
-    form.querySelectorAll('and-input[data-field]').forEach(function(input) {
-      input.addEventListener('andInput', function(e) {
-        values[input.dataset.field] = e.detail;
-      });
-    });
+    // Read straight off the element instead of accumulating change events:
+    // `and-input` exposes its current text as a reflected `value` prop, so
+    // this also picks up values the component was rendered with. (The old
+    // code listened for `andInput`, which the component never emits — its
+    // event is `andInputChange` — so every field always read as empty.)
+    function field(name) {
+      const input = form.querySelector('and-input[data-field="' + name + '"]');
+      return input ? input.value || '' : '';
+    }
 
     form.addEventListener('submit', async function(e) {
       e.preventDefault();
 
-      const email = (values.email || '').trim();
+      const email = field('email').trim();
 
       if (!email) {
-        toaster.present('Please enter your email', 'destructive');
+        toaster.present('Please enter your email', 'error');
         return;
       }
 

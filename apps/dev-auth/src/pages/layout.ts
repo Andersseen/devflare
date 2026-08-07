@@ -2,6 +2,23 @@
  * Layout base para todas las páginas de auth.
  * Incluye CDN de @andersseen/web-components, layout, motion e iconos.
  */
+
+/**
+ * Versiones exactas de los paquetes @andersseen/* servidos desde unpkg.
+ *
+ * Van pinneadas a propósito: con `@latest` cualquier publicación en
+ * and-web-components cambia estas páginas en producción sin tocar este repo,
+ * y una release con breaking changes tumbaría el login sin previo aviso.
+ * Al subir una versión aquí, revisa la API de los componentes que usan las
+ * páginas (nombres de eventos, props y variantes de toast).
+ */
+const CDN = {
+  webComponents: '0.4.0',
+  layout: '0.0.1',
+  motion: '0.2.0',
+  icon: '0.1.0',
+} as const;
+
 export interface LayoutOptions {
   title: string;
   body: string;
@@ -10,22 +27,22 @@ export interface LayoutOptions {
 
 export function renderLayout(options: LayoutOptions): string {
   return `<!DOCTYPE html>
-<html lang="en" data-color="devflare">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>${escapeHtml(options.title)} — DevFlare Auth</title>
 
     <!-- Web Components -->
-    <script type="module" src="https://unpkg.com/@andersseen/web-components@latest/dist/web-components/web-components.esm.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/@andersseen/web-components@latest/dist/web-components/web-components.css" />
+    <script type="module" src="https://unpkg.com/@andersseen/web-components@${CDN.webComponents}/dist/web-components/web-components.esm.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@andersseen/web-components@${CDN.webComponents}/dist/web-components/web-components.css" />
 
     <!-- Layout & Motion -->
-    <link rel="stylesheet" href="https://unpkg.com/@andersseen/layout@latest/dist/layout.css" />
-    <link rel="stylesheet" href="https://unpkg.com/@andersseen/motion@latest/style.css" />
+    <link rel="stylesheet" href="https://unpkg.com/@andersseen/layout@${CDN.layout}/dist/layout.css" />
+    <link rel="stylesheet" href="https://unpkg.com/@andersseen/motion@${CDN.motion}/dist/style.css" />
     <script type="module">
-      import { initMotion } from 'https://unpkg.com/@andersseen/motion@latest/dist/index.js';
-      import { registerAllIcons } from 'https://unpkg.com/@andersseen/icon@latest/dist/index.js';
+      import { initMotion } from 'https://unpkg.com/@andersseen/motion@${CDN.motion}/dist/index.js';
+      import { registerAllIcons } from 'https://unpkg.com/@andersseen/icon@${CDN.icon}/dist/index.js';
       registerAllIcons();
       initMotion();
     </script>
@@ -87,6 +104,21 @@ export function renderLayout(options: LayoutOptions): string {
       /* Ensure cards don't exceed viewport on mobile */
       and-card {
         max-width: 400px;
+        width: 100%;
+      }
+
+      /*
+       * Full-width buttons. and-button renders its button/anchor inside a
+       * shadow root, so stretching the host alone leaves the real control at
+       * its intrinsic width — the inner element has to be reached through the
+       * exposed parts. (The component has no "full" prop.)
+       */
+      and-button[data-full] {
+        display: block;
+        width: 100%;
+      }
+      and-button[data-full]::part(button),
+      and-button[data-full]::part(link) {
         width: 100%;
       }
     </style>
