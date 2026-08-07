@@ -44,6 +44,8 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - uses: ./.github/actions/cloudflare-preflight
+
       - uses: pnpm/action-setup@v6
         with:
           version: 10
@@ -73,6 +75,8 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v5
+
+      - uses: ./.github/actions/cloudflare-preflight
 
       - uses: pnpm/action-setup@v6
         with:
