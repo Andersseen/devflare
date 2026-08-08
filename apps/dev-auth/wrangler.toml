@@ -21,10 +21,24 @@ id = "local-rate-limit-kv"
 # Override via wrangler secret for production.
 BETTER_AUTH_URL = "http://localhost:8787"
 APP_URL = "http://localhost:4200"
+# Applications allowed to authenticate through this provider. This is the whole
+# registration mechanism — there is no registration endpoint and no dashboard.
+# Only the redirect URIs listed here are ever accepted, so adding an app is a
+# reviewable diff. Client secrets live in OAUTH_CLIENT_SECRETS (a secret, set in
+# .dev.vars locally / `wrangler secret put` in production), never here.
+OAUTH_CLIENTS = '''[
+  {
+    "clientId": "devflare-dev",
+    "name": "DevFlare (local)",
+    "type": "web",
+    "redirectURIs": ["http://localhost:4200/api/auth/callback"]
+  }
+]'''
 
 # Secrets (set via: wrangler secret put BETTER_AUTH_SECRET)
 # BETTER_AUTH_SECRET = "change-me-in-production"
 # GITHUB_CLIENT_SECRET = "your-github-oauth-app-secret"
+# OAUTH_CLIENT_SECRETS = '{"devflare-dev":"..."}'
 
 # D1 Migrations
 [[migrations]]
@@ -60,23 +74,51 @@ BETTER_AUTH_URL = "https://auth-devflare.andersseen.dev"
 # gets no CORS headers at all.
 ENVIRONMENT = "production"
 DEV_AUTH_CORS_ORIGINS = "https://devflare.andersseen.dev"
-# REQUIRED, not optional: enables better-auth's crossSubDomainCookie
-# (auth.config.ts keys off `!!env.COOKIE_DOMAIN`). The app and the auth service
-# are different subdomains, so without this the session cookie is host-only to
-# auth-devflare.andersseen.dev and the browser never sends it to
-# devflare.andersseen.dev — login would appear to succeed and every subsequent
-# request would still be 401.
-COOKIE_DOMAIN = ".andersseen.dev"
+# COOKIE_DOMAIN removed. It used to feed a cross-subdomain cookie setting that
+# was misspelled and therefore never took effect (see auth.config.ts). Consumers
+# now complete the OAuth flow and hold their own session, so this service's cookie
+# stays host-only to this Worker — which is what lets an app on an unrelated
+# domain work at all.
 # Public half of the GitHub OAuth App credentials — it travels in the
 # authorization URL, so it is not a secret. Its partner GITHUB_CLIENT_SECRET is
 # set with `wrangler secret put`. The App's callback URL must be exactly
 # https://auth-devflare.andersseen.dev/api/auth/callback/github
 GITHUB_CLIENT_ID = "Ov23ct49BSc1NKSicmGf"
-# Where the browser goes once it holds a session. This service has no landing
-# page of its own (`/` redirects to `/login`), so without this a successful
-# sign-in bounces straight back to the form. Also registered as a trusted
-# origin, or better-auth refuses it as a callbackURL.
+# Fallback destination for a sign-in that did NOT come from an OAuth
+# authorization request (someone opening /login directly). This service has no
+# landing page of its own (`/` redirects to `/login`), so without this such a
+# sign-in bounces straight back to the form. Authorization flows ignore it and
+# return to the calling app's registered redirect URI instead.
 APP_URL = "https://devflare.andersseen.dev"
+# The registered consumer applications. Adding an app here — plus its secret in
+# OAUTH_CLIENT_SECRETS — is all it takes; an app in another repository needs
+# nothing else from this service. Redirect URIs are matched exactly.
+OAUTH_CLIENTS = '''[
+  {
+    "clientId": "devflare",
+    "name": "DevFlare",
+    "type": "web",
+    "redirectURIs": ["https://devflare.andersseen.dev/api/auth/callback"]
+  }
+]'''
+# Example of registering an application from outside this monorepo. Uncomment,
+# replace the domain with the real one, add {"imaginaryx":"<secret>"} to
+# OAUTH_CLIENT_SECRETS, and redeploy — nothing else in this service changes.
+#
+# OAUTH_CLIENTS = '''[
+#   {
+#     "clientId": "devflare",
+#     "name": "DevFlare",
+#     "type": "web",
+#     "redirectURIs": ["https://devflare.andersseen.dev/api/auth/callback"]
+#   },
+#   {
+#     "clientId": "imaginaryx",
+#     "name": "Imaginaryx",
+#     "type": "web",
+#     "redirectURIs": ["https://imaginaryx.example.com/auth/callback"]
+#   }
+# ]'''
 # No transactional email provider is wired up yet, so email verification is off
 # (see auth.config.ts) and sign-up is restricted to these addresses instead.
 # Applies to GitHub sign-in too: the address GitHub returns must be listed here.
@@ -104,9 +146,16 @@ id = "38f688fba9d1466ea801902f36dbe2d2"
 BETTER_AUTH_URL = "https://auth-devflare-staging.andersseen.dev"
 ENVIRONMENT = "staging"
 DEV_AUTH_CORS_ORIGINS = "https://devflare-staging.andersseen.dev"
-COOKIE_DOMAIN = ".andersseen.dev"
 SIGNUP_ALLOWLIST = "andriipap01@gmail.com"
 APP_URL = "https://devflare-staging.andersseen.dev"
+OAUTH_CLIENTS = '''[
+  {
+    "clientId": "devflare-staging",
+    "name": "DevFlare (staging)",
+    "type": "web",
+    "redirectURIs": ["https://devflare-staging.andersseen.dev/api/auth/callback"]
+  }
+]'''
 # Staging needs its OWN GitHub OAuth App: an App accepts a single callback URL,
 # and production already claims .../api/auth/callback/github on the prod host.
 # GITHUB_CLIENT_ID = "your-staging-oauth-app-id"

@@ -1,9 +1,6 @@
 // Types
 export * from './lib/types/auth.types';
 
-// Server (solo para uso en Nitro server routes)
-export * from './lib/server/auth.config';
-
 // Client factory
 export * from './lib/client/auth-client';
 

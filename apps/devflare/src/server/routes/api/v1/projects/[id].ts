@@ -1,9 +1,9 @@
 import { defineEventHandler, getRouterParam, createError } from 'h3';
-import { getRemoteSession, requireAuth } from '../../../../lib/auth-remote';
+import { getAppSession, requireAuth } from '../../../../lib/session';
 import { db } from '../../../../db';
 
 export default defineEventHandler(async (event) => {
-  const session = await getRemoteSession(event);
+  const session = await getAppSession(event);
   const user = requireAuth(session);
   const id = getRouterParam(event, 'id');
 

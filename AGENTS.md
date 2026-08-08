@@ -15,8 +15,9 @@ This is the entry point for AI coding agents. Read this first, then load only th
 
 DevFlare is a developer-tools web platform: an AnalogJS (Angular 21) app with ~10
 browser-based utilities (QR codes, image compression, palette extraction, …) plus
-projects/deployments management, backed by a standalone auth microservice
-(`dev-auth`: Hono + better-auth + Cloudflare D1/Workers). Nx 22 monorepo, pnpm.
+projects/deployments management, plus `dev-auth`: a standalone OAuth 2.1 / OIDC
+**identity provider** (Hono + better-auth + Cloudflare D1/Workers) that DevFlare
+and other apps in other repositories all authenticate against. Nx 22 monorepo, pnpm.
 
 ## Hard rules
 
@@ -27,14 +28,18 @@ projects/deployments management, backed by a standalone auth microservice
 3. **Signals over RxJS** for component state. `inject()` over constructor injection.
 4. **Business logic lives in `libs/shared/core`** (`@org/core`) services; page
    components stay thin (UI + wiring).
-5. **Server routes**: h3 `defineEventHandler`, auth via `getRemoteSession` +
-   `requireAuth`, SQL via `db.sql` tagged templates (never string concatenation).
+5. **Server routes**: h3 `defineEventHandler`, auth via `getAppSession` +
+   `requireAuth` (`apps/devflare/src/server/lib/session.ts`), SQL via `db.sql`
+   tagged templates (never string concatenation).
 6. **Do not commit secrets**. Local secrets: `.env` (root) and
-   `apps/dev-auth/.dev.vars` (both gitignored).
+   `apps/*/.dev.vars` — now gitignored, but `apps/dev-auth/.dev.vars` was
+   committed before that and is still tracked; untrack it rather than adding to it.
 7. **Before declaring done**: `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
    (or `pnpm check` to also build). Fix what you broke, not unrelated failures.
 8. **Update [docs/ai/STATE.md](docs/ai/STATE.md)** when you finish meaningful work
    (see the "How to update" section inside it).
+9. **dev-auth serves more than DevFlare.** Register a consumer app in
+   `OAUTH_CLIENTS`; never add a DevFlare-specific assumption to the provider.
 
 ## Quick reference
 

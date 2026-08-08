@@ -34,9 +34,12 @@
 - h3 handlers: `export default defineEventHandler(async (event) => { … })`.
 - Auth-gated endpoints start with:
   ```ts
-  const session = await getRemoteSession(event);
+  const session = await getAppSession(event); // src/server/lib/session.ts
   const user = requireAuth(session);
   ```
+  `user.id` is the identity provider's `sub`. The session itself is DevFlare's —
+  established by the OIDC flow in `api/auth/callback.ts`, never by asking dev-auth
+  on each request.
 - Database access only via the `db.sql` tagged-template API — values are always
   interpolated as `${x}` (parameterized), never concatenated into SQL strings.
 - Errors: `throw createError({ statusCode, statusMessage })`.
