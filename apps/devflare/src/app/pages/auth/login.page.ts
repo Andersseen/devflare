@@ -75,7 +75,10 @@ const ERRORS: Record<string, string> = {
               } @else {
                 <span class="flex items-center justify-center gap-2">
                   Continue with DevAuth
-                  <lucide-icon name="arrow-right" class="w-4 h-4" />
+                  <!-- external-link, not an arrow: this leaves the app for the
+                       identity provider's own origin. Also the arrow is not in
+                       app.config.ts's curated LucideAngularModule.pick() set. -->
+                  <lucide-icon name="external-link" class="w-4 h-4" />
                 </span>
               }
             </volt-button>
