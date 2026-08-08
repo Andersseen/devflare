@@ -1,9 +1,9 @@
 import { renderLayout } from './layout';
 import { render as renderSignupBody } from './signup.flow.js';
 
-export function renderSignupPage(): string {
+export function renderSignupPage(appUrl?: string): string {
   return renderLayout({
     title: 'Sign Up',
-    body: renderSignupBody({}),
+    body: renderSignupBody({ appUrl: appUrl || '/' }),
   });
 }

@@ -22,6 +22,11 @@ export function createAuth(env: Env) {
     }),
     baseURL: env.BETTER_AUTH_URL,
     secret: env.BETTER_AUTH_SECRET,
+    // Every callbackURL is validated against this list. The app lives on a
+    // different subdomain, so without its origin here any sign-in that tries to
+    // land on the app is refused with INVALID_CALLBACK_URL. The list is
+    // additive — better-auth always trusts the baseURL origin on top of it.
+    trustedOrigins: env.APP_URL ? [new URL(env.APP_URL).origin] : [],
     emailAndPassword: {
       enabled: true,
       minPasswordLength: 8,

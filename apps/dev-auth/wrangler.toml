@@ -20,6 +20,7 @@ id = "local-rate-limit-kv"
 # These are defaults for local development.
 # Override via wrangler secret for production.
 BETTER_AUTH_URL = "http://localhost:8787"
+APP_URL = "http://localhost:4200"
 
 # Secrets (set via: wrangler secret put BETTER_AUTH_SECRET)
 # BETTER_AUTH_SECRET = "change-me-in-production"
@@ -71,6 +72,11 @@ COOKIE_DOMAIN = ".andersseen.dev"
 # set with `wrangler secret put`. The App's callback URL must be exactly
 # https://auth-devflare.andersseen.dev/api/auth/callback/github
 GITHUB_CLIENT_ID = "Ov23ct49BSc1NKSicmGf"
+# Where the browser goes once it holds a session. This service has no landing
+# page of its own (`/` redirects to `/login`), so without this a successful
+# sign-in bounces straight back to the form. Also registered as a trusted
+# origin, or better-auth refuses it as a callbackURL.
+APP_URL = "https://devflare.andersseen.dev"
 # No transactional email provider is wired up yet, so email verification is off
 # (see auth.config.ts) and sign-up is restricted to these addresses instead.
 # Applies to GitHub sign-in too: the address GitHub returns must be listed here.
@@ -100,6 +106,7 @@ ENVIRONMENT = "staging"
 DEV_AUTH_CORS_ORIGINS = "https://devflare-staging.andersseen.dev"
 COOKIE_DOMAIN = ".andersseen.dev"
 SIGNUP_ALLOWLIST = "andriipap01@gmail.com"
+APP_URL = "https://devflare-staging.andersseen.dev"
 # Staging needs its OWN GitHub OAuth App: an App accepts a single callback URL,
 # and production already claims .../api/auth/callback/github on the prod host.
 # GITHUB_CLIENT_ID = "your-staging-oauth-app-id"
