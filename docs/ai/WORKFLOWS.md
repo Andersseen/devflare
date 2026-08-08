@@ -88,8 +88,8 @@ pnpm cf:tail:app      # live logs
 
 `deploy:app` builds first on purpose: `apps/devflare/wrangler.toml` points
 `main` and `[assets]` at `dist/`, so deploying without a fresh build ships stale
-output. Full production setup (resources, secrets, domains, Vercel teardown):
-see [/DEPLOY.md](../../DEPLOY.md).
+output. Full production setup (resources, secrets, domains): see
+[/DEPLOY.md](../../DEPLOY.md).
 
 ## Troubleshooting quick hits
 
