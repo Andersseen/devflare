@@ -28,6 +28,12 @@ export interface Env {
   GITHUB_CLIENT_SECRET?: string;
   /** Comma-separated addresses allowed to sign up. Empty means unrestricted. */
   SIGNUP_ALLOWLIST?: string;
+  /**
+   * Where to send the browser once it holds a session. This service has no
+   * landing page of its own — `/` redirects back to `/login` — so without it
+   * a successful sign-in bounces the user straight back to the form.
+   */
+  APP_URL?: string;
 }
 
 const app = new Hono<{ Bindings: Env }>();
@@ -78,11 +84,11 @@ app.route('/api/analytics', analyticsRoutes);
 
 // Auth pages
 app.get('/login', (c) => {
-  return c.html(renderLoginPage());
+  return c.html(renderLoginPage(c.env.APP_URL));
 });
 
 app.get('/signup', (c) => {
-  return c.html(renderSignupPage());
+  return c.html(renderSignupPage(c.env.APP_URL));
 });
 
 app.get('/forgot', (c) => {
