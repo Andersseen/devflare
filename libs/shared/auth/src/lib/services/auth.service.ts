@@ -45,8 +45,8 @@ export class Auth {
 
   async #loadSession(): Promise<void> {
     try {
-      const { data } = await this.#client.getSession();
-      this.#_user.set((data?.user as AuthUser) ?? null);
+      const { user } = await this.#client.getSession();
+      this.#_user.set(user);
     } catch {
       this.#_user.set(null);
     } finally {
@@ -54,30 +54,22 @@ export class Auth {
     }
   }
 
-  async login(email: string, password: string): Promise<void> {
-    const { data, error } = await this.#client.signIn.email({
-      email,
-      password,
-    });
-    if (error) throw new Error(error.message);
-    this.#_user.set((data?.user as AuthUser) ?? null);
-  }
-
-  async register(email: string, password: string, name: string): Promise<void> {
-    const { data, error } = await this.#client.signUp.email({
-      email,
-      password,
-      name,
-    });
-    if (error) throw new Error(error.message);
-    this.#_user.set((data?.user as AuthUser) ?? null);
+  /**
+   * Hands the browser to the identity provider (dev-auth) to authenticate.
+   *
+   * Not a promise: this navigates away. Credentials are never typed into this
+   * app — the provider owns them, and it is the only place that knows about
+   * GitHub, so email/password and social sign-in stay one flow. The browser
+   * comes back to /api/auth/callback, which establishes this app's session and
+   * returns it to `returnTo`.
+   */
+  signIn(returnTo = '/'): void {
+    this.#client.signIn(returnTo);
   }
 
   async updateName(name: string): Promise<void> {
-    const { error } = await this.#client.updateUser({ name });
-    if (error) throw new Error(error.message);
-    const { data: sessionData } = await this.#client.getSession();
-    this.#_user.set((sessionData?.user as AuthUser) ?? null);
+    const { user } = await this.#client.updateUser({ name });
+    this.#_user.set(user);
   }
 
   async logout(): Promise<void> {

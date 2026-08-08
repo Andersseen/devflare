@@ -1,5 +1,5 @@
-import { Component, inject, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { Component, computed, inject, signal } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   VoltCard,
@@ -7,28 +7,33 @@ import {
   VoltCardTitle,
   VoltCardDescription,
   VoltCardContent,
-  VoltInput,
   VoltButton,
-  VoltFormField,
-  VoltLabel,
   VoltError,
 } from '@voltui/components';
 import { Auth } from '@org/auth';
 
+/**
+ * DevFlare no longer collects credentials. dev-auth is an OAuth 2.1 / OIDC
+ * provider and owns email/password, GitHub and account linking, so this page's
+ * only job is to hand the browser over and let it come back with an
+ * authorization code (see the server's /api/auth/login and /api/auth/callback).
+ */
+const ERRORS: Record<string, string> = {
+  invalid_state:
+    'That sign-in link expired before it could be used. Please try again.',
+  access_denied: 'Sign-in was cancelled.',
+};
+
 @Component({
   selector: 'app-login-page',
   imports: [
-    RouterLink,
     LucideAngularModule,
     VoltCard,
     VoltCardHeader,
     VoltCardTitle,
     VoltCardDescription,
     VoltCardContent,
-    VoltInput,
     VoltButton,
-    VoltFormField,
-    VoltLabel,
     VoltError,
   ],
   template: `
@@ -47,59 +52,38 @@ import { Auth } from '@org/auth';
         <volt-card>
           <volt-card-header>
             <volt-card-title>Welcome back</volt-card-title>
-            <volt-card-description
-              >Sign in to your account</volt-card-description
-            >
+            <volt-card-description>
+              Sign in with your DevAuth account
+            </volt-card-description>
           </volt-card-header>
           <volt-card-content>
-            <form class="space-y-4" (submit)="onSubmit($event)">
-              <volt-form-field>
-                <volt-label>Email</volt-label>
-                <volt-input
-                  type="email"
-                  placeholder="you@example.com"
-                  [(value)]="email"
-                  autocomplete="email"
-                />
-              </volt-form-field>
+            @if (error(); as message) {
+              <volt-error class="mb-4">{{ message }}</volt-error>
+            }
 
-              <volt-form-field>
-                <volt-label>Password</volt-label>
-                <volt-input
-                  type="password"
-                  placeholder="••••••••"
-                  [(value)]="password"
-                  autocomplete="current-password"
-                />
-              </volt-form-field>
-
-              @if (error()) {
-                <volt-error>{{ error() }}</volt-error>
+            <volt-button
+              variant="solid"
+              class="w-full"
+              [disabled]="isRedirecting()"
+              (click)="signIn()"
+            >
+              @if (isRedirecting()) {
+                <span class="flex items-center justify-center gap-2">
+                  <lucide-icon name="loader" class="animate-spin w-4 h-4" />
+                  Redirecting...
+                </span>
+              } @else {
+                <span class="flex items-center justify-center gap-2">
+                  Continue with DevAuth
+                  <lucide-icon name="arrow-right" class="w-4 h-4" />
+                </span>
               }
+            </volt-button>
 
-              <volt-button
-                type="submit"
-                variant="solid"
-                [disabled]="isLoading()"
-                class="w-full"
-              >
-                @if (isLoading()) {
-                  <span class="flex items-center justify-center gap-2">
-                    <lucide-icon name="loader" class="animate-spin w-4 h-4" />
-                    Signing in...
-                  </span>
-                } @else {
-                  Sign In
-                }
-              </volt-button>
-            </form>
-
-            <div class="mt-4 text-center text-sm text-muted-foreground">
-              Don't have an account?
-              <a routerLink="/sign-up" class="text-primary hover:underline"
-                >Sign up</a
-              >
-            </div>
+            <p class="mt-4 text-center text-sm text-muted-foreground">
+              Email, password and GitHub sign-in all live in DevAuth — including
+              creating an account.
+            </p>
           </volt-card-content>
         </volt-card>
       </div>
@@ -108,25 +92,21 @@ import { Auth } from '@org/auth';
 })
 export default class LoginPage {
   #auth = inject(Auth);
-  #router = inject(Router);
+  #route = inject(ActivatedRoute);
 
-  email = signal('');
-  password = signal('');
-  isLoading = signal(false);
-  error = signal('');
+  isRedirecting = signal(false);
 
-  async onSubmit(event: Event) {
-    event.preventDefault();
-    this.isLoading.set(true);
-    this.error.set('');
+  /** Set when the provider or the callback refused the flow. */
+  error = computed(() => {
+    const reason = this.#route.snapshot.queryParamMap.get('error');
+    if (!reason) return '';
+    return ERRORS[reason] ?? `Sign-in failed: ${reason}`;
+  });
 
-    try {
-      await this.#auth.login(this.email(), this.password());
-      this.#router.navigate(['/']);
-    } catch {
-      this.error.set('Invalid email or password');
-    } finally {
-      this.isLoading.set(false);
-    }
+  signIn(): void {
+    this.isRedirecting.set(true);
+    this.#auth.signIn(
+      this.#route.snapshot.queryParamMap.get('returnTo') ?? '/',
+    );
   }
 }

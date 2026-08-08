@@ -31,11 +31,13 @@ authenticated users.
 
 - **`devflare`** (main app) — the toolbox UI + a small SSR API (projects,
   deployments). This is what end users see at `app.<domain>`.
-- **`dev-auth`** — a **standalone, framework-agnostic auth microservice**
-  (Hono + better-auth + Cloudflare D1) meant to be reusable across the author's
-  projects, not just DevFlare. It has its own UI pages (login/signup/…), its own
-  DB, its own deploy target (`auth.<domain>`). Treat it as a separate product that
-  happens to live in this monorepo.
+- **`dev-auth`** — a **standalone identity provider** (Hono + better-auth +
+  Cloudflare D1) reusable across the author's projects, not just DevFlare. It
+  speaks OAuth 2.1 / OIDC, so applications in _other repositories_ on unrelated
+  domains authenticate against the same deployment; DevFlare is just the first
+  registered client. It has its own UI pages (login/signup/…), its own DB, its own
+  deploy target (`auth.<domain>`). Treat it as a separate product that happens to
+  live in this monorepo — and do not add DevFlare-specific assumptions to it.
 
 ## Product principles (use these to resolve design questions)
 

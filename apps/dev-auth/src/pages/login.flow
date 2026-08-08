@@ -46,7 +46,7 @@
     </div>
 
     <div and-layout="horizontal justify:end">
-      <a href="/forgot" and-text="p-xs color:primary">Forgot password?</a>
+      <a id="forgot-link" href="/forgot" and-text="p-xs color:primary">Forgot password?</a>
     </div>
 
     <and-button
@@ -75,7 +75,7 @@
   </div>
 
   <p and-text="p-sm align:center color:muted">
-    Don't have an account? <a href="/signup">Sign up</a>
+    Don't have an account? <a id="signup-link" href="/signup">Sign up</a>
   </p>
 </and-card>
 
@@ -89,6 +89,9 @@
     // This service has no landing page — `/` redirects back to `/login` — so
     // defaulting the post-login destination to '/' left the user staring at the
     // form they had just submitted. Send them to the app instead.
+    //
+    // Only used when nothing else asked for a destination. An OAuth
+    // authorization request overrides it: see resumeUrl() below.
     function destination() {
       const params = new URLSearchParams(window.location.search);
       const requested = params.get('callback');
@@ -96,6 +99,26 @@
       const config = document.getElementById('auth-config');
       return (config && config.dataset.appUrl) || '/';
     }
+
+    // An application that sent the user here to authorize arrives with
+    // client_id in the query. better-auth stashed the whole authorization
+    // request in a signed cookie, and once a session exists it resumes it and
+    // answers with the URL to continue at — the consumer's redirect_uri carrying
+    // the authorization code. Following it is what closes the OAuth loop.
+    function resumeUrl(data) {
+      return (data && data.url) || null;
+    }
+
+    // Carry the authorization request across to the sibling pages, or the user
+    // signs up / resets a password and the flow they came for is lost.
+    (function keepAuthorizeParams() {
+      const search = window.location.search;
+      if (!new URLSearchParams(search).get('client_id')) return;
+      ['signup-link', 'forgot-link'].forEach(function(id) {
+        const link = document.getElementById(id);
+        if (link) link.href = link.getAttribute('href') + search;
+      });
+    })();
 
     // A failed OAuth callback redirects back here carrying ?error=. Without
     // this the page looked untouched and the failure was indistinguishable
@@ -156,7 +179,7 @@
         }
 
         toaster.present('Signed in successfully', 'success');
-        const callback = destination();
+        const callback = resumeUrl(data) || destination();
         setTimeout(function() { window.location.href = callback; }, 600);
       } catch (err) {
         submitBtn.loading = false;

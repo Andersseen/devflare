@@ -9,12 +9,9 @@ test.describe('DevFlare App', () => {
   test('login page is accessible', async ({ page }) => {
     await page.goto('/login');
     await expect(page.locator('text=Welcome back')).toBeVisible();
-    await expect(page.locator('input[type="email"]')).toBeVisible();
-    await expect(page.locator('input[type="password"]')).toBeVisible();
-  });
-
-  test('sign-up page is accessible', async ({ page }) => {
-    await page.goto('/sign-up');
-    await expect(page.locator('text=Create an account')).toBeVisible();
+    // Credentials live at the identity provider — see auth.spec.ts.
+    await expect(
+      page.getByRole('button', { name: /Continue with DevAuth/i }),
+    ).toBeVisible();
   });
 });

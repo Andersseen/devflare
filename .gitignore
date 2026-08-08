@@ -55,6 +55,13 @@ vitest.config.*.timestamp*
 # .wrangler/deploy/config.json that points at the built worker config.
 .wrangler/
 
+# Local secrets. AGENTS.md promised these were ignored; only
+# apps/dev-auth/.gitignore actually did it, and by then apps/dev-auth/.dev.vars
+# had already been committed — .gitignore does not apply to tracked files, so
+# that one needs `git rm --cached` (and its BETTER_AUTH_SECRET rotating).
+.env
+.dev.vars
+
 __screenshots__/
 
 # Legacy local SQLite DB — replaced by Cloudflare D1 (miniflare state lives in .wrangler/)

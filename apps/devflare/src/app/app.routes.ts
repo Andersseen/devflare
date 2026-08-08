@@ -76,9 +76,12 @@ export const appRoutes: Route[] = [
     path: 'login',
     loadComponent: () => import('./pages/auth/login.page'),
   },
+  // Account creation happens at the identity provider (dev-auth), which its
+  // login page links to. Kept as a redirect so old links still land somewhere
+  // that starts the flow.
   {
     path: 'sign-up',
-    loadComponent: () => import('./pages/auth/sign-up.page'),
+    redirectTo: 'login',
   },
   {
     path: '**',

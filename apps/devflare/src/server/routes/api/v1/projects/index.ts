@@ -1,9 +1,9 @@
 import { defineEventHandler, readBody, createError } from 'h3';
-import { getRemoteSession, requireAuth } from '../../../../lib/auth-remote';
+import { getAppSession, requireAuth } from '../../../../lib/session';
 import { db } from '../../../../db';
 
 export default defineEventHandler(async (event) => {
-  const session = await getRemoteSession(event);
+  const session = await getAppSession(event);
 
   if (event.method === 'GET') {
     const user = requireAuth(session);

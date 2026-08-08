@@ -102,7 +102,7 @@
   </div>
 
   <p and-text="p-sm align:center color:muted">
-    Already have an account? <a href="/login">Sign in</a>
+    Already have an account? <a id="login-link" href="/login">Sign in</a>
   </p>
 </and-card>
 
@@ -116,6 +116,9 @@
     // This service has no landing page — `/` redirects back to `/login` — so
     // defaulting the destination to '/' bounced a freshly created account
     // straight back to a sign-in form. Send them to the app instead.
+    //
+    // Only used when nothing else asked for a destination; an OAuth
+    // authorization request overrides it (see resumeUrl).
     function destination() {
       const params = new URLSearchParams(window.location.search);
       const requested = params.get('callback');
@@ -123,6 +126,21 @@
       const config = document.getElementById('auth-config');
       return (config && config.dataset.appUrl) || '/';
     }
+
+    // Signing up from inside an authorization request: better-auth resumes the
+    // request as soon as the new account has a session and answers with the URL
+    // to continue at — the calling app's redirect_uri plus the code.
+    function resumeUrl(data) {
+      return (data && data.url) || null;
+    }
+
+    // Keep the authorization request alive across the hop to /login.
+    (function keepAuthorizeParams() {
+      const search = window.location.search;
+      if (!new URLSearchParams(search).get('client_id')) return;
+      const link = document.getElementById('login-link');
+      if (link) link.href = link.getAttribute('href') + search;
+    })();
 
     // Read straight off the element instead of accumulating change events:
     // `and-input` exposes its current text as a reflected `value` prop, so
@@ -174,7 +192,7 @@
         }
 
         toaster.present('Account created successfully', 'success');
-        const callback = destination();
+        const callback = resumeUrl(data) || destination();
         setTimeout(function() { window.location.href = callback; }, 600);
       } catch (err) {
         submitBtn.loading = false;

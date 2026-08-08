@@ -28,9 +28,19 @@ database_id = "399d5c02-d2b0-4537-9899-b28771b2c645"
 migrations_dir = "src/server/db/migrations"
 
 [vars]
-# Base URL of the dev-auth Worker that validates sessions (see
-# src/server/lib/auth-remote.ts). Local dev falls back to :8787 when unset.
+# DevFlare is one registered OAuth client of the dev-auth provider (see
+# src/server/lib/oidc.ts). These three values must line up with the matching
+# entry in apps/dev-auth/wrangler.toml's OAUTH_CLIENTS, or the provider answers
+# invalid_client / rejects the redirect URI.
+#
+# Base URL of the provider. Local dev falls back to :8787 when unset.
 DEV_AUTH_URL = "http://localhost:8787"
+DEV_AUTH_CLIENT_ID = "devflare-dev"
+# Compared byte for byte against the registered redirect URIs, so it is spelled
+# out rather than derived from the request host.
+DEV_AUTH_REDIRECT_URI = "http://localhost:4200/api/auth/callback"
+# DEV_AUTH_CLIENT_SECRET is a secret: apps/devflare/.dev.vars locally,
+# `wrangler secret put DEV_AUTH_CLIENT_SECRET` for a deployed environment.
 
 [observability]
 enabled = true
@@ -53,6 +63,8 @@ migrations_dir = "src/server/db/migrations"
 
 [env.production.vars]
 DEV_AUTH_URL = "https://auth-devflare.andersseen.dev"
+DEV_AUTH_CLIENT_ID = "devflare"
+DEV_AUTH_REDIRECT_URI = "https://devflare.andersseen.dev/api/auth/callback"
 
 [env.production.observability]
 enabled = true

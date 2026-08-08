@@ -8,15 +8,48 @@
 > to the last ~5 entries, newest first. Update the date. Facts only; no plans
 > you didn't verify.
 
-_Last updated: 2026-07-28_
+_Last updated: 2026-08-08_
 
 ## Branch & repo status
 
-- On `main`, in sync with `origin/main` (`9988d59`).
-- **Uncommitted:** the app-shell rework ("UI shell") and the Cloudflare
-  migration ("Hosting") below.
-- Recent merged work: Flowmark migration of dev-auth pages (`2138796`), PR #4 app
-  updates, PR #3 dev-auth updates, CI workflows, Sentry integration.
+- On `main`, in sync with `origin/main` (`5539e1e`).
+- **Uncommitted:** the identity-provider rework (see "dev-auth is now an OAuth
+  2.1 / OIDC provider" below).
+- Recent merged work: GitHub account linking (`dd7dcef`), GitHub button +
+  post-login redirect (`bc7007f`), GitHub OAuth + signup allow-list (`5fd1483`).
+
+## dev-auth is now an OAuth 2.1 / OIDC provider (2026-08-08, uncommitted)
+
+dev-auth stopped being "DevFlare's auth service" and became an identity provider
+that any of the owner's apps — in any repository, on any domain — can authenticate
+against. DevFlare is now just its first registered client.
+
+- **Provider**: better-auth's `oidc-provider` + `jwt` plugins in
+  `apps/dev-auth/src/auth.config.ts`. Authorization code flow, PKCE mandatory
+  (S256 only), ES256 ID tokens, JWKS at `/api/auth/jwks`, discovery at the issuer
+  root. `createAuthOptions(env, database)` is split from `createAuth(env)` so
+  tests exercise the identical config on an in-memory DB.
+- **Client registry**: `apps/dev-auth/src/oauth-clients.ts`. `OAUTH_CLIENTS` (a
+  wrangler var, in git: id/name/type/exact redirect URIs) +
+  `OAUTH_CLIENT_SECRETS` (a Worker secret). No registration endpoint, no
+  dashboard. A bad entry is dropped with a logged error rather than taking
+  sign-in down.
+- **DevFlare is a consumer now**: `src/server/lib/oidc.ts` +
+  `routes/api/auth/{login,callback,session,logout,user}.ts`, with its own session
+  in `app_session`/`app_user` (migration `0001_app_session.sql`). The
+  `/api/auth/*` proxy and `auth-remote.ts` are gone; `getRemoteSession` →
+  `getAppSession`. `app_user.id` is the provider's `sub`, so existing
+  `projects.userId` rows still resolve.
+- **DevFlare's login page collects no credentials** — it hands off to the
+  provider. `/sign-up` redirects to `/login`.
+- Two live bugs surfaced while typing the options object, both fixed:
+  `advanced.crossSubDomainCookie` was misspelled (runtime reads
+  `crossSubDomainCookies`) so cross-subdomain cookies were **never enabled** —
+  removed rather than switched on, since the OAuth flow makes it unnecessary; and
+  `allowDynamicClientRegistration: false` only gates _unauthenticated_ callers, so
+  `/api/auth/oauth2/register` is now blocked in `src/index.ts`.
+- 57 dev-auth tests + 15 DevFlare OIDC-helper tests + 6 auth-lib tests. The full
+  flow was also verified against a real `wrangler dev` Worker with D1.
 
 ## Hosting: Cloudflare Workers (deployed 2026-08-07)
 
@@ -36,8 +69,8 @@ The app and the auth service each run as a Cloudflare Worker, deployed from
 Migrations are already applied to all three D1 databases (remote).
 
 Target domains: app `devflare.andersseen.dev`, auth
-`auth-devflare.andersseen.dev` (shared parent domain, so the session cookie is
-same-site).
+`auth-devflare.andersseen.dev`. They no longer need a shared parent domain: the
+apps authenticate over OAuth and hold their own sessions, so no cookie is shared.
 
 Key decisions and the traps behind them:
 
@@ -55,8 +88,9 @@ Key decisions and the traps behind them:
   `getPlatformProxy`) in dev — so one code path covers both and the route
   handlers needed no changes. `initDatabase()` DDL-at-import is gone; schema is
   in `apps/devflare/src/server/db/migrations/`.
-- `auth-remote.ts` reads `DEV_AUTH_URL` from the Cloudflare binding first and
-  only falls back to `process.env`, rather than trusting the unenv shim.
+- `src/server/lib/oidc.ts` reads its config from the Cloudflare binding first and
+  only falls back to `process.env`, rather than trusting the unenv shim. (This
+  was `auth-remote.ts` before the provider rework.)
 - Browser-only tool deps cannot enter the Worker bundle. `colorthief` is aliased
   to its ESM build (the Node build reaches `sharp`); `papaparse` has no usable
   build (CJS + Blob-worker breaks Rollup's CJS transform) so it is aliased to
@@ -113,8 +147,10 @@ dev-auth's auth pages were migrated from inline HTML-in-TypeScript strings
 - All 10 tool pages under `/tools/*` (client-side: QR, bg-remover, image
   compressor, data converter, OG generator, palette, screen recorder, SEO
   simulator, SVG optimizer, URL shortener).
-- Full auth flow in local dev: `pnpm dev:all` → login at :4200 proxied to :8787,
-  session cookies, `pnpm seed:user` test account (`test@devflare.com` / `TestPass123`).
+- Full auth flow in local dev: `pnpm dev:all`, then "Continue with DevAuth" at
+  :4200 → authenticate at :8787 → back to :4200 with DevFlare's own session.
+  Needs a matching client secret on both sides (see apps/dev-auth/README.md).
+  `pnpm seed:user` test account (`test@devflare.com` / `TestPass123`).
 - Projects API (`GET/POST /api/v1/projects`, `/api/v1/projects/[id]`), auth-gated,
   now backed by Cloudflare D1 — locally via miniflare state in `.wrangler/`.
   Verified end to end in dev (insert/select/delete against the `DB` binding).
@@ -137,19 +173,58 @@ dev-auth's auth pages were migrated from inline HTML-in-TypeScript strings
 - ng-primitives 0.110.2 logs `nativeElement.addEventListener is not a function`
   (from `NgpLabel`) on every SSR render of a page with a Volt form field. Noisy
   but non-fatal — the HTML still renders and e2e is green. Upstream issue.
+- **`apps/dev-auth/.dev.vars` is tracked in git** (since "fase 1"), so its
+  `BETTER_AUTH_SECRET` is in history. `.gitignore` now lists `.dev.vars` but that
+  does not affect tracked files: it needs `git rm --cached` plus a rotation.
+- **`db.sql` returns `{ rows, success }`, not an array**, and the projects routes
+  treat it as one: `projects/index.ts` returns `{projects: {rows: […]}}` (the
+  Angular `Projects` service reads `data.projects` as an array), and
+  `projects/[id].ts` checks `.length` on that object so GET/DELETE of a single
+  project always 404s. Pre-existing, unrelated to the provider work, and invisible
+  because `tsconfig.app.json` excludes `src/server/routes` — it cannot be
+  typechecked without Nitro's generated types.
+- The `oidc-provider` plugin is **deprecated** in better-auth 1.6 (removed in
+  2.0, superseded by `@better-auth/oauth-provider`). Chosen deliberately: it ships
+  with the pinned version, supports config-declared clients, and needs no consent
+  UI for first-party apps. Migrating means a better-auth major upgrade plus a
+  schema rename (`oauthApplication` → `oauthClient`).
 - Routing is a **manual `app.routes.ts`**, not Analog's file-based router,
   despite the `*.page.ts` naming. `routeMeta` exports are therefore ignored;
   guards and route config go in `app.routes.ts`.
 
 ## Next steps (owner's apparent intent — confirm before large work)
 
-1. Wire up a transactional email provider, then re-enable
+1. **Untrack `apps/dev-auth/.dev.vars` and rotate its `BETTER_AUTH_SECRET`** —
+   it has been committed since "fase 1" despite AGENTS.md claiming otherwise.
+2. Before deploying the provider rework: apply both new migrations remotely, set
+   `OAUTH_CLIENT_SECRETS` (dev-auth) and `DEV_AUTH_CLIENT_SECRET` (devflare) to
+   the same value, and walk one real login through in a browser.
+3. Wire up a transactional email provider, then re-enable
    `requireEmailVerification` / `sendOnSignUp` and widen `SIGNUP_ALLOWLIST`.
-2. Review the shell rework in a browser, then commit it.
-3. Release `@andersseen/icon` with the `lock`/`user` fix, then bump `CDN.icon`
+4. Review the shell rework in a browser, then commit it.
+5. Release `@andersseen/icon` with the `lock`/`user` fix, then bump `CDN.icon`
    in `apps/dev-auth/src/pages/layout.ts`.
 
 ## Session log
+
+- **2026-08-08** — Turned dev-auth from DevFlare's auth service into a reusable
+  OAuth 2.1 / OIDC identity provider, and made DevFlare one of its clients.
+  Added better-auth's `oidc-provider` + `jwt` plugins, a config-driven client
+  registry (`OAUTH_CLIENTS` in git, `OAUTH_CLIENT_SECRETS` as a secret), and the
+  four provider tables plus `jwks` (migration `0002`). DevFlare now runs the
+  authorization code flow server-side and keeps its own session in D1 (migration
+  `0001_app_session`), so the `/api/auth/*` cookie-forwarding proxy and
+  `auth-remote.ts` are gone and nothing depends on a shared cookie any more.
+  Two latent bugs fell out of typing the better-auth options:
+  `advanced.crossSubDomainCookie` was misspelled — the runtime reads
+  `crossSubDomainCookies`, so the cross-subdomain cookie production supposedly
+  depended on was **never actually enabled** (deleted rather than switched on,
+  since the OAuth flow removes the need); and `allowDynamicClientRegistration:
+false` only blocks _unauthenticated_ registration, so any signed-in user could
+  have registered a client with their own redirect URIs — `/api/auth/oauth2/register`
+  is now refused outright. Verified the whole flow twice: 78 unit/integration
+  tests (including authorize → code → token → userinfo against the real
+  better-auth instance), and by curl against a live `wrangler dev` Worker on D1.
 
 - **2026-08-07** — Repaired the dev-auth auth pages, which rendered completely
   unstyled and could not log anyone in (branch `feature/dev-auth-fixes`).
