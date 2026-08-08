@@ -66,7 +66,15 @@ DEV_AUTH_CORS_ORIGINS = "https://devflare.andersseen.dev"
 # devflare.andersseen.dev — login would appear to succeed and every subsequent
 # request would still be 401.
 COOKIE_DOMAIN = ".andersseen.dev"
-# GITHUB_CLIENT_ID = "your-github-oauth-app-id"
+# Public half of the GitHub OAuth App credentials — it travels in the
+# authorization URL, so it is not a secret. Its partner GITHUB_CLIENT_SECRET is
+# set with `wrangler secret put`. The App's callback URL must be exactly
+# https://auth-devflare.andersseen.dev/api/auth/callback/github
+GITHUB_CLIENT_ID = "Ov23ct49BSc1NKSicmGf"
+# No transactional email provider is wired up yet, so email verification is off
+# (see auth.config.ts) and sign-up is restricted to these addresses instead.
+# Applies to GitHub sign-in too: the address GitHub returns must be listed here.
+SIGNUP_ALLOWLIST = "andriipap01@gmail.com"
 
 # Staging environment
 [env.staging]
@@ -91,4 +99,7 @@ BETTER_AUTH_URL = "https://auth-devflare-staging.andersseen.dev"
 ENVIRONMENT = "staging"
 DEV_AUTH_CORS_ORIGINS = "https://devflare-staging.andersseen.dev"
 COOKIE_DOMAIN = ".andersseen.dev"
-# GITHUB_CLIENT_ID = "your-github-oauth-app-id"
+SIGNUP_ALLOWLIST = "andriipap01@gmail.com"
+# Staging needs its OWN GitHub OAuth App: an App accepts a single callback URL,
+# and production already claims .../api/auth/callback/github on the prod host.
+# GITHUB_CLIENT_ID = "your-staging-oauth-app-id"

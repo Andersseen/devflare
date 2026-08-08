@@ -26,6 +26,8 @@ export interface Env {
   ADMIN_SECRET?: string;
   GITHUB_CLIENT_ID?: string;
   GITHUB_CLIENT_SECRET?: string;
+  /** Comma-separated addresses allowed to sign up. Empty means unrestricted. */
+  SIGNUP_ALLOWLIST?: string;
 }
 
 const app = new Hono<{ Bindings: Env }>();

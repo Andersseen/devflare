@@ -18,12 +18,10 @@ _Last updated: 2026-07-28_
 - Recent merged work: Flowmark migration of dev-auth pages (`2138796`), PR #4 app
   updates, PR #3 dev-auth updates, CI workflows, Sentry integration.
 
-## Hosting: Vercel → Cloudflare (uncommitted, NOT yet deployed)
+## Hosting: Cloudflare Workers (deployed 2026-08-07)
 
-The app moved from a Vercel-dashboard Git deploy to a Cloudflare Worker. Nothing
-of DevFlare had ever existed on Cloudflare before this — the old production
-`deploy.yml` would have failed, because `dev-auth-db` was never created and its
-frontend job only uploaded a build artifact.
+The app and the auth service each run as a Cloudflare Worker, deployed from
+`main` by `.github/workflows/deploy.yml`.
 
 **Provisioned 2026-07-28** (account `c32a93ee83fe9b5d53c63fcc73b90bb9`):
 
@@ -123,36 +121,17 @@ dev-auth's auth pages were migrated from inline HTML-in-TypeScript strings
 
 ## Known gaps / not production-ready
 
-- **Nothing is deployed to Cloudflare yet, and the site is down.** Verified
-  2026-07-30: `devflare.andersseen.dev` and `auth-devflare.andersseen.dev` both
-  resolve to Cloudflare and return **404** (custom domains exist, no Worker
-  behind them), and `devflare.vercel.app` returns 451 — Vercel is _not_ serving
-  the live site any more, contrary to what this doc said before.
-- **`CLOUDFLARE_API_TOKEN` still lacks Workers permissions.** The token was
-  rotated 2026-07-30 and D1 now works — "Apply D1 migrations" passes in both
-  jobs (the old `code 7403` is gone). Both jobs now fail one step later, at
-  `wrangler deploy`, with `Authentication error [code: 10000]` on
-  `/accounts/…/workers/services/{devflare,dev-auth-prod}`. Missing: account
-  **Workers Scripts: Edit**, plus zone **Workers Routes: Edit** on
-  `andersseen.dev` — both wrangler.toml files declare `custom_domain = true`
-  routes, which are attached at deploy time. Easiest fix: the dashboard's "Edit
-  Cloudflare Workers" template + `D1:Edit` + `Workers KV Storage:Edit`.
-  The trailing `/memberships … [code: 9106]` error is noise: an Account API
-  Token cannot list memberships, wrangler just tries during its whoami dump.
-  Not fixable from the repo.
-- **The Vercel GitHub App is still installed** and posts a failing `Vercel`
-  commit status on every push to the `andersseens-projects/devflare` project.
-  Not removable with `gh` (commit statuses have no DELETE endpoint, and
-  `/user/installations` 403s for a non-App token) — uninstall or drop this repo
-  at <https://github.com/settings/installations>, or disconnect Git in the
-  Vercel dashboard.
-- **Secrets are not set.** `BETTER_AUTH_SECRET` (and `GITHUB_CLIENT_SECRET` if
-  GitHub OAuth is wanted) must be set with `wrangler secret put --env production`
-  before dev-auth will work deployed.
+- **No transactional email provider.** `sendVerificationEmail` in
+  `auth.config.ts` only `console.log`s the URL, so nobody can complete a
+  verification. Because of that `requireEmailVerification` and `sendOnSignUp`
+  are both **off**, and access is gated by the `SIGNUP_ALLOWLIST` var instead
+  (currently one address). Wiring up Resend/SES means turning both back on and
+  widening or dropping the allow-list. The allow-list also covers GitHub
+  sign-in: the address GitHub returns must be listed or account creation 403s.
 - The Analog app has **no staging environment** — staging covers dev-auth only.
   Adding it needs a `devflare-db-staging` D1 plus an `[env.staging]` block.
-- Email verification sending (Resend) is documented in DEPLOY.md but not
-  implemented in `auth.config.ts`.
+  Staging also has no GitHub OAuth App: an App takes a single callback URL, so
+  staging needs its own before `GITHUB_CLIENT_ID` can be set there.
 - `deployments` table exists but the deploy feature (`libs/deploy`,
   `deploy.page.ts`) is skeletal.
 - ng-primitives 0.110.2 logs `nativeElement.addEventListener is not a function`
@@ -164,11 +143,10 @@ dev-auth's auth pages were migrated from inline HTML-in-TypeScript strings
 
 ## Next steps (owner's apparent intent — confirm before large work)
 
-1. Set the Cloudflare secrets, then run the first production deploy of both
-   workers and verify `devflare.andersseen.dev`.
-2. Disconnect the Vercel project once Cloudflare serves traffic.
-3. Review the shell rework in a browser, then commit it.
-4. Release `@andersseen/icon` with the `lock`/`user` fix, then bump `CDN.icon`
+1. Wire up a transactional email provider, then re-enable
+   `requireEmailVerification` / `sendOnSignUp` and widen `SIGNUP_ALLOWLIST`.
+2. Review the shell rework in a browser, then commit it.
+3. Release `@andersseen/icon` with the `lock`/`user` fix, then bump `CDN.icon`
    in `apps/dev-auth/src/pages/layout.ts`.
 
 ## Session log
@@ -217,11 +195,11 @@ dev-auth's auth pages were migrated from inline HTML-in-TypeScript strings
   `*.flow.js` in ESLint. `devflare` itself was already green — `dev-auth` was
   the only failed task. Deploy workflows remain red for an unrelated reason:
   the Cloudflare API token is rejected with `code 7403` (see Known gaps).
-- **2026-07-28** — Migrated hosting from Vercel to Cloudflare: Nitro
-  `cloudflare-module` preset, app DB on D1, provisioned 3 D1 + 2 KV and applied
-  all migrations, rewrote both deploy workflows (fixing a pre-existing bug where
-  they passed a database name that never resolved under `--env`). Not deployed
-  yet; secrets pending.
+- **2026-07-28** — Moved hosting onto Cloudflare: Nitro `cloudflare-module`
+  preset, app DB on D1, provisioned 3 D1 + 2 KV and applied all migrations,
+  rewrote both deploy workflows (fixing a pre-existing bug where they passed a
+  database name that never resolved under `--env`). Not deployed yet; secrets
+  pending.
 - **2026-07-28** — Fixed the VoltUI visual regression: the missing
   `@voltui/components/themes.css` import meant Tailwind purged every class used
   inside Volt's templates. Added the import plus the missing theme tokens, then

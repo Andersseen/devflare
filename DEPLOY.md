@@ -105,11 +105,24 @@ BETTER_AUTH_URL = "https://auth-devflare.andersseen.dev"
 ENVIRONMENT = "production"
 DEV_AUTH_CORS_ORIGINS = "https://devflare.andersseen.dev"
 COOKIE_DOMAIN = ".andersseen.dev"
+GITHUB_CLIENT_ID = "Ov23ct49BSc1NKSicmGf"
+SIGNUP_ALLOWLIST = "andriipap01@gmail.com"
 ```
 
 `COOKIE_DOMAIN` is required, not optional. The app and auth service are separate
 subdomains, so without it the session cookie is host-only to the auth Worker and
 the browser never sends it to the app — login succeeds, then every request 401s.
+
+`GITHUB_CLIENT_ID` is a var, not a secret: it travels in the authorization URL
+and is public. Only its partner `GITHUB_CLIENT_SECRET` needs `wrangler secret put`.
+
+`SIGNUP_ALLOWLIST` is a comma-separated list of addresses permitted to create an
+account; empty means unrestricted. It exists because no email provider is wired
+up yet, so `requireEmailVerification` is off (see `auth.config.ts`) and this is
+what stops the deployment collecting unverifiable accounts. It gates **GitHub
+sign-in too** — the address GitHub returns must appear here.
+
+Vars only take effect on redeploy. Secrets apply immediately.
 
 ### DevFlare App
 
@@ -175,30 +188,7 @@ curl -X POST https://auth-devflare.andersseen.dev/api/auth/sign-in/email \
   -d '{"email":"test@devflare.com","password":"TestPass123"}'
 ```
 
-## 7. Decommissioning Vercel
-
-The repo never contained Vercel config — there is no `vercel.json` and no
-adapter. The old deployment came from Vercel's Git integration, configured in
-the Vercel dashboard, so **removing it is a dashboard action; nothing in this
-repo controls it.**
-
-Do this only after step 6 passes, in order:
-
-1. Confirm `https://devflare.andersseen.dev` serves the app and login works.
-2. In the Vercel dashboard, open the DevFlare project →
-   **Settings → Git → Disconnect** so pushes to `main` stop triggering builds.
-   Do this before deleting anything, or a push can redeploy the old site.
-3. Move any custom domain still pointing at Vercel over to the Worker. If the
-   DNS record lives in Cloudflare, deleting the Vercel `CNAME`/`A` record and
-   letting `wrangler deploy` recreate it as a custom domain is enough.
-4. Check Vercel project **Settings → Environment Variables** for anything that
-   exists nowhere else (it should be nothing — the app's only server config is
-   `DEV_AUTH_URL`) and copy it into `wrangler.toml` vars or a Worker secret.
-5. Delete the Vercel project once you are happy to lose its deployment history.
-
-Nothing else in the codebase references Vercel, so no code change is needed.
-
-## 8. Optional Features
+## 7. Optional Features
 
 ### GitHub OAuth
 
@@ -256,7 +246,7 @@ curl -H "Authorization: Bearer $ADMIN_SECRET" \
   https://auth-devflare.andersseen.dev/api/analytics/events
 ```
 
-## 9. Security Checklist
+## 8. Security Checklist
 
 - [ ] `BETTER_AUTH_SECRET` is a strong random string (32+ chars)
 - [ ] `BETTER_AUTH_URL` points to HTTPS domain (not localhost)
