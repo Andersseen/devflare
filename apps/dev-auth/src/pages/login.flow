@@ -97,6 +97,27 @@
       return (config && config.dataset.appUrl) || '/';
     }
 
+    // A failed OAuth callback redirects back here carrying ?error=. Without
+    // this the page looked untouched and the failure was indistinguishable
+    // from the button doing nothing at all.
+    (function showCallbackError() {
+      const reason = new URLSearchParams(window.location.search).get('error');
+      if (!reason) return;
+
+      const messages = {
+        account_not_linked:
+          'That address already has a password account. Sign in with your password, then link GitHub from your profile.',
+        access_denied: 'GitHub sign-in was cancelled.',
+      };
+
+      toaster.present(messages[reason] || ('Sign-in failed: ' + reason), 'error');
+      // Drop the param so a refresh does not replay the toast.
+      const url = new URL(window.location.href);
+      url.searchParams.delete('error');
+      url.searchParams.delete('error_description');
+      window.history.replaceState({}, '', url);
+    })();
+
     // Read straight off the element instead of accumulating change events:
     // `and-input` exposes its current text as a reflected `value` prop, so
     // this also picks up values the component was rendered with. (The old

@@ -51,6 +51,27 @@ export function createAuth(env: Env) {
         clientSecret: env.GITHUB_CLIENT_SECRET || '',
       },
     },
+    account: {
+      accountLinking: {
+        enabled: true,
+        // GitHub only hands back verified primary addresses, so treating it as
+        // trusted is what lets an existing account adopt it as a second method.
+        trustedProviders: ['github'],
+        // Must be false here. It defaults to TRUE, and with email verification
+        // switched off (no provider can send the mail) every locally created
+        // account sits at emailVerified = 0 forever — so the default silently
+        // refuses to link GitHub to any of them, bouncing the user back to the
+        // login form with no explanation.
+        requireLocalEmailVerified: false,
+      },
+    },
+    // Failed callbacks default to `${baseURL}/error`, which this service does
+    // not serve — the browser ended up back on /login with the reason stripped,
+    // which is what made "GitHub does nothing" so hard to read. Send failures to
+    // the login page instead, where the ?error= param is surfaced as a toast.
+    onAPIError: {
+      errorURL: `${env.BETTER_AUTH_URL}/login`,
+    },
     session: {
       cookieCache: {
         enabled: true,
