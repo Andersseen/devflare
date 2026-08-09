@@ -31,13 +31,37 @@ test.describe('Auth Pages', () => {
     ).toBeVisible();
   });
 
-  test('signing in leaves the app for the provider', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByRole('button', { name: /Continue with DevAuth/i }).click();
+  test('the hand-off starts a correct authorization request', async ({
+    request,
+  }) => {
+    // Asserted on the redirect itself rather than by clicking and following the
+    // browser. Following it would leave for dev-auth, which is NOT running in
+    // CI — the connection is refused, the navigation never completes, and the
+    // test times out having proved nothing. Reading the Location header instead
+    // stops exactly at the app boundary, which is what this file is for, and
+    // checks the parameters rather than merely that the URL changed.
+    const response = await request.get('/api/auth/login?returnTo=/projects', {
+      maxRedirects: 0,
+    });
 
-    // /api/auth/login answers with a redirect to the authorization endpoint.
-    await page.waitForURL(/oauth2\/authorize|\/login\?/, { timeout: 10000 });
-    expect(page.url()).not.toBe('/login');
+    expect(response.status()).toBe(302);
+
+    const location = new URL(response.headers()['location']);
+    expect(location.pathname).toBe('/api/auth/oauth2/authorize');
+    expect(Object.fromEntries(location.searchParams)).toMatchObject({
+      response_type: 'code',
+      code_challenge_method: 'S256',
+      scope: 'openid profile email',
+    });
+    expect(location.searchParams.get('client_id')).toBeTruthy();
+    expect(location.searchParams.get('redirect_uri')).toBeTruthy();
+    // Without these the flow has no CSRF protection and no PKCE binding.
+    expect(location.searchParams.get('state')).toBeTruthy();
+    expect(location.searchParams.get('code_challenge')).toBeTruthy();
+
+    // The state and PKCE verifier are parked on DevFlare's own domain; the
+    // callback cannot validate anything without them.
+    expect(response.headers()['set-cookie']).toContain('df_oauth_tx=');
   });
 
   test('a failed callback surfaces the reason on the login page', async ({
