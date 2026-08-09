@@ -20,7 +20,6 @@ id = "local-rate-limit-kv"
 # These are defaults for local development.
 # Override via wrangler secret for production.
 BETTER_AUTH_URL = "http://localhost:8787"
-APP_URL = "http://localhost:4200"
 # Applications allowed to authenticate through this provider. This is the whole
 # registration mechanism — there is no registration endpoint and no dashboard.
 # Only the redirect URIs listed here are ever accepted, so adding an app is a
@@ -84,12 +83,6 @@ DEV_AUTH_CORS_ORIGINS = "https://devflare.andersseen.dev"
 # set with `wrangler secret put`. The App's callback URL must be exactly
 # https://auth-devflare.andersseen.dev/api/auth/callback/github
 GITHUB_CLIENT_ID = "Ov23ct49BSc1NKSicmGf"
-# Fallback destination for a sign-in that did NOT come from an OAuth
-# authorization request (someone opening /login directly). This service has no
-# landing page of its own (`/` redirects to `/login`), so without this such a
-# sign-in bounces straight back to the form. Authorization flows ignore it and
-# return to the calling app's registered redirect URI instead.
-APP_URL = "https://devflare.andersseen.dev"
 # The registered consumer applications. Adding an app here — plus its secret in
 # OAUTH_CLIENT_SECRETS — is all it takes; an app in another repository needs
 # nothing else from this service. Redirect URIs are matched exactly.
@@ -147,7 +140,6 @@ BETTER_AUTH_URL = "https://auth-devflare-staging.andersseen.dev"
 ENVIRONMENT = "staging"
 DEV_AUTH_CORS_ORIGINS = "https://devflare-staging.andersseen.dev"
 SIGNUP_ALLOWLIST = "andriipap01@gmail.com"
-APP_URL = "https://devflare-staging.andersseen.dev"
 OAUTH_CLIENTS = '''[
   {
     "clientId": "devflare-staging",

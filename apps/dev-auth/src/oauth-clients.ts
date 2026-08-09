@@ -1,5 +1,3 @@
-import type { Client } from 'better-auth/plugins/oidc-provider';
-
 /**
  * Registry of the applications allowed to authenticate through this service.
  *
@@ -18,18 +16,36 @@ import type { Client } from 'better-auth/plugins/oidc-provider';
  * while the half that decides *where a browser may be sent back to* stays in
  * version control where a diff makes it obvious.
  *
- * These are handed to better-auth as `trustedClients`, which is what lets the
- * provider validate `client_id` and `redirect_uri` without a database round trip
- * — and, crucially, without accepting anything a browser makes up.
+ * What this module produces is fed to the provider through ./client-registry.ts,
+ * which answers the plugin's client lookups from this list instead of from D1.
+ * Nothing here is ever written to the database, so removing a client from
+ * configuration removes it from the provider on the next deploy — there is no
+ * stale row left behind that could still complete an authorization.
  */
+
+import { hashClientSecret } from './lib/client-secret';
 
 /**
- * OAuth client types, as defined by better-auth. Only `public` clients may omit
- * a client secret; they authenticate with PKCE alone.
+ * OAuth client types, as defined by RFC 6749 §2.1 and understood by the
+ * provider plugin. `web` is confidential (keeps a client secret); the other two
+ * are public (cannot keep one, and authenticate with PKCE alone).
  */
-const CLIENT_TYPES = ['web', 'public', 'native', 'user-agent-based'] as const;
+const CLIENT_TYPES = ['web', 'native', 'user-agent-based'] as const;
 
 type ClientType = (typeof CLIENT_TYPES)[number];
+
+const PUBLIC_CLIENT_TYPES: ReadonlySet<string> = new Set([
+  'native',
+  'user-agent-based',
+]);
+
+/**
+ * Client secrets shorter than this are reported, not rejected. They are still
+ * usable — dropping a client for a short secret would take a working consumer
+ * offline the moment this service is deployed, which is a worse failure than
+ * the one it would be protecting against.
+ */
+const RECOMMENDED_SECRET_LENGTH = 32;
 
 /** The shape a single entry of the `OAUTH_CLIENTS` JSON array must have. */
 export interface OAuthClientConfig {
@@ -42,12 +58,56 @@ export interface OAuthClientConfig {
    * with string equality, so list every callback the app actually uses.
    */
   redirectURIs: string[];
+  /**
+   * Exact post-logout redirect URIs. Only meaningful with `enableEndSession`;
+   * they are where `/oauth2/end-session` may return the browser to.
+   */
+  postLogoutRedirectURIs?: string[];
+  /**
+   * Lets this client end the provider session through RP-initiated logout.
+   * Off unless asked for, because it lets a client log the user out of every
+   * *other* client too.
+   */
+  enableEndSession?: boolean;
+}
+
+/**
+ * A client in the shape the provider plugin reads. Field names are the plugin's
+ * schema field names — ./client-registry.ts hands these records straight back
+ * as if they had been loaded from the `oauthClient` table.
+ */
+export interface RegisteredClient {
+  clientId: string;
+  /** Stored form (see ./lib/client-secret.ts), never the configured plaintext. */
+  clientSecret?: string;
+  name: string;
+  type: ClientType;
+  public: boolean;
+  tokenEndpointAuthMethod: 'client_secret_basic' | 'none';
+  redirectUris: string[];
+  postLogoutRedirectUris: string[];
+  enableEndSession: boolean;
+  /** Always true. Configuration cannot turn PKCE off for a registered client. */
+  requirePKCE: true;
+  /** Always true: every registered client is one of my own applications. */
+  skipConsent: true;
+  disabled: false;
+  grantTypes: ['authorization_code'];
+  responseTypes: ['code'];
 }
 
 export interface ParsedClientRegistry {
-  clients: Client[];
-  /** Human-readable reasons why entries were rejected. Never contains secrets. */
+  clients: RegisteredClient[];
+  /**
+   * Why entries were rejected. A rejected entry is not registered at all.
+   * Never contains secrets.
+   */
   errors: string[];
+  /**
+   * Weaknesses that did not justify dropping a working client. Never contains
+   * secrets.
+   */
+  warnings: string[];
 }
 
 function parseJson(
@@ -81,6 +141,12 @@ function redirectUriError(uri: unknown): string | null {
 
   if (url.hash) return `"${uri}" must not contain a fragment`;
 
+  // Userinfo in a redirect target is never intentional here, and it is a classic
+  // way to make a URL read as one host while resolving to another.
+  if (url.username || url.password) {
+    return `"${uri}" must not contain credentials`;
+  }
+
   // `new URL()` accepts "https://*.example.com" as a host, so parsing alone is
   // not validation. A pattern like that could never match a real redirect_uri
   // (the provider compares exact strings), so accepting it would only mislead
@@ -105,17 +171,49 @@ function isClientType(value: unknown): value is ClientType {
 }
 
 /**
- * Turns the two configuration values into the client list better-auth trusts.
+ * Validates a list of exact redirect URIs, returning the de-duplicated list.
+ * Duplicates within one client are harmless, so they are collapsed silently
+ * rather than reported.
+ */
+function validateUriList(
+  value: unknown,
+  label: string,
+): { uris: string[]; errors: string[] } {
+  if (!Array.isArray(value)) {
+    return { uris: [], errors: [`${label} must be an array`] };
+  }
+
+  const errors = value
+    .map(redirectUriError)
+    .filter((error): error is string => error !== null);
+  if (errors.length) return { uris: [], errors };
+
+  return { uris: [...new Set(value as string[])], errors: [] };
+}
+
+/**
+ * Turns the two configuration values into the client list the provider trusts.
  *
  * Invalid entries are dropped and reported rather than thrown: a typo in one
  * app's redirect URI must not take email/password and GitHub sign-in down for
- * everything else. Callers log `errors` so a dropped client is still loud.
+ * everything else. Callers log `errors` and `warnings` so a dropped client is
+ * still loud.
+ *
+ * The failure modes all point the same way. Unparseable `OAUTH_CLIENTS` means no
+ * client is registered, so no authorization can complete; unparseable
+ * `OAUTH_CLIENT_SECRETS` means no confidential client can be registered, for the
+ * same reason. Neither ever falls back to a weaker check.
+ *
+ * Asynchronous only because a configured secret is hashed into its stored form
+ * here (see ./lib/client-secret.ts) rather than being kept in memory as
+ * plaintext for the lifetime of the isolate.
  */
-export function parseOAuthClients(
+export async function parseOAuthClients(
   clientsJson: string | undefined,
   secretsJson: string | undefined,
-): ParsedClientRegistry {
+): Promise<ParsedClientRegistry> {
   const errors: string[] = [];
+  const warnings: string[] = [];
 
   const [parsedClients, clientsErrors] = parseJson(
     clientsJson,
@@ -128,11 +226,11 @@ export function parseOAuthClients(
   );
   errors.push(...secretsErrors);
 
-  if (parsedClients === undefined) return { clients: [], errors };
+  if (parsedClients === undefined) return { clients: [], errors, warnings };
 
   if (!Array.isArray(parsedClients)) {
     errors.push('OAUTH_CLIENTS must be a JSON array of client objects.');
-    return { clients: [], errors };
+    return { clients: [], errors, warnings };
   }
 
   const secrets: Record<string, string> =
@@ -146,8 +244,12 @@ export function parseOAuthClients(
     errors.push('OAUTH_CLIENT_SECRETS must be a JSON object of id -> secret.');
   }
 
-  const clients: Client[] = [];
+  const clients: RegisteredClient[] = [];
   const seen = new Set<string>();
+  // Two clients sharing a callback would mean one endpoint receiving codes
+  // issued to two different identities — never intentional on a provider this
+  // size, and it makes client-confusion mistakes possible downstream.
+  const claimedRedirects = new Map<string, string>();
 
   for (const [index, entry] of parsedClients.entries()) {
     const where = `OAUTH_CLIENTS[${index}]`;
@@ -197,39 +299,86 @@ export function parseOAuthClients(
       continue;
     }
 
-    const uriErrors = config.redirectURIs
-      .map(redirectUriError)
-      .filter((error): error is string => error !== null);
-    if (uriErrors.length) {
-      errors.push(`${where} (${clientId}): ${uriErrors.join('; ')}.`);
+    const redirects = validateUriList(config.redirectURIs, 'redirectURIs');
+    if (redirects.errors.length) {
+      errors.push(`${where} (${clientId}): ${redirects.errors.join('; ')}.`);
       continue;
     }
 
+    const postLogout = validateUriList(
+      config.postLogoutRedirectURIs ?? [],
+      'postLogoutRedirectURIs',
+    );
+    if (postLogout.errors.length) {
+      errors.push(`${where} (${clientId}): ${postLogout.errors.join('; ')}.`);
+      continue;
+    }
+
+    const stolen = redirects.uris.find(
+      (uri) =>
+        claimedRedirects.has(uri) && claimedRedirects.get(uri) !== clientId,
+    );
+    if (stolen) {
+      errors.push(
+        `${where} (${clientId}): redirect URI "${stolen}" is already registered to "${claimedRedirects.get(stolen)}".`,
+      );
+      continue;
+    }
+
+    const isPublic = PUBLIC_CLIENT_TYPES.has(type);
     const clientSecret = secrets[clientId];
-    if (type !== 'public' && !clientSecret) {
+
+    if (!isPublic && !clientSecret) {
       errors.push(
         `${where} (${clientId}): confidential clients need an OAUTH_CLIENT_SECRETS entry.`,
       );
       continue;
     }
+    if (isPublic && clientSecret) {
+      // A public client cannot keep a secret, so one configured for it is either
+      // a copy-paste mistake or a misunderstanding of the client type. Either
+      // way the secret is not protecting anything and should not look like it is.
+      errors.push(
+        `${where} (${clientId}): ${type} clients are public and must not have an OAUTH_CLIENT_SECRETS entry.`,
+      );
+      continue;
+    }
+    if (clientSecret && clientSecret.length < RECOMMENDED_SECRET_LENGTH) {
+      warnings.push(
+        `${where} (${clientId}): client secret is shorter than ${RECOMMENDED_SECRET_LENGTH} characters — generate a new one with \`openssl rand -base64 32\`.`,
+      );
+    }
 
     seen.add(clientId);
+    for (const uri of redirects.uris) claimedRedirects.set(uri, clientId);
+
     clients.push({
       clientId,
-      clientSecret: type === 'public' ? undefined : clientSecret,
-      type,
+      clientSecret: clientSecret
+        ? await hashClientSecret(clientSecret)
+        : undefined,
       name,
-      disabled: false,
-      metadata: null,
-      redirectUrls: [...config.redirectURIs],
+      type,
+      public: isPublic,
+      tokenEndpointAuthMethod: isPublic ? 'none' : 'client_secret_basic',
+      redirectUris: redirects.uris,
+      postLogoutRedirectUris: postLogout.uris,
+      enableEndSession: config.enableEndSession === true,
+      requirePKCE: true,
       // Every registered client here is one of my own applications, so there is
       // nothing for the user to consent to — the consent screen exists to
       // protect users from third-party apps, and none are allowed to register.
       skipConsent: true,
+      disabled: false,
+      // Authorization code only. `client_credentials` would let a client act
+      // without a user, which no consumer of this provider needs; the plugin
+      // still grants `refresh_token` alongside an authorization-code client.
+      grantTypes: ['authorization_code'],
+      responseTypes: ['code'],
     });
   }
 
-  return { clients, errors };
+  return { clients, errors, warnings };
 }
 
 /**
@@ -238,10 +387,13 @@ export function parseOAuthClients(
  * make its origin trusted — otherwise the app that just completed a flow cannot
  * be used as a destination.
  */
-export function clientOrigins(clients: Client[]): string[] {
+export function clientOrigins(clients: RegisteredClient[]): string[] {
   const origins = new Set<string>();
   for (const client of clients) {
-    for (const uri of client.redirectUrls) {
+    for (const uri of [
+      ...client.redirectUris,
+      ...client.postLogoutRedirectUris,
+    ]) {
       try {
         origins.add(new URL(uri).origin);
       } catch {

@@ -27,12 +27,20 @@ Each consumer completes the flow and then keeps **its own** session. Nothing
 depends on sharing this service's cookie, which is what lets a consumer live on a
 different domain.
 
+`dev-auth` has no application of its own. Opening it directly and signing in
+gives you a session _with the provider_ and nothing more — there is no dashboard,
+and it does not stand in for any particular app. GitHub is an upstream detail of
+this service alone: a consumer sees `dev-auth` as its identity provider and never
+talks to GitHub.
+
 ## Features
 
 - 🔐 **Email & password + GitHub** — one account, either method, with account
   linking between them
 - 🪪 **OAuth 2.1 / OIDC provider** — authorization code flow with mandatory PKCE,
-  ES256-signed ID tokens, and a JWKS endpoint
+  ES256-signed tokens, a JWKS endpoint, token revocation and introspection
+- 📄 **Standards discovery** — OpenID configuration and OAuth authorization-server
+  metadata at the issuer root, so any client library configures itself
 - 🗄️ **Cloudflare D1** — serverless SQLite for users, sessions and issued tokens
 - 🎨 **Web Components UI** — auth pages built with `@andersseen/web-components`
 - 🔒 **Rate limiting** — brute-force protection on the credential endpoints
@@ -40,13 +48,13 @@ different domain.
 
 ## Tech Stack
 
-| Layer     | Technology                                    |
-| --------- | --------------------------------------------- |
-| Framework | Hono                                          |
-| Auth      | Better Auth (`oidc-provider` + `jwt` plugins) |
-| Database  | Cloudflare D1 (SQLite) via Drizzle            |
-| UI        | `@andersseen/web-components`, Flowview        |
-| Deploy    | Cloudflare Workers                            |
+| Layer     | Technology                                              |
+| --------- | ------------------------------------------------------- |
+| Framework | Hono                                                    |
+| Auth      | Better Auth 1.6 (`@better-auth/oauth-provider` + `jwt`) |
+| Database  | Cloudflare D1 (SQLite) via Drizzle                      |
+| UI        | `@andersseen/web-components`, Flowview                  |
+| Deploy    | Cloudflare Workers                                      |
 
 ## Quick Start
 
@@ -72,13 +80,15 @@ the DevFlare app on `:4200`.
 
 ### Local secrets
 
-`apps/dev-auth/.dev.vars` (gitignored — see the note under
-[Security](#security-notes)):
+`apps/dev-auth/.dev.vars` — gitignored and untracked; keep it that way, and see
+[Secret rotation still owed](#secret-rotation-still-owed) for the value that was
+committed before it was:
 
 ```
 BETTER_AUTH_SECRET=a-long-random-string
-# One JSON object mapping client id -> client secret, for the clients declared
-# in wrangler.toml. Generate values with: openssl rand -hex 32
+# One JSON object mapping client id -> client secret, for the confidential
+# clients declared in wrangler.toml. 32+ characters; shorter ones still work but
+# are logged as a warning at boot. Generate with: openssl rand -base64 32
 OAUTH_CLIENT_SECRETS={"devflare-dev":"a-long-random-string"}
 ```
 
@@ -143,15 +153,30 @@ OAUTH_CLIENTS = '''[
 
 - `type: "web"` — confidential: needs an `OAUTH_CLIENT_SECRETS` entry. Use this
   for anything with a server (the code exchange happens server side).
-- `type: "public"` — no secret; authenticated by PKCE alone. For clients that
-  cannot keep one.
+- `type: "native"` / `type: "user-agent-based"` — public: no secret, authenticated
+  by PKCE alone. Configuring a secret for one of these is rejected, because the
+  secret would not be protecting anything.
 - `redirectURIs` are matched **exactly**. No prefixes, no wildcards, no implicit
   trailing slash. List every callback the app actually uses.
+- `enableEndSession: true` plus `postLogoutRedirectURIs` opts a client into
+  RP-initiated logout (`/api/auth/oauth2/end-session`). Off by default: it lets
+  one client end the session every _other_ client is relying on.
 
-A malformed entry is dropped with an error in the logs rather than taking the
-whole service down, so email/password and GitHub sign-in keep working — but that
-client will get `invalid_client` until the config is fixed. Check the Worker logs
-(`pnpm cf:tail:auth`) after changing this.
+Client secrets never reach the database in any form. The registry hashes
+each one at boot and the provider is given that hash to compare against, so
+`oauthClient` in D1 stays empty and deleting a client from `OAUTH_CLIENTS`
+removes it from the provider outright — there is no stale row that could still
+complete an authorization.
+
+Validation is per-entry. A malformed client is dropped with an error in the logs
+rather than taking the whole service down, so email/password, GitHub, and every
+_other_ consumer keep working — but that one client gets `invalid_client` until
+the config is fixed. Failures that would make security ambiguous fail closed
+instead: unreadable `OAUTH_CLIENTS` registers nobody, and unreadable
+`OAUTH_CLIENT_SECRETS` registers no confidential client rather than quietly
+letting one through without a secret. Weak-but-working configuration (a client
+secret under 32 characters) is logged as a warning and left running. Check the
+Worker logs (`pnpm cf:tail:auth`) after changing this.
 
 ## How a consumer integrates
 
@@ -168,11 +193,18 @@ client will get `invalid_client` until the config is fixed. Check the Worker log
 Step 7 is the part that matters architecturally: the consumer does not keep
 asking dev-auth "who is this?" on every request, and does not share its cookie.
 
-Discovery lives at both the issuer root and under the auth base path:
+Both discovery documents live at the issuer root, which is where a generic
+client library looks for them:
 
 ```
 https://auth-devflare.andersseen.dev/.well-known/openid-configuration
+https://auth-devflare.andersseen.dev/.well-known/oauth-authorization-server
 ```
+
+Point an OIDC client library at the issuer (`https://auth-devflare.andersseen.dev`)
+and everything else — endpoints, supported algorithms, JWKS location — comes from
+there. A consumer needs no code from this repository, no better-auth dependency,
+no access to this service's D1 and no cookie from it.
 
 ```bash
 # 3 — send the browser here
@@ -199,22 +231,33 @@ consumer, in about 200 lines and with no auth SDK.
 
 ## API Endpoints
 
-| Endpoint                            | Method | Description                             |
-| ----------------------------------- | ------ | --------------------------------------- |
-| `/health`                           | GET    | Service health check                    |
-| `/.well-known/openid-configuration` | GET    | OIDC discovery document                 |
-| `/api/auth/oauth2/authorize`        | GET    | Start an authorization flow             |
-| `/api/auth/oauth2/token`            | POST   | Exchange a code (or refresh) for tokens |
-| `/api/auth/oauth2/userinfo`         | GET    | Identity for an access token            |
-| `/api/auth/jwks`                    | GET    | ID token verification keys              |
-| `/api/auth/sign-up/email`           | POST   | Register a new user                     |
-| `/api/auth/sign-in/email`           | POST   | Sign in                                 |
-| `/api/auth/sign-in/social`          | POST   | Start GitHub sign-in                    |
-| `/api/auth/sign-out`                | POST   | End the provider session                |
-| `/api/auth/get-session`             | GET    | The provider's own session              |
-| `/api/setup/d1`                     | POST   | Create D1 database (setup wizard)       |
+| Endpoint                                  | Method | Description                             |
+| ----------------------------------------- | ------ | --------------------------------------- |
+| `/health`                                 | GET    | Service health check                    |
+| `/.well-known/openid-configuration`       | GET    | OIDC discovery document                 |
+| `/.well-known/oauth-authorization-server` | GET    | OAuth authorization-server metadata     |
+| `/api/auth/oauth2/authorize`              | GET    | Start an authorization flow             |
+| `/api/auth/oauth2/token`                  | POST   | Exchange a code (or refresh) for tokens |
+| `/api/auth/oauth2/userinfo`               | GET    | Identity for an access token            |
+| `/api/auth/oauth2/introspect`             | POST   | Token state, for a registered client    |
+| `/api/auth/oauth2/revoke`                 | POST   | Revoke an access or refresh token       |
+| `/api/auth/oauth2/end-session`            | GET    | RP-initiated logout (opt-in per client) |
+| `/api/auth/oauth2/consent`                | POST   | Record a consent decision               |
+| `/api/auth/jwks`                          | GET    | Token verification keys                 |
+| `/api/auth/sign-up/email`                 | POST   | Register a new user                     |
+| `/api/auth/sign-in/email`                 | POST   | Sign in                                 |
+| `/api/auth/sign-in/social`                | POST   | Start GitHub sign-in                    |
+| `/api/auth/sign-out`                      | POST   | End the provider session                |
+| `/api/auth/get-session`                   | GET    | The provider's own session              |
+| `/api/setup/d1`                           | POST   | Create D1 database (setup wizard)       |
 
-`/login`, `/signup`, `/forgot`, `/verify` and `/setup` serve the HTML pages.
+`/`, `/login`, `/signup`, `/forgot`, `/consent`, `/verify` and `/setup` serve the
+HTML pages. `/` is the provider's own signed-in page (or a redirect to `/login`).
+
+**Permanently 404, by design:** `/api/auth/oauth2/register`, `.../create-client`,
+`.../update-client`, `.../delete-client` and `.../client/rotate-secret`. Clients
+are registered in configuration; see [Security notes](#security-notes) for the
+three independent locks that keep those closed.
 
 ## Deployment
 
@@ -235,14 +278,23 @@ pnpm deploy:auth
 
 The `/setup` page also walks through creating the D1 database from a browser.
 
+> **Migration order matters for `0003_oauth_provider_v2.sql`.** It renames the
+> previous provider's tables aside and creates the new ones, so apply migrations
+> _before_ deploying the Worker — a deployed Worker pointed at an unmigrated D1
+> cannot serve an authorization request. Accounts, sessions, linked GitHub
+> identities and signing keys are untouched by it; access and refresh tokens
+> issued by the old plugin stop being redeemable, which costs each consumer one
+> extra round through the authorization flow.
+
 ## Project Structure
 
 ```
 apps/dev-auth/
 ├── src/
 │   ├── index.ts              # Hono app entry point, routing, discovery
-│   ├── auth.config.ts        # Better Auth + OIDC provider configuration
-│   ├── oauth-clients.ts      # Registered consumer applications
+│   ├── auth.config.ts        # Better Auth + OAuth provider configuration
+│   ├── oauth-clients.ts      # Registered consumer applications (parsing)
+│   ├── client-registry.ts    # Serves those clients to the provider, read-only
 │   ├── db/
 │   │   ├── schema.ts         # Drizzle schema (core + provider tables)
 │   │   ├── index.ts          # Database connection
@@ -250,7 +302,7 @@ apps/dev-auth/
 │   ├── routes/               # better-auth mount, setup, admin, analytics
 │   ├── pages/                # Flowview auth pages
 │   ├── middleware/           # CORS, session, rate limiting, headers
-│   └── lib/                  # Validation helpers
+│   └── lib/                  # Client-secret hashing, validation helpers
 ├── wrangler.toml             # Cloudflare Worker config + client registry
 ├── .dev.vars                 # Local secrets (see Security notes)
 └── README.md
@@ -259,32 +311,62 @@ apps/dev-auth/
 ## Security Notes
 
 - **`BETTER_AUTH_SECRET`** must be a strong random string. It also encrypts the
-  ID token signing keys in the `jwks` table, so rotating it without clearing that
+  token signing keys in the `jwks` table, so rotating it without clearing that
   table breaks token signing.
-- **`apps/dev-auth/.dev.vars` is tracked in git** (committed before it was
-  ignored). `.gitignore` does not apply to tracked files: run
-  `git rm --cached apps/dev-auth/.dev.vars` and rotate the `BETTER_AUTH_SECRET`
-  it contains.
 - **Redirect URIs** are compared with string equality against the registry. No
   prefix or substring matching anywhere in the flow.
 - **PKCE is mandatory** (`S256` only) for every client, confidential ones
-  included.
-- **Client secrets** are stored as configuration, not in the database, and never
-  appear in a URL or in an error returned to a browser.
+  included. `plain` is refused outright rather than redirected with an error.
+- **Client secrets** live in configuration, never in the database, and never
+  appear in a URL, a log line or an error returned to a browser. They are hashed
+  before the provider ever sees them and compared in constant time.
+- **Client registration is closed**, held shut by three independent locks so that
+  removing any one of them does not open it:
+  1. the routes 404 in `src/index.ts`, before better-auth is reached;
+  2. `clientPrivileges` denies every create/update/delete/rotate in
+     `auth.config.ts`, including for a signed-in user;
+  3. the client store in `client-registry.ts` refuses writes and has nowhere to
+     put them — `oauthClient` in D1 is empty and stays empty.
 - **Rate limiting**: 10 req/min per IP on credential endpoints; 60 req/min on the
   OAuth endpoints, which receive one call per user login from a consumer's server
   rather than one per user.
 - **CORS**: configurable via `DEV_AUTH_CORS_ORIGINS`. The OAuth back channel does
   not need it — those calls are server to server.
 
-### Known limitation
+### Secret rotation still owed
 
-The `oidc-provider` plugin this builds on is deprecated in better-auth 1.6 and
-will be removed in 2.0, in favour of `@better-auth/oauth-provider`. It was chosen
-anyway: it ships with the pinned better-auth, supports config-declared clients
-directly, and needs no consent UI for first-party apps. Migrating means a
-better-auth major upgrade and a schema change (`oauthApplication` →
-`oauthClient`), so it is a deliberate later step, not a blocker.
+`apps/dev-auth/.dev.vars` was committed in the initial import and later removed
+from tracking. It is gitignored and untracked today, and no secret file is
+tracked now — but **git history still contains the `BETTER_AUTH_SECRET` that was
+in it**. Removing a file from tracking does not remove it from history.
+
+Whether the deployed secret was ever rotated cannot be established from this
+repository. Treat that value as compromised until rotated by hand:
+
+```bash
+wrangler secret put BETTER_AUTH_SECRET --env production   # apps/dev-auth
+```
+
+Rotating it invalidates the encrypted private keys in the `jwks` table, so clear
+that table in the same maintenance window and let the provider mint a fresh key
+pair; consumers pick the new one up from `/api/auth/jwks` automatically. Live
+provider sessions are also invalidated, so users sign in again once.
+
+### Known limitation: no email delivery
+
+There is no transactional email provider wired up, and none is being added yet.
+`sendVerificationEmail` logs the link instead of sending it, so:
+
+- `requireEmailVerification` is **off** — requiring a mail nobody can receive
+  would create accounts that can never sign in;
+- password recovery is **not** functional end to end, whatever `/forgot` implies;
+- access is gated by `SIGNUP_ALLOWLIST` instead, which applies to GitHub sign-up
+  as well as to email — the address GitHub returns has to be on the list.
+
+This is a deliberate, temporary trade for a personal provider with one user. It
+is not production-ready email verification and should not be described as such.
+Wiring up a provider, then re-enabling `requireEmailVerification` and
+`sendOnSignUp` together, is the step that closes it.
 
 ## Testing
 
@@ -293,11 +375,19 @@ pnpm nx test dev-auth        # provider flow + client registry
 pnpm nx typecheck dev-auth
 ```
 
-`src/__tests__/oidc-provider.spec.ts` drives the real better-auth instance
-through the whole flow — authorize, login, code, token exchange, userinfo —
-using the same `createAuthOptions` the Worker uses, against an in-memory
-database. It covers registered vs unregistered redirect URIs, PKCE enforcement,
-client isolation and two applications coexisting.
+`src/__tests__/oauth-provider.spec.ts` drives the real better-auth instance
+through the whole flow — authorize, login, code, token exchange, userinfo,
+refresh, revoke — using the same `createAuthOptions` the Worker uses, against an
+in-memory database. It covers registered vs unregistered redirect URIs, PKCE
+enforcement, client authentication, single-use codes, client isolation, and two
+independent applications (DevFlare and Imaginaryx) coexisting. Imaginaryx appears
+here only as a second, deliberately unrelated client; nothing in its own
+repository is involved.
+
+`client-registry.spec.ts` covers the read-only client store on its own, and
+`app.spec.ts` covers the routing layer: the blocked registration paths, both
+discovery documents, and the fact that a direct visit never lands on a consumer
+app.
 
 ### Manual smoke test
 

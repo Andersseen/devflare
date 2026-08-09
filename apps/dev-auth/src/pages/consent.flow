@@ -1,0 +1,95 @@
+<and-card variant="elevated" padded
+  and-layout="vertical gap:md"
+  and-motion="fade-in slide-in-up"
+  and-motion-trigger="enter"
+  and-motion-duration="600ms">
+
+  <div and-layout="horizontal justify:center align:center gap:sm">
+    <and-icon name="lock" size="24"></and-icon>
+    <span and-text="h6 weight:bold color:foreground">DevAuth</span>
+  </div>
+
+  <div and-layout="vertical gap:xs">
+    <h1 and-text="h4 align:center color:foreground">Authorize application</h1>
+    <p and-text="p-sm align:center color:muted">
+      <span id="client-name">An application</span> wants to sign you in.
+    </p>
+  </div>
+
+  <div and-layout="vertical gap:xs">
+    <span and-text="p-xs color:foreground weight:medium">It will be able to read</span>
+    <ul id="scope-list" and-text="p-sm color:muted" style="margin:0;padding-left:1.25rem"></ul>
+  </div>
+
+  <div and-layout="vertical gap:sm">
+    <and-button id="allow-btn" variant="default" data-full>
+      <and-icon slot="start" name="check" size="16"></and-icon>
+      Allow
+    </and-button>
+    <and-button id="deny-btn" variant="outline" data-full>
+      Cancel
+    </and-button>
+  </div>
+</and-card>
+
+<script>
+  (function() {
+    const allowBtn = document.getElementById('allow-btn');
+    const denyBtn = document.getElementById('deny-btn');
+    const toaster = document.getElementById('toaster');
+
+    // The provider signs the authorization request into this page's query
+    // string and verifies that signature when the decision comes back, so the
+    // whole string is forwarded verbatim — re-assembling it from parts would
+    // invalidate it.
+    const oauthQuery = window.location.search.replace(/^\?/, '');
+    const params = new URLSearchParams(oauthQuery);
+
+    const clientId = params.get('client_id');
+    if (clientId) {
+      // textContent, not innerHTML: client_id arrives in the URL.
+      document.getElementById('client-name').textContent = clientId;
+    }
+
+    const SCOPE_LABELS = {
+      openid: 'Who you are (a stable account identifier)',
+      profile: 'Your name and avatar',
+      email: 'Your email address',
+      offline_access: 'Stay signed in when you are away'
+    };
+
+    const list = document.getElementById('scope-list');
+    (params.get('scope') || '').split(' ').filter(Boolean).forEach(function(scope) {
+      const item = document.createElement('li');
+      item.textContent = SCOPE_LABELS[scope] || scope;
+      list.appendChild(item);
+    });
+
+    async function decide(accept, button) {
+      button.loading = true;
+
+      try {
+        const res = await fetch('/api/auth/oauth2/consent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ accept: accept, oauth_query: oauthQuery })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.redirect_uri) {
+          throw new Error(data.message || data.error_description || data.error || 'Could not complete authorization');
+        }
+
+        window.location.href = data.redirect_uri;
+      } catch (err) {
+        button.loading = false;
+        toaster.present(err.message || 'Could not complete authorization', 'error');
+      }
+    }
+
+    allowBtn.addEventListener('click', function() { decide(true, allowBtn); });
+    denyBtn.addEventListener('click', function() { decide(false, denyBtn); });
+  })();
+</script>
