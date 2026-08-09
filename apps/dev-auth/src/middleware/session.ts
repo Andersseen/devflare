@@ -8,7 +8,7 @@ import type { Env } from '../index';
  */
 export const authMiddleware = createMiddleware<{ Bindings: Env }>(
   async (c, next) => {
-    const auth = createAuth(c.env);
+    const auth = await createAuth(c.env);
 
     const session = await auth.api.getSession({
       headers: c.req.raw.headers,

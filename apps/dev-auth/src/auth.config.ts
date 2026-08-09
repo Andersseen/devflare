@@ -2,30 +2,95 @@ import { betterAuth, type BetterAuthOptions } from 'better-auth';
 import { APIError } from 'better-auth/api';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { jwt } from 'better-auth/plugins/jwt';
-import { oidcProvider } from 'better-auth/plugins/oidc-provider';
+import { oauthProvider } from '@better-auth/oauth-provider';
+import type { DBAdapterInstance } from 'better-auth/types';
 import { createDb } from './db';
 import * as schema from './db/schema';
-import { clientOrigins, parseOAuthClients } from './oauth-clients';
+import { withConfiguredClients } from './client-registry';
+import { hashClientSecret, verifyClientSecret } from './lib/client-secret';
+import {
+  clientOrigins,
+  parseOAuthClients,
+  type ParsedClientRegistry,
+} from './oauth-clients';
 import type { Env } from './index';
 
 /**
- * The algorithm the ID tokens are signed with. ES256 rather than better-auth's
+ * The algorithm the ID and access tokens are signed with. ES256 rather than the
  * EdDSA default: Ed25519 key generation is not available in every Workers
  * runtime version, while ECDSA P-256 is, and every OIDC client library verifies
- * ES256. The provider metadata has to advertise it explicitly — better-auth
- * hardcodes ["RS256", "EdDSA"] there.
+ * ES256. The provider advertises whatever is configured here in its discovery
+ * document, so this is the only place it has to be stated.
  */
 const ID_TOKEN_ALG = 'ES256';
+
+/**
+ * The scopes a client may ask for. `openid` is what makes this an OIDC provider
+ * rather than a bare OAuth server; `offline_access` is what a consumer requests
+ * when it wants a refresh token.
+ */
+const SCOPES = ['openid', 'profile', 'email', 'offline_access'] as const;
+
+/**
+ * Parsing the client registry hashes each configured secret, so it is done once
+ * per isolate instead of on every request — `createAuth` runs per request.
+ *
+ * A single-entry memo is enough: a Worker isolate only ever sees one env. The
+ * raw configuration strings are the cache key, so editing either one in
+ * wrangler (a redeploy, a new isolate) re-parses rather than serving a stale
+ * registry.
+ */
+let registryCache:
+  | {
+      clients?: string;
+      secrets?: string;
+      parsed: Promise<ParsedClientRegistry>;
+    }
+  | undefined;
+
+function getClientRegistry(env: Env): Promise<ParsedClientRegistry> {
+  if (
+    registryCache &&
+    registryCache.clients === env.OAUTH_CLIENTS &&
+    registryCache.secrets === env.OAUTH_CLIENT_SECRETS
+  ) {
+    return registryCache.parsed;
+  }
+
+  const parsed = parseOAuthClients(
+    env.OAUTH_CLIENTS,
+    env.OAUTH_CLIENT_SECRETS,
+  ).then((registry) => {
+    // Logged once per isolate rather than once per request. Neither list ever
+    // contains a secret — see ./oauth-clients.ts.
+    for (const error of registry.errors) {
+      console.error(`[oauth-clients] ${error}`);
+    }
+    for (const warning of registry.warnings) {
+      console.warn(`[oauth-clients] ${warning}`);
+    }
+    return registry;
+  });
+
+  registryCache = {
+    clients: env.OAUTH_CLIENTS,
+    secrets: env.OAUTH_CLIENT_SECRETS,
+    parsed,
+  };
+  return parsed;
+}
+
+/** Test seam: drops the memo so a spec can change OAUTH_CLIENTS between cases. */
+export function resetClientRegistryCache(): void {
+  registryCache = undefined;
+}
 
 /**
  * Builds the better-auth options. Split out from `createAuth` so tests can run
  * the exact same provider configuration against an in-memory database instead of
  * D1 — the alternative is a second, drifting copy of the config.
  */
-export function createAuthOptions(
-  env: Env,
-  database: BetterAuthOptions['database'],
-): BetterAuthOptions {
+export async function createAuthOptions(env: Env, database: DBAdapterInstance) {
   // Comma-separated addresses allowed to create an account. Empty (the local
   // dev default) means no restriction; production sets it in wrangler.toml.
   const signupAllowlist = (env.SIGNUP_ALLOWLIST ?? '')
@@ -35,16 +100,19 @@ export function createAuthOptions(
 
   // The applications allowed to authenticate through this service. See
   // ./oauth-clients.ts — registration is configuration, not an API.
-  const { clients, errors } = parseOAuthClients(
-    env.OAUTH_CLIENTS,
-    env.OAUTH_CLIENT_SECRETS,
-  );
-  for (const error of errors) {
-    console.error(`[oauth-clients] ${error}`);
-  }
+  const { clients } = await getClientRegistry(env);
 
-  return {
-    database,
+  // `satisfies` rather than a `: BetterAuthOptions` return annotation. Both
+  // reject a misspelled option — that is how a `crossSubDomainCookie` typo, which
+  // TypeScript had been silently accepting, was finally caught — but only
+  // `satisfies` keeps the concrete plugin types, and `createAuth`'s callers need
+  // them: the discovery endpoints are server-only, so src/index.ts reaches them
+  // through `auth.api.getOpenIdConfig` rather than through the HTTP handler.
+  const options = {
+    // The provider reads registered clients through the adapter; this wrapper
+    // answers those reads from the configuration above instead of from D1, and
+    // refuses every write. See ./client-registry.ts.
+    database: withConfiguredClients(database, clients),
     baseURL: env.BETTER_AUTH_URL,
     secret: env.BETTER_AUTH_SECRET,
     // Every callbackURL is validated against this list. Consumer apps live on
@@ -52,11 +120,9 @@ export function createAuthOptions(
     // sign-in that tries to land on one is refused with INVALID_CALLBACK_URL.
     // Registered OAuth clients are trusted by construction — their redirect
     // URIs were vetted when they were registered. The list is additive:
-    // better-auth always trusts the baseURL origin on top of it.
-    trustedOrigins: [
-      ...clientOrigins(clients),
-      ...(env.APP_URL ? [new URL(env.APP_URL).origin] : []),
-    ],
+    // better-auth always trusts the baseURL origin on top of it, which is what
+    // covers this service's own pages now that there is no APP_URL.
+    trustedOrigins: clientOrigins(clients),
     emailAndPassword: {
       enabled: true,
       minPasswordLength: 8,
@@ -70,8 +136,8 @@ export function createAuthOptions(
       sendOnSignUp: false,
       autoSignInAfterVerification: true,
       sendVerificationEmail: async ({ user, url }) => {
-        // In production, integrate with Resend/SendGrid/AWS SES
-        // For now, log the verification URL in development
+        // There is no transactional email provider wired up. This logs rather
+        // than sends, which is why requireEmailVerification is off above.
         console.log(`[Email] Verification for ${user.email}: ${url}`);
       },
     },
@@ -99,64 +165,78 @@ export function createAuthOptions(
     // not serve — the browser ended up back on /login with the reason stripped,
     // which is what made "GitHub does nothing" so hard to read. Send failures to
     // the login page instead, where the ?error= param is surfaced as a toast.
-    // The OIDC provider reuses this URL for authorization errors it cannot
-    // report to a client (bad client_id, disabled client).
+    // The provider reuses this URL for authorization errors it cannot report to
+    // a client (bad client_id, disabled client).
     onAPIError: {
       errorURL: `${env.BETTER_AUTH_URL}/login`,
     },
     session: {
       cookieCache: {
         enabled: true,
-        maxAge: 60 * 5, // 5 minutos de cache
+        maxAge: 60 * 5,
       },
     },
-    // No cross-subdomain cookie. There used to be a `crossSubDomainCookie` block
-    // here (keyed off COOKIE_DOMAIN) that widened this service's session cookie
-    // to `.andersseen.dev` so the app could read it — except better-auth's option
-    // is `crossSubDomainCookies`, plural, so it never did anything: TypeScript
-    // accepted the misspelling because `betterAuth()`'s generic parameter
-    // suppresses excess-property checks, and typing these options is what
-    // surfaced it.
-    //
-    // Deleted rather than corrected. Consumers authenticate through the OAuth
-    // flow and mint their own session, so none of them needs this cookie — and an
-    // app on an unrelated domain could never have received it anyway. Enabling it
-    // now would widen the cookie's scope for the first time, to serve nothing.
+    // No cross-subdomain cookie, deliberately. Consumers authenticate through
+    // the OAuth flow and mint their own session, so none of them needs this
+    // service's cookie — and an app on an unrelated domain could never have
+    // received it anyway. It stays host-only to this Worker.
     advanced: {
       database: {
         generateId: () => crypto.randomUUID(),
       },
     },
     plugins: [
-      // Signs the OIDC ID tokens with a rotatable key pair and publishes the
-      // public half at /api/auth/jwks, so a consumer can verify an ID token
-      // without sharing any secret with this service.
+      // Signs the tokens with a rotatable key pair and publishes the public half
+      // at /api/auth/jwks, so a consumer can verify an ID token without sharing
+      // any secret with this service. The provider reads the algorithm from here
+      // for its discovery document.
       jwt({
         jwks: { keyPairConfig: { alg: ID_TOKEN_ALG } },
         jwt: { issuer: env.BETTER_AUTH_URL },
       }),
-      oidcProvider({
+      oauthProvider({
+        scopes: [...SCOPES],
         // Where an unauthenticated authorization request is sent. This service's
         // own login page: it authenticates the user with email/password or
-        // GitHub, and better-auth then resumes the authorization request from
-        // the signed cookie it left behind.
+        // GitHub, and the provider resumes the authorization request from the
+        // signed `oauth_query` the page hands back.
         loginPage: '/login',
-        trustedClients: clients,
-        // OAuth 2.1: public clients cannot keep a secret, so the code exchange
-        // is bound to the browser that started it instead.
-        requirePKCE: true,
-        allowPlainCodeChallengeMethod: false,
-        // Registration is configuration (see ./oauth-clients.ts). Leaving the
-        // dynamic registration endpoint open would let anyone create a client
-        // with its own redirect URIs on a provider meant for my apps only.
+        // Required by the plugin, and unreachable for every client registered
+        // today: the registry marks them all `skipConsent` because they are all
+        // my own applications. It is wired up rather than pointed at a dead URL
+        // so that a future non-first-party client fails closed at a real screen
+        // instead of a 404.
+        consentPage: '/consent',
+        signup: { page: '/signup' },
+        // Authorization code only. `client_credentials` would let a client act
+        // with no user involved, which nothing here needs, and leaving it out of
+        // the advertised metadata keeps the surface honest. The plugin still
+        // issues refresh tokens to an authorization-code client that asked for
+        // the `offline_access` scope.
+        grantTypes: ['authorization_code', 'refresh_token'],
+        // Registration is configuration (see ./oauth-clients.ts). Both flags off
+        // means the plugin serves no registration endpoint and advertises none;
+        // src/index.ts blocks the paths anyway, and the client store rejects
+        // writes, so this is the first of three independent locks.
         allowDynamicClientRegistration: false,
-        useJWTPlugin: true,
-        metadata: {
-          id_token_signing_alg_values_supported: [ID_TOKEN_ALG],
-          // Not advertised, because it is blocked in src/index.ts. Leaving it in
-          // discovery would invite clients to try registering themselves and get
-          // a 404 for their trouble. `undefined` drops the key from the JSON.
-          registration_endpoint: undefined,
+        allowUnauthenticatedClientRegistration: false,
+        // Denies every client CRUD action, for every caller, including a
+        // signed-in one. Without this the plugin only asks whether the *session*
+        // is valid before letting it create a client.
+        clientPrivileges: async () => false,
+        // The registry hands over already-hashed secrets and never the
+        // plaintext, so the provider is told how to hash and compare rather than
+        // being left to assume a format. See ./lib/client-secret.ts.
+        storeClientSecret: {
+          hash: hashClientSecret,
+          verify: verifyClientSecret,
+        },
+        // Both discovery documents are served from this Worker's root in
+        // src/index.ts, which is where a client looks for them given the issuer
+        // is the origin. The plugin cannot tell that from inside its base path.
+        silenceWarnings: {
+          oauthAuthServerConfig: true,
+          openidConfig: true,
         },
       }),
     ],
@@ -177,14 +257,16 @@ export function createAuthOptions(
         },
       },
     },
-  };
+  } satisfies BetterAuthOptions;
+
+  return options;
 }
 
-export function createAuth(env: Env) {
+export async function createAuth(env: Env) {
   const db = createDb(env.DB);
 
   return betterAuth(
-    createAuthOptions(
+    await createAuthOptions(
       env,
       drizzleAdapter(db, {
         provider: 'sqlite',
@@ -194,4 +276,4 @@ export function createAuth(env: Env) {
   );
 }
 
-export type Auth = ReturnType<typeof createAuth>;
+export type Auth = Awaited<ReturnType<typeof createAuth>>;

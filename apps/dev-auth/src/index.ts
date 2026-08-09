@@ -1,4 +1,8 @@
 import { Hono } from 'hono';
+import {
+  oauthProviderAuthServerMetadata,
+  oauthProviderOpenIdConfigMetadata,
+} from '@better-auth/oauth-provider';
 import { createAuth } from './auth.config';
 import { withSentry } from './instrument';
 import { createCorsMiddleware } from './middleware/cors';
@@ -11,8 +15,10 @@ import analyticsRoutes from './routes/analytics';
 import { renderLoginPage } from './pages/login';
 import { renderSignupPage } from './pages/signup';
 import { renderForgotPage } from './pages/forgot';
+import { renderConsentPage } from './pages/consent';
 import { renderSetupPage } from './pages/setup';
 import { renderNotFoundPage } from './pages/not-found';
+import { renderSignedInPage } from './pages/signed-in';
 import { renderVerifyPage } from './pages/verify';
 
 export interface Env {
@@ -39,14 +45,6 @@ export interface Env {
    * A secret: `wrangler secret put OAUTH_CLIENT_SECRETS` (or .dev.vars locally).
    */
   OAUTH_CLIENT_SECRETS?: string;
-  /**
-   * Default destination for a sign-in that did *not* start from an OAuth
-   * authorization request — someone opening /login directly. This service has no
-   * landing page of its own (`/` redirects back to `/login`), so without it such
-   * a sign-in bounces the user straight back to the form. Authorization flows
-   * ignore this and return to the calling application's redirect URI.
-   */
-  APP_URL?: string;
 }
 
 /** Exported for tests; the Worker entry point is the default export below. */
@@ -91,11 +89,7 @@ app.get('/health', (c) => {
 // login, and 10/min would throttle real traffic rather than an attacker.
 const oauthLimit = createRateLimitMiddleware(60, 60 * 1000);
 const credentialLimit = createRateLimitMiddleware(10, 60 * 1000);
-const PROVIDER_PREFIXES = [
-  '/api/auth/oauth2/',
-  '/api/auth/jwks',
-  '/api/auth/.well-known/',
-];
+const PROVIDER_PREFIXES = ['/api/auth/oauth2/', '/api/auth/jwks'];
 
 app.use('/api/auth/*', (c, next) =>
   PROVIDER_PREFIXES.some((prefix) => c.req.path.startsWith(prefix))
@@ -103,34 +97,60 @@ app.use('/api/auth/*', (c, next) =>
     : credentialLimit(c, next),
 );
 
-// Dynamic client registration is closed. `allowDynamicClientRegistration: false`
-// is NOT enough on its own: better-auth only reads it to decide whether an
-// *unauthenticated* caller may register, so with it off any signed-in user could
-// still POST here and create a client with redirect URIs of their choosing —
-// exactly the thing the registry exists to prevent. Registration is
-// configuration (OAUTH_CLIENTS), so the endpoint has no reason to exist.
-// Registered before the better-auth mount, which is what makes this win.
-app.all('/api/auth/oauth2/register', (c) =>
-  c.json(
-    {
-      error: 'invalid_request',
-      error_description:
-        'Dynamic client registration is disabled. Clients are registered in configuration.',
-    },
-    404,
-  ),
-);
+/**
+ * Every way the provider plugin can be asked to write a client. Registration is
+ * configuration (`OAUTH_CLIENTS`), so none of these has a reason to exist here.
+ *
+ * Turning the plugin's registration flags off is NOT enough on its own: those
+ * only govern the RFC 7591 endpoint, while `/oauth2/create-client` and friends
+ * ask merely for a valid *session* — so without this any signed-in user could
+ * mint a client with redirect URIs of their choosing, which is exactly what the
+ * registry exists to prevent. Registered before the better-auth mount, which is
+ * what makes these win.
+ *
+ * This is the outermost of three independent locks. The other two are
+ * `clientPrivileges` (auth.config.ts), which denies the actions, and the
+ * configuration-backed client store (client-registry.ts), which has nowhere to
+ * write them.
+ */
+const CLIENT_WRITE_PATHS = [
+  '/api/auth/oauth2/register',
+  '/api/auth/oauth2/create-client',
+  '/api/auth/oauth2/update-client',
+  '/api/auth/oauth2/delete-client',
+  '/api/auth/oauth2/client/rotate-secret',
+];
+
+for (const path of CLIENT_WRITE_PATHS) {
+  app.all(path, (c) =>
+    c.json(
+      {
+        error: 'invalid_request',
+        error_description:
+          'Client registration is disabled. Clients are registered in configuration.',
+      },
+      404,
+    ),
+  );
+}
 
 app.route('/api/auth', authRoutes);
 
-// OIDC discovery. The issuer is this service's origin, so standard clients look
-// for the document here rather than under the /api/auth base path better-auth
-// mounts it on. Serve the same document from both, so there is one source.
+/**
+ * Discovery. The issuer is this service's origin, so a standard client looks for
+ * these documents at the root rather than under the /api/auth base path the rest
+ * of better-auth is mounted on. The plugin marks both as server-only for exactly
+ * this reason and exports the handlers so they can be served where the issuer
+ * says they are.
+ */
 app.get('/.well-known/openid-configuration', async (c) => {
-  const auth = createAuth(c.env);
-  const url = new URL(c.req.url);
-  url.pathname = '/api/auth/.well-known/openid-configuration';
-  return auth.handler(new Request(url, { headers: c.req.raw.headers }));
+  const auth = await createAuth(c.env);
+  return oauthProviderOpenIdConfigMetadata(auth)(c.req.raw);
+});
+
+app.get('/.well-known/oauth-authorization-server', async (c) => {
+  const auth = await createAuth(c.env);
+  return oauthProviderAuthServerMetadata(auth)(c.req.raw);
 });
 
 // Setup API — disabled in production
@@ -144,15 +164,26 @@ app.route('/api/analytics', analyticsRoutes);
 
 // Auth pages
 app.get('/login', (c) => {
-  return c.html(renderLoginPage(c.env.APP_URL));
+  return c.html(renderLoginPage());
 });
 
 app.get('/signup', (c) => {
-  return c.html(renderSignupPage(c.env.APP_URL));
+  return c.html(renderSignupPage());
 });
 
 app.get('/forgot', (c) => {
   return c.html(renderForgotPage());
+});
+
+/**
+ * Consent. Unreachable for every client registered today — they are all my own
+ * applications and the registry marks them `skipConsent` — but the provider
+ * requires a page to send a user to when a client does need one, and pointing
+ * that at a URL this service does not serve would be a latent 404 in the middle
+ * of an authorization flow.
+ */
+app.get('/consent', (c) => {
+  return c.html(renderConsentPage());
 });
 
 // Setup page
@@ -166,9 +197,29 @@ app.get('/verify', (c) => {
   return c.html(renderVerifyPage(error || undefined));
 });
 
-// Root — redirect to login
-app.get('/', (c) => {
-  return c.redirect('/login');
+/**
+ * The provider's own landing page.
+ *
+ * This used to redirect to `APP_URL`, which meant a direct sign-in here was
+ * really a sign-in to DevFlare — dev-auth serves several applications, and the
+ * one that happened to be first is not the answer to "who am I signed in as".
+ * So: signed in, this reports the provider session and offers a way out of it;
+ * signed out, it sends the browser to the login form. An authorization request
+ * never reaches here, because it returns to the redirect URI of the client that
+ * started it.
+ */
+app.get('/', async (c) => {
+  const auth = await createAuth(c.env);
+  const session = await auth.api.getSession({ headers: c.req.raw.headers });
+
+  if (!session) return c.redirect('/login');
+
+  return c.html(
+    renderSignedInPage({
+      email: session.user.email,
+      name: session.user.name,
+    }),
+  );
 });
 
 // 404 Not Found

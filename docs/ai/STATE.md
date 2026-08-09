@@ -8,48 +8,90 @@
 > to the last ~5 entries, newest first. Update the date. Facts only; no plans
 > you didn't verify.
 
-_Last updated: 2026-08-08_
+_Last updated: 2026-08-09_
 
 ## Branch & repo status
 
-- On `main`, in sync with `origin/main` (`5539e1e`).
-- **Uncommitted:** the identity-provider rework (see "dev-auth is now an OAuth
-  2.1 / OIDC provider" below).
-- Recent merged work: GitHub account linking (`dd7dcef`), GitHub button +
-  post-login redirect (`bc7007f`), GitHub OAuth + signup allow-list (`5fd1483`).
+- On `main` at `b5860db`, in sync with `origin/main`.
+- **Uncommitted:** the dev-auth OAuth-provider migration described in the next
+  section. Everything else listed in this file is merged.
+- The identity-provider rework, the UI shell rework and DevFlare's OIDC consumer
+  are all **merged** (`b5860db`, `5539e1e`) — earlier versions of this file
+  described them as uncommitted.
+- Recent merged work: auth app updates (`32c827c`, `8fbb79c`), GitHub account
+  linking (`dd7dcef`), GitHub OAuth + signup allow-list (`5fd1483`).
 
-## dev-auth is now an OAuth 2.1 / OIDC provider (2026-08-08, uncommitted)
+## dev-auth: a standalone OAuth 2.1 / OIDC identity provider
 
-dev-auth stopped being "DevFlare's auth service" and became an identity provider
-that any of the owner's apps — in any repository, on any domain — can authenticate
-against. DevFlare is now just its first registered client.
+dev-auth is not "DevFlare's auth service". It is an identity provider that any of
+the owner's apps — in any repository, on any domain — authenticates against.
+DevFlare is one registered client; Imaginaryx is the worked example of a second.
 
-- **Provider**: better-auth's `oidc-provider` + `jwt` plugins in
+**Migrated to `@better-auth/oauth-provider` (2026-08-09, uncommitted).** The old
+`better-auth/plugins/oidc-provider` carries an explicit `@deprecated` in 1.6.26
+("will be removed in the next major version"). better-auth went 1.6.11 → 1.6.26
+(a patch bump inside the same minor; nothing else was upgraded) and the new
+plugin came in at the same version.
+
+- **Provider**: `@better-auth/oauth-provider` + `jwt` in
   `apps/dev-auth/src/auth.config.ts`. Authorization code flow, PKCE mandatory
-  (S256 only), ES256 ID tokens, JWKS at `/api/auth/jwks`, discovery at the issuer
-  root. `createAuthOptions(env, database)` is split from `createAuth(env)` so
-  tests exercise the identical config on an in-memory DB.
-- **Client registry**: `apps/dev-auth/src/oauth-clients.ts`. `OAUTH_CLIENTS` (a
-  wrangler var, in git: id/name/type/exact redirect URIs) +
-  `OAUTH_CLIENT_SECRETS` (a Worker secret). No registration endpoint, no
-  dashboard. A bad entry is dropped with a logged error rather than taking
-  sign-in down.
-- **DevFlare is a consumer now**: `src/server/lib/oidc.ts` +
+  (S256 only — `plain` is now rejected at the schema, with a 400 rather than a
+  redirect), ES256 tokens, JWKS at `/api/auth/jwks`. New for free with the
+  migration: `/oauth2/revoke`, `/oauth2/introspect`, `/oauth2/end-session`
+  (opt-in per client), RFC 9207 `iss` on the callback, and
+  `/.well-known/oauth-authorization-server`. Both discovery documents are
+  server-only inside the plugin, so `src/index.ts` mounts them at the issuer root.
+  `createAuthOptions(env, database)` is still split from `createAuth(env)` so
+  tests exercise the identical config on an in-memory DB; both are now async
+  (the registry hashes client secrets) and memoised per isolate.
+- **Client registry**: unchanged in principle, rebuilt underneath.
+  `OAUTH_CLIENTS` (a wrangler var, in git: id/name/type/exact redirect URIs) +
+  `OAUTH_CLIENT_SECRETS` (a Worker secret). The new plugin has **no in-memory
+  `trustedClients` option** — it reads clients through the database adapter — so
+  `src/client-registry.ts` wraps the adapter and answers the `oauthClient` model
+  from configuration, refusing every write. Consequences: `oauthClient` in D1
+  stays empty, no client secret is ever persisted, and deleting a client from
+  config deletes it from the provider with no stale row behind it.
+- **Client registration is closed by three independent locks**: the routes 404 in
+  `src/index.ts`; `clientPrivileges: () => false` in `auth.config.ts` (the plugin
+  otherwise only checks for a _session_ before letting `/oauth2/create-client`
+  through); and the read-only client store. Any one can be removed without
+  opening registration.
+- **Schema**: migration `0003_oauth_provider_v2.sql`. `oauthApplication`,
+  `oauthAccessToken` and `oauthConsent` are **renamed** to `*_legacy_oidc` (not
+  dropped), and the new `oauthClient` / `oauthRefreshToken` / `oauthAccessToken` /
+  `oauthConsent` are created. `user`, `session`, `account`, `verification` and
+  `jwks` are untouched, so every account, password, linked GitHub identity, live
+  session and signing key survives. Old-plugin access/refresh tokens stop being
+  redeemable — unavoidable, costs one extra trip through the flow per consumer.
+  Verified locally: 0000→0003 applies clean on a fresh miniflare D1, and the
+  indexes land on the new tables (an index follows its table through a rename but
+  keeps its name, so 0003 drops the three stale names first — without that
+  `CREATE INDEX IF NOT EXISTS` would silently no-op).
+- **`APP_URL` is gone.** It was the last DevFlare-specific assumption: a direct
+  sign-in at dev-auth redirected to DevFlare, so "signed in to the provider"
+  silently meant "signed in to DevFlare". `/` is now the provider's own signed-in
+  page (identity + sign out, no dashboard) or a redirect to `/login`. Removed
+  from `Env`, `wrangler.toml` (all three envs), `.env.example` and both auth
+  pages. Authorization requests are unaffected — they return to the initiating
+  client's registered redirect URI.
+- **Flow resumption changed shape.** The old plugin parked the authorization
+  request in an `oidc_login_prompt` cookie; the new one signs it into the login
+  page's query string. `login.flow` / `signup.flow` now hand that string back as
+  `oauth_query` on sign-in, sign-up and GitHub sign-in. A tampered one is refused.
+- **New `/consent` page.** `consentPage` is a required option now. Unreachable
+  for every client registered today (all first-party, all `skipConsent`), but
+  wired to a real screen so a future non-first-party client fails closed rather
+  than at a 404.
+- **DevFlare is a consumer**: `src/server/lib/oidc.ts` +
   `routes/api/auth/{login,callback,session,logout,user}.ts`, with its own session
-  in `app_session`/`app_user` (migration `0001_app_session.sql`). The
-  `/api/auth/*` proxy and `auth-remote.ts` are gone; `getRemoteSession` →
-  `getAppSession`. `app_user.id` is the provider's `sub`, so existing
-  `projects.userId` rows still resolve.
-- **DevFlare's login page collects no credentials** — it hands off to the
-  provider. `/sign-up` redirects to `/login`.
-- Two live bugs surfaced while typing the options object, both fixed:
-  `advanced.crossSubDomainCookie` was misspelled (runtime reads
-  `crossSubDomainCookies`) so cross-subdomain cookies were **never enabled** —
-  removed rather than switched on, since the OAuth flow makes it unnecessary; and
-  `allowDynamicClientRegistration: false` only gates _unauthenticated_ callers, so
-  `/api/auth/oauth2/register` is now blocked in `src/index.ts`.
-- 57 dev-auth tests + 15 DevFlare OIDC-helper tests + 6 auth-lib tests. The full
-  flow was also verified against a real `wrangler dev` Worker with D1.
+  in `app_session`/`app_user` (migration `0001_app_session.sql`). `app_user.id`
+  is the provider's `sub`, so existing `projects.userId` rows still resolve.
+  **Untouched by this migration** — it talks standard OAuth and never knew which
+  plugin was behind it, which is the point.
+- 103 dev-auth tests (41 provider-flow, 28 registry-parsing, 17 routing, 9
+  read-only client store, 8 validation), all against the real better-auth
+  instance via `createAuthOptions`.
 
 ## Hosting: Cloudflare Workers (deployed 2026-08-07)
 
@@ -97,7 +139,7 @@ Key decisions and the traps behind them:
   `apps/devflare/shims/papaparse.server.mjs`, which throws if SSR ever calls it.
 - `better-sqlite3` and the tracked, empty `data/devflare.db` are removed.
 
-## UI shell (uncommitted)
+## UI shell (merged)
 
 Reworked the shell so the VoltUI adoption keeps the pre-VoltUI look:
 
@@ -128,7 +170,8 @@ Reworked the shell so the VoltUI adoption keeps the pre-VoltUI look:
 dev-auth's auth pages were migrated from inline HTML-in-TypeScript strings
 (~800 lines deleted) to **flowview `.flow` templates**:
 
-- `src/pages/*.flow` (6 pages), `scripts/compile-flow.mjs`,
+- `src/pages/*.flow` (8 pages since the provider migration added
+  `consent.flow` and `signed-in.flow`), `scripts/compile-flow.mjs`,
   `scripts/watch-flow.mjs`, `src/types/flowview.d.ts`, `@flowview/runtime` dep.
 - `pages/*.ts` are thin wrappers calling the compiled `render()` from
   `*.flow.js`; `wrangler.toml` runs the compile as its `[build] command`.
@@ -149,6 +192,8 @@ dev-auth's auth pages were migrated from inline HTML-in-TypeScript strings
   simulator, SVG optimizer, URL shortener).
 - Full auth flow in local dev: `pnpm dev:all`, then "Continue with DevAuth" at
   :4200 → authenticate at :8787 → back to :4200 with DevFlare's own session.
+  (Verified for the pre-migration provider; the migrated one is covered by tests
+  and a Worker build, but has not been walked through a browser yet.)
   Needs a matching client secret on both sides (see apps/dev-auth/README.md).
   `pnpm seed:user` test account (`test@devflare.com` / `TestPass123`).
 - Projects API (`GET/POST /api/v1/projects`, `/api/v1/projects/[id]`), auth-gated,
@@ -173,9 +218,15 @@ dev-auth's auth pages were migrated from inline HTML-in-TypeScript strings
 - ng-primitives 0.110.2 logs `nativeElement.addEventListener is not a function`
   (from `NgpLabel`) on every SSR render of a page with a Volt form field. Noisy
   but non-fatal — the HTML still renders and e2e is green. Upstream issue.
-- **`apps/dev-auth/.dev.vars` is tracked in git** (since "fase 1"), so its
-  `BETTER_AUTH_SECRET` is in history. `.gitignore` now lists `.dev.vars` but that
-  does not affect tracked files: it needs `git rm --cached` plus a rotation.
+- **A `BETTER_AUTH_SECRET` is in git history.** `apps/dev-auth/.dev.vars` was
+  committed in "fase 1" and has since been untracked — verified: `git ls-files`
+  lists no `.dev.vars` or `.env` file, only `*.example`/`*.sample` placeholders,
+  and both `.gitignore`s cover it. Untracking does not rewrite history, so the
+  value is still reachable there. **Whether the deployed secret was rotated
+  cannot be determined from this repository** — treat it as compromised until
+  `wrangler secret put BETTER_AUTH_SECRET --env production` has been run by hand.
+  Rotating invalidates the encrypted private keys in `jwks`, so clear that table
+  in the same window and let a fresh pair be minted.
 - **`db.sql` returns `{ rows, success }`, not an array**, and the projects routes
   treat it as one: `projects/index.ts` returns `{projects: {rows: […]}}` (the
   Angular `Projects` service reads `data.projects` as an array), and
@@ -183,29 +234,51 @@ dev-auth's auth pages were migrated from inline HTML-in-TypeScript strings
   project always 404s. Pre-existing, unrelated to the provider work, and invisible
   because `tsconfig.app.json` excludes `src/server/routes` — it cannot be
   typechecked without Nitro's generated types.
-- The `oidc-provider` plugin is **deprecated** in better-auth 1.6 (removed in
-  2.0, superseded by `@better-auth/oauth-provider`). Chosen deliberately: it ships
-  with the pinned version, supports config-declared clients, and needs no consent
-  UI for first-party apps. Migrating means a better-auth major upgrade plus a
-  schema rename (`oauthApplication` → `oauthClient`).
+- The deprecated `oidc-provider` plugin is **gone** (2026-08-09) — dev-auth runs
+  on `@better-auth/oauth-provider`. What remains from it: the three
+  `*_legacy_oidc` tables, kept rather than dropped so nothing was destroyed in
+  the same migration that renamed them. Dropping them is a later, deliberate
+  step once their contents have been looked at.
 - Routing is a **manual `app.routes.ts`**, not Analog's file-based router,
   despite the `*.page.ts` naming. `routeMeta` exports are therefore ignored;
   guards and route config go in `app.routes.ts`.
 
 ## Next steps (owner's apparent intent — confirm before large work)
 
-1. **Untrack `apps/dev-auth/.dev.vars` and rotate its `BETTER_AUTH_SECRET`** —
-   it has been committed since "fase 1" despite AGENTS.md claiming otherwise.
-2. Before deploying the provider rework: apply both new migrations remotely, set
-   `OAUTH_CLIENT_SECRETS` (dev-auth) and `DEV_AUTH_CLIENT_SECRET` (devflare) to
-   the same value, and walk one real login through in a browser.
+1. **Rotate `BETTER_AUTH_SECRET` in production** (and clear `jwks` in the same
+   window). The file is untracked now, but the old value is still in history and
+   nothing in the repo proves it was rotated. See Known gaps.
+2. Before deploying the provider migration: apply migrations **first**
+   (`pnpm db:migrate:auth`, and the staging equivalent), then deploy — a deployed
+   Worker on an unmigrated D1 cannot serve an authorization request. Then walk one
+   real login through in a browser, both email/password and GitHub.
 3. Wire up a transactional email provider, then re-enable
    `requireEmailVerification` / `sendOnSignUp` and widen `SIGNUP_ALLOWLIST`.
-4. Review the shell rework in a browser, then commit it.
+4. Only then: register Imaginaryx for real (`OAUTH_CLIENTS` + a secret + its exact
+   callback URI). Nothing else in dev-auth changes for it.
 5. Release `@andersseen/icon` with the `lock`/`user` fix, then bump `CDN.icon`
-   in `apps/dev-auth/src/pages/layout.ts`.
+   in `apps/dev-auth/src/pages/layout.ts`. The new `/` page uses `user` and
+   `log-out`, so check those render before relying on them.
 
 ## Session log
+
+- **2026-08-09** — Migrated dev-auth off the deprecated
+  `better-auth/plugins/oidc-provider` onto `@better-auth/oauth-provider`, and
+  removed the last DevFlare-specific assumption from the provider. better-auth
+  1.6.11 → 1.6.26 (scoped: same minor, nothing else upgraded). The hard part was
+  that the new plugin has no in-memory `trustedClients` — it loads clients through
+  the database adapter — which would have meant seeding client rows (and hashed
+  secrets) into D1 and keeping them in sync with `OAUTH_CLIENTS`. Instead
+  `client-registry.ts` decorates the adapter and answers the `oauthClient` model
+  from configuration while refusing writes, so config stays the whole registry,
+  D1 holds no client secrets, and the plugin's CRUD endpoints have nowhere to
+  write even if the route blocks and `clientPrivileges` were both removed.
+  `APP_URL` deleted: `/` is now the provider's own signed-in page instead of a
+  redirect into DevFlare. Migration `0003` renames the three old provider tables
+  aside rather than dropping them and creates the new four; users, sessions,
+  accounts and JWKS are untouched. Verified: 103 dev-auth tests, full repo
+  `format:check` + `lint` + `typecheck` + `test`, a `wrangler deploy --dry-run`
+  Worker build, and 0000→0003 applied on a fresh local D1.
 
 - **2026-08-08** — Turned dev-auth from DevFlare's auth service into a reusable
   OAuth 2.1 / OIDC identity provider, and made DevFlare one of its clients.

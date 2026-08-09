@@ -1,0 +1,57 @@
+<and-card variant="elevated" padded
+  and-layout="vertical gap:md align:center"
+  and-motion="fade-in slide-in-up"
+  and-motion-trigger="enter"
+  and-motion-duration="600ms">
+
+  <div and-layout="horizontal justify:center align:center gap:sm">
+    <and-icon name="user" size="24"></and-icon>
+    <span and-text="h6 weight:bold color:foreground">DevAuth</span>
+  </div>
+
+  <div and-layout="vertical gap:xs">
+    <h1 and-text="h4 align:center color:foreground">You are signed in</h1>
+    <p and-text="p-sm align:center color:muted">{{ context.email }}</p>
+  </div>
+
+  <p and-text="p-xs align:center color:muted">
+    This is the identity provider itself, not an application. Open the app you
+    want to use and sign in from there — it will bring you back here only if it
+    needs you to authenticate.
+  </p>
+
+  <and-button id="signout-btn" variant="outline" data-full>
+    <and-icon slot="start" name="log-out" size="16"></and-icon>
+    Sign out
+  </and-button>
+</and-card>
+
+<script>
+  (function() {
+    const button = document.getElementById('signout-btn');
+    const toaster = document.getElementById('toaster');
+
+    button.addEventListener('click', async function() {
+      button.loading = true;
+
+      try {
+        const res = await fetch('/api/auth/sign-out', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: '{}'
+        });
+
+        if (!res.ok) {
+          const data = await res.json().catch(function() { return {}; });
+          throw new Error(data.message || data.error || 'Could not sign out');
+        }
+
+        window.location.href = '/login';
+      } catch (err) {
+        button.loading = false;
+        toaster.present(err.message || 'Could not sign out', 'error');
+      }
+    });
+  })();
+</script>
