@@ -77,7 +77,7 @@
   </p>
 </and-card>
 
-<script>
+<script type="module">
   (function() {
     const form = document.getElementById('login-form');
     const submitBtn = document.getElementById('submit-btn');

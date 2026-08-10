@@ -9,6 +9,7 @@ export const appRoutes: Route[] = [
     children: [
       {
         path: '',
+        canActivate: [authGuard],
         loadComponent: () => import('./pages/(home).page'),
       },
       {

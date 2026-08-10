@@ -104,7 +104,7 @@
   </p>
 </and-card>
 
-<script>
+<script type="module">
   (function() {
     const form = document.getElementById('signup-form');
     const submitBtn = document.getElementById('submit-btn');

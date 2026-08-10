@@ -8,18 +8,87 @@
 > to the last ~5 entries, newest first. Update the date. Facts only; no plans
 > you didn't verify.
 
-_Last updated: 2026-08-09_
+_Last updated: 2026-08-10_
 
 ## Branch & repo status
 
-- On `main` at `b5860db`, in sync with `origin/main`.
-- **Uncommitted:** the dev-auth OAuth-provider migration described in the next
-  section. Everything else listed in this file is merged.
-- The identity-provider rework, the UI shell rework and DevFlare's OIDC consumer
-  are all **merged** (`b5860db`, `5539e1e`) — earlier versions of this file
-  described them as uncommitted.
-- Recent merged work: auth app updates (`32c827c`, `8fbb79c`), GitHub account
-  linking (`dd7dcef`), GitHub OAuth + signup allow-list (`5fd1483`).
+- On `main` at `e36848e`, in sync with `origin/main`.
+- **Uncommitted:** the login-page script-ordering fix and the dashboard auth
+  guard described below. Everything else listed in this file is merged.
+- The oauth-provider migration (previously the "uncommitted" section here) is
+  merged and deployed: PR #13 (`e582d30`) failed CI, PR #14 (`5b6c40e`,
+  `fix(ci): sync the lockfile and stop the e2e hand-off at the app boundary`)
+  fixed it, and the merge `e36848e` deployed clean — both `deploy-auth` (D1
+  migrations + Worker) and `deploy-app` jobs succeeded 2026-08-09T12:04:49Z.
+  Production dev-auth is running `@better-auth/oauth-provider` today.
+
+## 2026-08-10 — first real browser walkthrough of prod auth, and what it found
+
+STATE's own "Next steps" from 2026-08-09 said the migrated provider had never
+been walked through a browser. It hadn't — and the first real attempt (by the
+owner, against `auth-devflare.andersseen.dev`) surfaced a genuine bug that made
+**both** GitHub sign-in and email/password sign-in look completely dead in
+production, plus a separate local-only "GitHub gives an error" report and a
+request to stop DevFlare's dashboard from rendering while signed out.
+
+- **Root cause (fixed):** every `apps/dev-auth/src/pages/*.flow` page renders
+  a bare classic `<script>` at the end of `renderLayout`'s body. The custom
+  elements it depends on (`and-toast`, `and-input`, …) are registered by a
+  `type="module"` script in `<head>` — and module scripts are always deferred,
+  running only after the document finishes parsing, regardless of where they
+  sit in the document. A classic inline script with no `src` executes
+  synchronously the moment the parser reaches it, _before_ that deferred
+  module has run — so `document.getElementById('toaster')` returns the raw
+  unupgraded element, and `.present` doesn't exist on it yet.
+  `login.flow`'s `showCallbackError()` IIFE calls `toaster.present(...)`
+  unconditionally at the top of the script whenever the page loads with
+  `?error=`, which is exactly what happens on the redirect back from a failed
+  `/authorize` call. That call threw an uncaught `TypeError`, which aborted
+  the rest of the script **before** `form.addEventListener('submit', …)` and
+  `githubBtn.addEventListener('click', …)` ever ran — so neither button did
+  anything, indefinitely, because the same script also never got a chance to
+  strip `?error=` from the URL, so every reload re-triggered the crash. A
+  native (unhandled) form GET submit is also why "sign in with email" visibly
+  just reloaded `/login`. Fix: `<script>` → `<script type="module">` in all
+  six pages that reference `toaster` (`login`, `signup`, `forgot`, `setup`,
+  `consent`, `signed-in`) — module scripts execute in document order relative
+  to each other, so by the time these run, the components module has already
+  finished its synchronous `customElements.define()` calls. Recompiled via
+  `compile-flow.mjs`. Verified end-to-end locally with Playwright against
+  `pnpm dev:all`: email sign-in completes and lands back on DevFlare
+  authenticated; the GitHub button now correctly POSTs to
+  `/api/auth/sign-in/social` and navigates to GitHub (with an empty
+  `client_id` locally, since there's no local GitHub OAuth App configured —
+  expected, production has real credentials).
+- **What produced the original `?error=invalid_client` in prod is still
+  unconfirmed** — DevFlare's own `/api/auth/login` route always sends
+  `client_id` (from `DEV_AUTH_CLIENT_ID`, correctly `"devflare"` in
+  `wrangler.toml`'s `[env.production.vars]`), so the normal button-driven flow
+  cannot produce that error. Most likely explanation: a stale tab from earlier
+  manual testing of the raw `/authorize` endpoint, then stuck there forever by
+  the bug above (the URL's `?error=` never got cleared). Not chased further
+  since the script-ordering bug fully explains "both buttons are dead" on its
+  own; worth a fresh look if `invalid_client` recurs from a real button click
+  after this fix ships.
+- **The local "GitHub gives an error" report was environmental, not a code
+  bug:** the terminal in the report ran `nx run devflare:dev` directly, which
+  only starts the Analog app (port 4200/5173) — not dev-auth. `pnpm dev:all`
+  is what starts both (dev-auth on :8787). Confirmed: with `pnpm dev:all`, the
+  full authorization-code round trip (DevFlare → dev-auth → GitHub or
+  email/password → back to DevFlare) works locally.
+- **Dashboard now requires login.** `apps/devflare/src/app/app.routes.ts`'s
+  `''` (home) child route had no guard — the marketing/dashboard page and its
+  "Welcome back, {user}" block rendered fully for signed-out visitors. Added
+  `canActivate: [authGuard]` (same guard already used by `/deploy`,
+  `/projects`, `/settings`). `/tools/*` is a set of sibling top-level routes,
+  not a child of `''`, so it is unaffected and stays public. Verified with
+  Playwright: signed-out `/` now redirects to `/login`; `/tools` still renders
+  without a session; a full sign-in still lands back on `/` authenticated.
+- Verified: `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+  all green (125 tests: 103 dev-auth + 16 devflare + 6 auth).
+- **Not yet done:** commit, push, or redeploy. The fix has only been verified
+  against local `pnpm dev:all` — the prod symptoms (dead GitHub button, email
+  login bouncing back to `/login`) will not be resolved until this is deployed.
 
 ## dev-auth: a standalone OAuth 2.1 / OIDC identity provider
 
@@ -191,11 +260,15 @@ dev-auth's auth pages were migrated from inline HTML-in-TypeScript strings
   compressor, data converter, OG generator, palette, screen recorder, SEO
   simulator, SVG optimizer, URL shortener).
 - Full auth flow in local dev: `pnpm dev:all`, then "Continue with DevAuth" at
-  :4200 → authenticate at :8787 → back to :4200 with DevFlare's own session.
-  (Verified for the pre-migration provider; the migrated one is covered by tests
-  and a Worker build, but has not been walked through a browser yet.)
-  Needs a matching client secret on both sides (see apps/dev-auth/README.md).
-  `pnpm seed:user` test account (`test@devflare.com` / `TestPass123`).
+  :4200 → authenticate at :8787 (email/password or GitHub) → back to :4200
+  with DevFlare's own session. Verified end-to-end in a real browser
+  (Playwright) against the migrated `@better-auth/oauth-provider` on
+  2026-08-10 — see that section above. Not yet re-verified in production; see
+  Next steps. Needs a matching client secret on both sides (see
+  apps/dev-auth/README.md). `pnpm seed:user` test account
+  (`test@devflare.com` / `TestPass123`).
+- DevFlare's dashboard (`/`) now requires a session (`authGuard`), same as
+  `/deploy`, `/projects`, `/settings`. `/tools/*` stays public.
 - Projects API (`GET/POST /api/v1/projects`, `/api/v1/projects/[id]`), auth-gated,
   now backed by Cloudflare D1 — locally via miniflare state in `.wrangler/`.
   Verified end to end in dev (insert/select/delete against the `DB` binding).
@@ -245,13 +318,11 @@ dev-auth's auth pages were migrated from inline HTML-in-TypeScript strings
 
 ## Next steps (owner's apparent intent — confirm before large work)
 
-1. **Rotate `BETTER_AUTH_SECRET` in production** (and clear `jwks` in the same
+1. **Commit and deploy the 2026-08-10 fix above.** Prod is still on the broken
+   script — GitHub sign-in and email sign-in are dead there until this ships.
+2. **Rotate `BETTER_AUTH_SECRET` in production** (and clear `jwks` in the same
    window). The file is untracked now, but the old value is still in history and
    nothing in the repo proves it was rotated. See Known gaps.
-2. Before deploying the provider migration: apply migrations **first**
-   (`pnpm db:migrate:auth`, and the staging equivalent), then deploy — a deployed
-   Worker on an unmigrated D1 cannot serve an authorization request. Then walk one
-   real login through in a browser, both email/password and GitHub.
 3. Wire up a transactional email provider, then re-enable
    `requireEmailVerification` / `sendOnSignUp` and widen `SIGNUP_ALLOWLIST`.
 4. Only then: register Imaginaryx for real (`OAUTH_CLIENTS` + a secret + its exact
