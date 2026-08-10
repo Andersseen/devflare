@@ -32,7 +32,7 @@
   </div>
 </and-card>
 
-<script>
+<script type="module">
   (function() {
     const allowBtn = document.getElementById('allow-btn');
     const denyBtn = document.getElementById('deny-btn');
