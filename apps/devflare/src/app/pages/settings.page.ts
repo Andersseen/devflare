@@ -18,6 +18,8 @@ import {
   VoltError,
 } from '@voltui/components';
 import { Auth } from '@org/auth';
+import { DevAuthAdminService } from '@org/core';
+import { IdentitySection } from './settings/identity-section';
 
 const BIO_STORAGE_KEY = 'devflare_user_bio';
 
@@ -40,6 +42,7 @@ const BIO_STORAGE_KEY = 'devflare_user_bio';
     VoltTabsTrigger,
     VoltTabsContent,
     VoltError,
+    IdentitySection,
   ],
   template: `
     <div class="space-y-6 max-w-3xl mx-auto">
@@ -56,6 +59,11 @@ const BIO_STORAGE_KEY = 'devflare_user_bio';
           <volt-tabs-trigger value="integrations"
             >Integrations</volt-tabs-trigger
           >
+          <!-- Only for administrators of dev-auth, which the provider decides;
+               see /api/admin/whoami. Most users never see this tab. -->
+          @if (isIdentityAdmin()) {
+            <volt-tabs-trigger value="identity">Identity</volt-tabs-trigger>
+          }
         </volt-tabs-list>
 
         <volt-tabs-content value="profile">
@@ -180,12 +188,28 @@ const BIO_STORAGE_KEY = 'devflare_user_bio';
             </volt-card>
           </div>
         </volt-tabs-content>
+
+        @if (isIdentityAdmin()) {
+          <volt-tabs-content value="identity">
+            <app-identity-section />
+          </volt-tabs-content>
+        }
       </volt-tabs>
     </div>
   `,
 })
 export default class SettingsPage {
   auth = inject(Auth);
+  private readonly devAuthAdmin = inject(DevAuthAdminService);
+
+  /**
+   * Whether to offer the Identity tab. dev-auth is the authority on who may
+   * administer it, so this is asked rather than derived from anything local —
+   * a second list here would drift out of step with `ADMIN_EMAILS` and offer
+   * controls the API then refuses.
+   */
+  readonly isIdentityAdmin = signal(false);
+
   activeTab = signal('profile');
   saved = signal(false);
   isSaving = signal(false);
@@ -206,6 +230,13 @@ export default class SettingsPage {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem(BIO_STORAGE_KEY);
       if (stored) this.userBio.set(stored);
+
+      // Not awaited: the rest of the page must not wait on the provider, and a
+      // failure here simply means the tab stays hidden.
+      void this.devAuthAdmin
+        .loadWhoami()
+        .then((admin) => this.isIdentityAdmin.set(admin))
+        .catch(() => this.isIdentityAdmin.set(false));
     }
   }
 

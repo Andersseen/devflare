@@ -41,6 +41,12 @@ DEV_AUTH_CLIENT_ID = "devflare-dev"
 DEV_AUTH_REDIRECT_URI = "http://localhost:4200/api/auth/callback"
 # DEV_AUTH_CLIENT_SECRET is a secret: apps/devflare/.dev.vars locally,
 # `wrangler secret put DEV_AUTH_CLIENT_SECRET` for a deployed environment.
+#
+# DEV_AUTH_ADMIN_TOKEN is a secret too, and unrelated to the OAuth client secret
+# above: it lets this server manage dev-auth's client registry and settings on
+# behalf of a signed-in admin (Settings → Identity). It must equal
+# ADMIN_API_TOKEN on the dev-auth side. Without it the Identity tab stays hidden
+# and the proxy answers 503 — sign-in is unaffected either way.
 
 [observability]
 enabled = true

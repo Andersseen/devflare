@@ -2,6 +2,7 @@
 export * from './lib/services/auth.service';
 export * from './lib/services/webcontainer.service';
 export * from './lib/services/projects.service';
+export * from './lib/services/devauth-admin.service';
 
 // Tool Services
 export * from './lib/services/tools/image-compressor.service';

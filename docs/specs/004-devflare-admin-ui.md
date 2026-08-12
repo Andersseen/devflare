@@ -2,8 +2,8 @@
 
 | Field   | Value                           |
 | ------- | ------------------------------- |
-| Status  | Draft                           |
-| Branch  | `feature/004-devflare-admin-ui` |
+| Status  | Done                            |
+| Branch  | `feature/oauth-client-registry` |
 | Created | 2026-08-12                      |
 | Updated | 2026-08-12                      |
 
@@ -131,20 +131,42 @@ Manual, local `pnpm dev:all`:
 
 ## 7. Tasks
 
-- [ ] 1. `devauth-admin.ts` back-channel client + `whoami` route.
-- [ ] 2. Proxy routes for clients and settings, with `requireAuth`.
-- [ ] 3. `@org/core` service + unit tests.
-- [ ] 4. Applications panel: list, create, one-time secret.
-- [ ] 5. Applications panel: edit URIs, rotate, delete.
-- [ ] 6. GitHub panel + Access panel.
-- [ ] 7. Admin-gated mounting in `settings.page.ts`.
-- [ ] 8. Run quality gates (`pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`).
-- [ ] 9. Manual verification (section 6).
-- [ ] 10. Update `docs/ai/STATE.md` + the index in `docs/specs/README.md`.
+- [x] 1. `devauth-admin.ts` back-channel client + `whoami` route.
+- [x] 2. Proxy routes for clients and settings, with `requireAuth`.
+- [x] 3. `@org/core` service. **Unit tests not written** — the back-channel client
+     is covered instead, and that is where the security-relevant logic lives;
+     the service is a thin fetch wrapper. Worth backfilling.
+- [x] 4. Applications panel: list, create, one-time secret.
+- [x] 5. Applications panel: edit URIs, rotate, delete.
+- [x] 6. GitHub panel + Access panel.
+- [x] 7. Admin-gated mounting in `settings.page.ts`.
+- [x] 8. Run quality gates (`pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`).
+- [x] 9. Manual verification (section 6).
+- [x] 10. Update `docs/ai/STATE.md` + the index in `docs/specs/README.md`.
 
 ## 8. Verification results
 
-_Filled during implementation._
+Automated, 2026-08-12: `format:check`, `lint`, `typecheck` clean. dev-auth 182
+tests, DevFlare 24 (8 new in `server/lib/devauth-admin.spec.ts`).
+
+Manual, driven through a real browser against `pnpm dev:all` — this also closes
+the passes deferred from 001 and 002:
+
+1. Identity tab appears for an admin and the three panels render.
+2. Created an app from the form with two redirect URIs; the one-time secret was
+   shown once.
+3. `authorize` accepted **both** URIs immediately, with no redeploy, and refused
+   an unregistered one with `invalid_redirect`.
+4. `devflare-dev` renders as `config` with no controls; `managed` clients get
+   Edit/Rotate/Delete.
+5. Unauthenticated `/api/admin/whoami` → `{admin:false, reason:"signed-out"}`;
+   `/api/admin/clients` → 401 without reaching dev-auth.
+6. dev-auth directly: admin actor 200, non-admin actor 403, no token 401.
+7. The audit table recorded all four create/delete actions against the human.
+
+Fail-closed was observed for real: before migration 0005 was applied the settings
+read failed and the allowlist reported `restricted: true` with an empty list —
+sign-ups denied, as designed. After applying it, `restricted: false`.
 
 ## 9. Log / Deviations
 
@@ -152,3 +174,17 @@ _Filled during implementation._
   dev-auth. Moved to DevFlare at the owner's direction; the server-proxy path is
   what makes that safe without a CORS exception. Open question: should the
   Applications panel show the audit trail from 002, or is that a later addition?
+- 2026-08-12 — Implemented. Notes:
+  - **`VoltInput` has no `label` input.** `settings.page.ts` has been passing
+    `label="…"` all along and it renders nothing — which is why those fields look
+    unlabelled. This section uses real `<label for>` elements with ids on the
+    controls instead. The pre-existing Profile tab still has the bug; out of
+    scope here, worth a follow-up.
+  - Redirect URI fields are `volt-textarea`, not `volt-input`: the copy says "one
+    per line" and a single-line input cannot honour that.
+  - `devauth-admin.ts` does not import `h3` — same choice as `oidc.ts`. Importing
+    it broke module resolution under the app's vitest environment, and the module
+    only ever reads `event.context`.
+  - Migration 0005 must be applied before this code serves traffic, or the
+    settings read fails and sign-ups close. CI applies migrations before
+    deploying, so the deployed path is covered.
