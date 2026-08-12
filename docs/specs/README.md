@@ -34,8 +34,10 @@ the code is the implementation of it.
 
 ## Index
 
-| #   | Spec       | Status |
-| --- | ---------- | ------ |
-| —   | _none yet_ | —      |
+| #   | Spec                                                          | Status |
+| --- | ------------------------------------------------------------- | ------ |
+| 001 | [Hybrid OAuth client registry](001-hybrid-client-registry.md) | Draft  |
+| 002 | [OAuth client admin API](002-client-admin-api.md)             | Draft  |
+| 003 | [OAuth client management UI](003-client-management-ui.md)     | Draft  |
 
 (Keep this table updated — it's how agents discover active work.)
