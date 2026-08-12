@@ -43,6 +43,15 @@ ADMIN_EMAILS = "test@devflare.com"
 # GITHUB_CLIENT_SECRET = "your-github-oauth-app-secret"
 # OAUTH_CLIENT_SECRETS = '{"devflare-dev":"..."}'
 # ADMIN_API_TOKEN = "..."   # lets DevFlare's server call /admin/* back-channel
+# SECRET_ENCRYPTION_KEY = "..."  # `openssl rand -base64 32`
+#
+# SECRET_ENCRYPTION_KEY seals the few settings that must be stored reversibly
+# rather than hashed — today only the GitHub client secret, which this service
+# has to present to GitHub in plaintext (see src/lib/secret-box.ts). Without it
+# /admin/settings refuses to store one and the provider keeps reading
+# GITHUB_CLIENT_SECRET from the environment. Rotating it makes every value
+# already sealed under the old key unreadable; re-enter them, do not expect a
+# silent fallback, because there deliberately is not one.
 
 # D1 Migrations
 [[migrations]]

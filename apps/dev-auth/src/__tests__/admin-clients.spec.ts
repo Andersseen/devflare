@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { Hono } from 'hono';
 import adminClientRoutes from '../routes/admin-clients';
 import { resetClientRegistryCache } from '../auth.config';
-import { createTestD1, type TestD1 } from './helpers/d1';
+import { createTestD1, MIGRATIONS, type TestD1 } from './helpers/d1';
 import type { Env } from '../index';
 
 /**
@@ -64,13 +64,7 @@ function asAdmin(init: RequestInit = {}, actor = ADMIN): RequestInit {
 }
 
 beforeEach(() => {
-  d1 = createTestD1([
-    '0000_init.sql',
-    '0001_analytics.sql',
-    '0002_oauth_provider.sql',
-    '0003_oauth_provider_v2.sql',
-    '0004_client_admin.sql',
-  ]);
+  d1 = createTestD1(MIGRATIONS);
   resetClientRegistryCache();
 });
 

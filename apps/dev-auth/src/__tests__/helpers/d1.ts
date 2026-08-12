@@ -19,6 +19,19 @@ import { join } from 'node:path';
 
 const MIGRATIONS_DIR = join(import.meta.dirname, '../../db/migrations');
 
+/**
+ * Every migration, in order. Kept here so a new one is added in a single place
+ * rather than in each spec that builds a database.
+ */
+export const MIGRATIONS = [
+  '0000_init.sql',
+  '0001_analytics.sql',
+  '0002_oauth_provider.sql',
+  '0003_oauth_provider_v2.sql',
+  '0004_client_admin.sql',
+  '0005_provider_settings.sql',
+];
+
 type Row = Record<string, unknown>;
 
 function isSelect(sql: string): boolean {

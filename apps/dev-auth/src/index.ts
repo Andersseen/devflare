@@ -12,6 +12,7 @@ import authRoutes from './routes/auth';
 import setupRoutes from './routes/setup';
 import adminRoutes from './routes/admin';
 import adminClientRoutes from './routes/admin-clients';
+import adminSettingsRoutes from './routes/admin-settings';
 import analyticsRoutes from './routes/analytics';
 import { renderLoginPage } from './pages/login';
 import { renderSignupPage } from './pages/signup';
@@ -43,6 +44,13 @@ export interface Env {
    * behalf of a named admin (DevFlare's dashboard). A Worker secret, never a var.
    */
   ADMIN_API_TOKEN?: string;
+  /**
+   * Key for the few settings that must be stored reversibly rather than hashed
+   * — the GitHub client secret. A Worker secret. Without it those values cannot
+   * be decrypted and the provider falls back to the config vars.
+   * See src/lib/secret-box.ts.
+   */
+  SECRET_ENCRYPTION_KEY?: string;
   GITHUB_CLIENT_ID?: string;
   GITHUB_CLIENT_SECRET?: string;
   /** Comma-separated addresses allowed to sign up. Empty means unrestricted. */
@@ -177,6 +185,10 @@ app.route('/api/admin', adminRoutes);
 // on this origin, or one of my own servers presenting a service token and naming
 // the admin it acts for. See src/lib/admin.ts.
 app.route('/admin/clients', adminClientRoutes);
+
+// The provider's own configuration: GitHub credentials, who may sign up. Same
+// authorization and the same audit trail as the client registry above.
+app.route('/admin/settings', adminSettingsRoutes);
 
 // Analytics API
 app.route('/api/analytics', analyticsRoutes);

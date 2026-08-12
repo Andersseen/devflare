@@ -213,6 +213,25 @@ export const jwks = sqliteTable('jwks', {
 });
 
 /**
+ * Provider configuration that used to live only in wrangler.toml: the GitHub
+ * OAuth App credentials and the signup allowlist.
+ *
+ * Key/value rather than a column per setting, so adding the next one is a row
+ * and not a migration. `encrypted` marks values sealed by ../lib/secret-box.ts —
+ * only the GitHub client secret today, because it is the one value this service
+ * has to hand to someone else in plaintext and therefore cannot hash.
+ */
+export const providerSetting = sqliteTable('providerSetting', {
+  key: text('key').primaryKey(),
+  value: text('value'),
+  encrypted: integer('encrypted', { mode: 'boolean' }).notNull().default(false),
+  updatedAt: integer('updatedAt', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+  updatedBy: text('updatedBy'),
+});
+
+/**
  * Who changed which OAuth client, when, and to what.
  *
  * A table rather than log lines: Worker logs are not retained long enough to
@@ -249,3 +268,4 @@ export type OAuthAccessToken = typeof oauthAccessToken.$inferSelect;
 export type OAuthConsent = typeof oauthConsent.$inferSelect;
 export type Jwks = typeof jwks.$inferSelect;
 export type OAuthClientAudit = typeof oauthClientAudit.$inferSelect;
+export type ProviderSetting = typeof providerSetting.$inferSelect;

@@ -2,7 +2,16 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { betterAuth } from 'better-auth';
 import { memoryAdapter } from 'better-auth/adapters/memory';
 import { createAuthOptions, resetClientRegistryCache } from '../auth.config';
+import { resetProviderSettingsCache } from '../lib/provider-settings';
+import { createTestD1, MIGRATIONS } from './helpers/d1';
 import type { Env } from '../index';
+
+/**
+ * Provider settings live in D1 and are read per request, so this file needs a
+ * real binding even though better-auth runs on the memory adapter. One instance
+ * for the file: no test here writes a setting.
+ */
+const settingsD1 = createTestD1(MIGRATIONS);
 
 /**
  * Exercises the provider role against a real better-auth instance built from the
@@ -47,8 +56,11 @@ const WRONG_VERIFIER = 'M25iVXpKU3puUjFaYWg3T1NDTDQtcW1ROUY5YXlwalNfSk';
 
 function createTestEnv(overrides: Partial<Env> = {}): Env {
   return {
-    // Replaced by the memory adapter below; the type demands a binding.
-    DB: undefined as unknown as D1Database,
+    // better-auth itself runs on the memory adapter below, but provider settings
+    // are read straight from D1 (src/lib/provider-settings.ts) and fail *closed*
+    // when that read fails — so the binding has to be real, or every sign-up in
+    // this file is correctly refused.
+    DB: settingsD1.binding,
     BETTER_AUTH_URL: BASE_URL,
     BETTER_AUTH_SECRET: 'test-secret-at-least-32-characters-long',
     GITHUB_CLIENT_ID: 'github-test-client-id',
@@ -77,8 +89,9 @@ function emptyDb(): Record<string, unknown[]> {
 async function createTestAuth(env: Env = createTestEnv()) {
   // The registry is memoised per configuration in auth.config.ts; a spec that
   // swaps OAUTH_CLIENTS between cases has to drop that memo or it gets the
-  // previous case's clients.
+  // previous case's clients. Provider settings are memoised too, on a timer.
   resetClientRegistryCache();
+  resetProviderSettingsCache();
   return betterAuth(await createAuthOptions(env, memoryAdapter(emptyDb())));
 }
 

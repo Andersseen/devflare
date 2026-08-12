@@ -7,6 +7,7 @@ import type { DBAdapterInstance } from 'better-auth/types';
 import { createDb } from './db';
 import * as schema from './db/schema';
 import { withHybridClients } from './client-registry';
+import { getProviderSettings, maySignUp } from './lib/provider-settings';
 import { hashClientSecret, verifyClientSecret } from './lib/client-secret';
 import {
   clientOrigins,
@@ -91,12 +92,11 @@ export function resetClientRegistryCache(): void {
  * D1 — the alternative is a second, drifting copy of the config.
  */
 export async function createAuthOptions(env: Env, database: DBAdapterInstance) {
-  // Comma-separated addresses allowed to create an account. Empty (the local
-  // dev default) means no restriction; production sets it in wrangler.toml.
-  const signupAllowlist = (env.SIGNUP_ALLOWLIST ?? '')
-    .split(',')
-    .map((address) => address.trim().toLowerCase())
-    .filter(Boolean);
+  // Who may sign up, and the GitHub credentials — resolved from D1 first and the
+  // environment second. With no rows this is exactly the previous behaviour;
+  // see ./lib/provider-settings.ts for how the empty allowlist case differs
+  // between "configured as empty" and "not configured".
+  const settings = await getProviderSettings(env);
 
   // The applications allowed to authenticate through this service. See
   // ./oauth-clients.ts — registration is configuration, not an API.
@@ -141,12 +141,17 @@ export async function createAuthOptions(env: Env, database: DBAdapterInstance) {
         console.log(`[Email] Verification for ${user.email}: ${url}`);
       },
     },
-    socialProviders: {
-      github: {
-        clientId: env.GITHUB_CLIENT_ID || '',
-        clientSecret: env.GITHUB_CLIENT_SECRET || '',
-      },
-    },
+    // Omitted entirely when GitHub is not fully configured or has been switched
+    // off from the admin API. Passing empty strings instead would advertise a
+    // provider whose button fails at the redirect, and log a warning per request.
+    socialProviders: settings.github.enabled
+      ? {
+          github: {
+            clientId: settings.github.clientId,
+            clientSecret: settings.github.clientSecret,
+          },
+        }
+      : {},
     account: {
       accountLinking: {
         enabled: true,
@@ -247,12 +252,10 @@ export async function createAuthOptions(env: Env, database: DBAdapterInstance) {
           // alike, so one check covers both. Throwing here aborts the insert;
           // returning false would too, but without a message the caller can read.
           before: async (user) => {
-            if (signupAllowlist.length === 0) return;
-            if (!signupAllowlist.includes(user.email.toLowerCase())) {
-              throw new APIError('FORBIDDEN', {
-                message: 'Sign-ups are currently limited to invited addresses.',
-              });
-            }
+            if (maySignUp(user.email, settings)) return;
+            throw new APIError('FORBIDDEN', {
+              message: 'Sign-ups are currently limited to invited addresses.',
+            });
           },
         },
       },

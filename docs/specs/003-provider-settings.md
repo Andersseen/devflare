@@ -2,8 +2,8 @@
 
 | Field   | Value                           |
 | ------- | ------------------------------- |
-| Status  | Draft                           |
-| Branch  | `feature/003-provider-settings` |
+| Status  | Done                            |
+| Branch  | `feature/oauth-client-registry` |
 | Created | 2026-08-12                      |
 | Updated | 2026-08-12                      |
 
@@ -146,22 +146,43 @@ Manual, local:
 
 ## 7. Tasks
 
-- [ ] 1. `providerSetting` table + migration, seeding current values.
-- [ ] 2. `lib/secret-box.ts` (AES-GCM) + unit tests.
-- [ ] 3. `lib/provider-settings.ts` resolution + cache + tests, allowlist failing closed.
-- [ ] 4. Wire `auth.config.ts` to it, keeping var fallback.
-- [ ] 5. `/admin/settings` router + audit + tests.
+- [x] 1. `providerSetting` table + migration. Seeds **nothing** — see deviations.
+- [x] 2. `lib/secret-box.ts` (AES-GCM) + unit tests.
+- [x] 3. `lib/provider-settings.ts` resolution + cache + tests, allowlist failing closed.
+- [x] 4. Wire `auth.config.ts` to it, keeping var fallback.
+- [x] 5. `/admin/settings` router + audit + tests.
 - [ ] 6. Set `SECRET_ENCRYPTION_KEY` as a Worker secret (prod + staging).
-- [ ] 7. Run quality gates (`pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`).
-- [ ] 8. Manual verification (section 6).
-- [ ] 9. Update `docs/ai/STATE.md` + the index in `docs/specs/README.md`.
+     **Owner action** — documented in wrangler.toml, not something this branch
+     can do. Until it is set, GitHub keeps coming from the config vars.
+- [x] 7. Run quality gates (`pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`).
+- [x] 8. Manual verification (section 6).
+- [x] 9. Update `docs/ai/STATE.md` + the index in `docs/specs/README.md`.
 
 ## 8. Verification results
 
-_Filled during implementation._
+Automated, 2026-08-12: `format:check`, `lint`, `typecheck` clean. dev-auth suite
+**182 passed**, up from 156 — 8 in `lib/__tests__/secret-box.spec.ts` and 18 in
+`__tests__/provider-settings.spec.ts`, covering every case in section 6.
+
+Manual verification outstanding, together with 001's and 002's.
 
 ## 9. Log / Deviations
 
 - 2026-08-12 — Drafted. Open question: once a D1 row exists, should the matching
   wrangler.toml var be deleted, or kept as a break-glass fallback? Spec keeps it,
   which means a stale var could quietly become live if the row is ever deleted.
+- 2026-08-12 — Implemented. Notes:
+  - **A bug the tests caught before it shipped.** The first cut resolved the
+    GitHub secret with `stored || env || ''`, so an undecryptable stored value
+    fell back to the config var — exactly what the comment above it said must
+    never happen, and it would make a botched key rotation look successful. A
+    stored secret is now authoritative even when it cannot be opened.
+  - The settings memo is keyed on the env values it falls back to, not on time
+    alone. Without that a change to a var was masked by a memo derived from the
+    previous one — the same bug the client registry cache already avoids.
+  - `socialProviders` is now **omitted** when GitHub is not fully configured,
+    rather than passed with empty strings. The old shape logged a better-auth
+    warning on every request and advertised a button that failed at the redirect.
+  - Existing specs needed a real D1 binding: they passed `DB: undefined`, and
+    fail-closed correctly refused every sign-up. `helpers/d1.ts` now exports the
+    migration list so a new migration is added in one place.
