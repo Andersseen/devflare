@@ -8,18 +8,15 @@
 > to the last ~5 entries, newest first. Update the date. Facts only; no plans
 > you didn't verify.
 
-_Last updated: 2026-08-10_
+_Last updated: 2026-08-12_
 
 ## Branch & repo status
 
-- On `main` at `63f908c`, in sync with `origin/main`.
-- The oauth-provider migration is merged and deployed: PR #13 (`e582d30`)
-  failed CI, PR #14 (`5b6c40e`) fixed it, and the merge `e36848e` deployed
-  clean (2026-08-09T12:04:49Z). The login-page script-ordering fix and the
-  dashboard auth guard (see the 2026-08-10 section below) are merged via PR
-  #15 (`254c3ba`, `63f908c`) and deployed clean (2026-08-10T07:01:21Z, both
-  `deploy-auth` and `deploy-app`). Production dev-auth is running
-  `@better-auth/oauth-provider` with both fixes live.
+- On `feature/oauth-client-registry`, **not pushed**. Eight commits on top of
+  `main` (`63f908c`). The owner does the push and the PR.
+- That branch carries two things: the imageryx registration (`0f79dce`) and
+  specs 001–004 implemented (`d655957`, `e3558a5`, `07138a0`, and the UI).
+- Nothing on it is deployed. `main` is still what production runs.
 
 ## 2026-08-10 — first real browser walkthrough of prod auth, and what it found
 
@@ -356,23 +353,55 @@ dev-auth's auth pages were migrated from inline HTML-in-TypeScript strings
 
 ## Next steps (owner's apparent intent — confirm before large work)
 
-1. Wire up a transactional email provider, then re-enable
-   `requireEmailVerification` / `sendOnSignUp` and widen `SIGNUP_ALLOWLIST`.
-2. Only then: register Imaginaryx for real (`OAUTH_CLIENTS` + a secret + its exact
-   callback URI). Nothing else in dev-auth changes for it. When it's added,
-   don't repeat 2026-08-10's mistake — set its `OAUTH_CLIENT_SECRETS` entry
-   (and its consumer-side client secret) _before_ calling it done, and confirm
-   with `wrangler secret list --env production` on both sides, not just a
-   green build.
-3. Release `@andersseen/icon` with the `lock`/`user` fix, then bump `CDN.icon`
-   in `apps/dev-auth/src/pages/layout.ts`. The new `/` page uses `user` and
-   `log-out`, so check those render before relying on them.
-4. A local GitHub OAuth App now exists (callback
-   `http://localhost:8787/api/auth/callback/github`, credentials in
-   `apps/dev-auth/.dev.vars`) — GitHub sign-in can be exercised end-to-end
-   locally, not just email/password.
+1. **Push `feature/oauth-client-registry` and open the PR.** Before merging,
+   check `OAUTH_CLIENT_SECRETS` in production actually contains an `imageryx`
+   key — it could not be verified from a dev machine, and without it the client
+   is dropped at parse time and keeps returning `invalid_client`.
+2. **Set two Worker secrets before the Identity UI can do anything in
+   production**, neither of which this branch can set:
+   - `ADMIN_API_TOKEN` on dev-auth **and** the same value as
+     `DEV_AUTH_ADMIN_TOKEN` on DevFlare. Without it the tab stays hidden.
+   - `SECRET_ENCRYPTION_KEY` on dev-auth (`openssl rand -base64 32`). Without
+     it GitHub credentials keep coming from the config vars and the settings
+     API refuses to store a secret rather than storing it in the clear.
+3. Migration `0005_provider_settings.sql` must be applied **before** the new
+   code serves traffic. CI applies migrations before deploying, so the deployed
+   path is covered — but if it is ever run out of order the settings read fails
+   and, by design, sign-ups close.
+4. Wire up a transactional email provider, then re-enable
+   `requireEmailVerification` / `sendOnSignUp`. Widening who may sign up no
+   longer needs a deploy — it is the Access panel in Settings → Identity.
+5. Release `@andersseen/icon` with the `lock`/`user` fix, then bump `CDN.icon`
+   in `apps/dev-auth/src/pages/layout.ts`.
+6. Two follow-ups this work surfaced but did not fix:
+   - `VoltInput` has no `label` input, so every `label="…"` in
+     `settings.page.ts` renders nothing. The Profile tab's fields are unlabelled
+     as a result.
+   - `/api/admin` (backup, stats) still uses `ADMIN_SECRET`, a machine token
+     with no acting human, alongside the new user-attributed `/admin/*`. Two
+     admin surfaces with different auth models is worth collapsing.
 
 ## Session log
+
+- **2026-08-12** — Registered imageryx, then made the whole registry editable
+  without a deploy (specs 001–004, all Done). Findings that mattered more than
+  the code: imageryx was **not registered at all** — both its URIs returned
+  `invalid_client`, so there was nothing to "add to"; and the verification
+  command in the request used `curl -I`, which 404s on this endpoint even for a
+  working client, so it could never have shown the truth.
+  The registry now resolves config first, D1 second: config clients cannot be
+  shadowed or edited, so the panel cannot rewrite the client it signs in with.
+  GitHub credentials and the signup allowlist moved to D1 too, the GitHub secret
+  sealed with AES-GCM. The allowlist needed care the clients did not — an empty
+  `SIGNUP_ALLOWLIST` means "unrestricted", which is wrong as the failure mode of
+  a database read, so it now fails closed. That was observed for real: before
+  migration 0005 was applied, sign-ups correctly refused.
+  Two bugs the tests caught before they shipped: the GitHub secret fell back to
+  the env var when it could not be decrypted (a botched key rotation would have
+  looked successful), and the settings memo was not keyed on the env values it
+  falls back to. Verified end to end in a browser: an app created from Settings
+  → Identity authorizes on both its redirect URIs immediately, with no redeploy.
+  182 dev-auth tests, 24 DevFlare tests.
 
 - **2026-08-09** — Migrated dev-auth off the deprecated
   `better-auth/plugins/oidc-provider` onto `@better-auth/oauth-provider`, and

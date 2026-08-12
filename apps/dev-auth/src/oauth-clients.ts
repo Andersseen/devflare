@@ -24,6 +24,7 @@
  */
 
 import { hashClientSecret } from './lib/client-secret';
+import { validateUriList } from './lib/redirect-uri';
 
 /**
  * OAuth client types, as defined by RFC 6749 §2.1 and understood by the
@@ -87,10 +88,15 @@ export interface RegisteredClient {
   redirectUris: string[];
   postLogoutRedirectUris: string[];
   enableEndSession: boolean;
-  /** Always true. Configuration cannot turn PKCE off for a registered client. */
+  /** Always true. Neither configuration nor a database row can turn PKCE off. */
   requirePKCE: true;
-  /** Always true: every registered client is one of my own applications. */
-  skipConsent: true;
+  /**
+   * True for every configured client — those are all my own applications, so
+   * there is nothing to consent to. Clients registered at runtime (see
+   * ./lib/client-row.ts) carry their own value, because a client created from a
+   * form has not been reviewed by anyone.
+   */
+  skipConsent: boolean;
   disabled: false;
   grantTypes: ['authorization_code'];
   responseTypes: ['code'];
@@ -122,73 +128,8 @@ function parseJson(
   }
 }
 
-/**
- * A redirect URI is the one value in this whole flow that decides where an
- * authorization code is delivered, so it has to be an exact, absolute URL.
- * Plain http is only tolerated for loopback development hosts.
- */
-function redirectUriError(uri: unknown): string | null {
-  if (typeof uri !== 'string' || !uri.trim()) {
-    return 'redirect URIs must be non-empty strings';
-  }
-
-  let url: URL;
-  try {
-    url = new URL(uri);
-  } catch {
-    return `"${uri}" is not an absolute URL`;
-  }
-
-  if (url.hash) return `"${uri}" must not contain a fragment`;
-
-  // Userinfo in a redirect target is never intentional here, and it is a classic
-  // way to make a URL read as one host while resolving to another.
-  if (url.username || url.password) {
-    return `"${uri}" must not contain credentials`;
-  }
-
-  // `new URL()` accepts "https://*.example.com" as a host, so parsing alone is
-  // not validation. A pattern like that could never match a real redirect_uri
-  // (the provider compares exact strings), so accepting it would only mislead
-  // whoever wrote it into thinking wildcards work here. They do not.
-  if (!/^\[?[a-z0-9.:-]+\]?$/i.test(url.hostname)) {
-    return `"${uri}" has an invalid host — redirect URIs are matched exactly, wildcards are not supported`;
-  }
-
-  const isLoopback =
-    url.hostname === 'localhost' ||
-    url.hostname === '127.0.0.1' ||
-    url.hostname === '[::1]';
-
-  if (url.protocol === 'https:') return null;
-  if (url.protocol === 'http:' && isLoopback) return null;
-
-  return `"${uri}" must use https (plain http is only allowed on localhost)`;
-}
-
 function isClientType(value: unknown): value is ClientType {
   return CLIENT_TYPES.includes(value as ClientType);
-}
-
-/**
- * Validates a list of exact redirect URIs, returning the de-duplicated list.
- * Duplicates within one client are harmless, so they are collapsed silently
- * rather than reported.
- */
-function validateUriList(
-  value: unknown,
-  label: string,
-): { uris: string[]; errors: string[] } {
-  if (!Array.isArray(value)) {
-    return { uris: [], errors: [`${label} must be an array`] };
-  }
-
-  const errors = value
-    .map(redirectUriError)
-    .filter((error): error is string => error !== null);
-  if (errors.length) return { uris: [], errors };
-
-  return { uris: [...new Set(value as string[])], errors: [] };
 }
 
 /**

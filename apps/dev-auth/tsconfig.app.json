@@ -5,5 +5,8 @@
     "types": ["@cloudflare/workers-types"]
   },
   "include": ["src/**/*"],
-  "exclude": ["**/*.test.ts", "**/*.spec.ts"]
+  // Test helpers are excluded alongside the specs themselves: they are Node
+  // code (node:sqlite, node:fs) and this project compiles against
+  // @cloudflare/workers-types, which has no Node globals by design.
+  "exclude": ["**/*.test.ts", "**/*.spec.ts", "src/**/__tests__/**"]
 }

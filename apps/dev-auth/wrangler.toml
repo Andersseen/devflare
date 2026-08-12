@@ -34,10 +34,26 @@ OAUTH_CLIENTS = '''[
   }
 ]'''
 
+# Who may administer the client registry locally. Empty means nobody — see the
+# production block for why this one fails closed where SIGNUP_ALLOWLIST does not.
+# Both the seeded test user and the owner's own account: locally you sign in as
+# either, and being an admin as one but not the other is a confusing five minutes.
+ADMIN_EMAILS = "test@devflare.com,andriipap01@gmail.com"
+
 # Secrets (set via: wrangler secret put BETTER_AUTH_SECRET)
 # BETTER_AUTH_SECRET = "change-me-in-production"
 # GITHUB_CLIENT_SECRET = "your-github-oauth-app-secret"
 # OAUTH_CLIENT_SECRETS = '{"devflare-dev":"..."}'
+# ADMIN_API_TOKEN = "..."   # lets DevFlare's server call /admin/* back-channel
+# SECRET_ENCRYPTION_KEY = "..."  # `openssl rand -base64 32`
+#
+# SECRET_ENCRYPTION_KEY seals the few settings that must be stored reversibly
+# rather than hashed — today only the GitHub client secret, which this service
+# has to present to GitHub in plaintext (see src/lib/secret-box.ts). Without it
+# /admin/settings refuses to store one and the provider keeps reading
+# GITHUB_CLIENT_SECRET from the environment. Rotating it makes every value
+# already sealed under the old key unreadable; re-enter them, do not expect a
+# silent fallback, because there deliberately is not one.
 
 # D1 Migrations
 [[migrations]]
@@ -92,30 +108,37 @@ OAUTH_CLIENTS = '''[
     "name": "DevFlare",
     "type": "web",
     "redirectURIs": ["https://devflare.andersseen.dev/api/auth/callback"]
+  },
+  {
+    "clientId": "imageryx",
+    "name": "Imageryx",
+    "type": "web",
+    "redirectURIs": [
+      "https://imageryx-dashboard.pages.dev/proxy/auth/callback",
+      "http://localhost:5173/proxy/auth/callback"
+    ]
   }
 ]'''
-# Example of registering an application from outside this monorepo. Uncomment,
-# replace the domain with the real one, add {"imaginaryx":"<secret>"} to
-# OAUTH_CLIENT_SECRETS, and redeploy — nothing else in this service changes.
+# Imageryx is the worked example of an app registered from outside this
+# monorepo: an entry above, plus {"imageryx":"<secret>"} in OAUTH_CLIENT_SECRETS.
+# Nothing else in this service changes for it.
 #
-# OAUTH_CLIENTS = '''[
-#   {
-#     "clientId": "devflare",
-#     "name": "DevFlare",
-#     "type": "web",
-#     "redirectURIs": ["https://devflare.andersseen.dev/api/auth/callback"]
-#   },
-#   {
-#     "clientId": "imaginaryx",
-#     "name": "Imaginaryx",
-#     "type": "web",
-#     "redirectURIs": ["https://imaginaryx.example.com/auth/callback"]
-#   }
-# ]'''
+# It lists its dev callback (http://localhost:5173/...) here alongside the
+# deployed one because it has no separate development provider to point at —
+# it runs its local dev server against this production issuer. Loopback http is
+# accepted for exactly that reason (see redirectUriError in oauth-clients.ts).
+# Both URIs are matched byte for byte; a trailing slash is a different URI.
 # No transactional email provider is wired up yet, so email verification is off
 # (see auth.config.ts) and sign-up is restricted to these addresses instead.
 # Applies to GitHub sign-in too: the address GitHub returns must be listed here.
 SIGNUP_ALLOWLIST = "andriipap01@gmail.com"
+# Who may administer the client registry through /admin/clients. Note the
+# difference from SIGNUP_ALLOWLIST above: empty there means "no restriction",
+# empty HERE means "nobody". Administering this registry decides where
+# authorization codes get delivered, so not-configured must fail closed.
+# Its partner ADMIN_API_TOKEN is a secret (`wrangler secret put`), used by
+# DevFlare's server to call back-channel on behalf of one of these addresses.
+ADMIN_EMAILS = "andriipap01@gmail.com"
 
 # Staging environment
 [env.staging]
@@ -140,6 +163,7 @@ BETTER_AUTH_URL = "https://auth-devflare-staging.andersseen.dev"
 ENVIRONMENT = "staging"
 DEV_AUTH_CORS_ORIGINS = "https://devflare-staging.andersseen.dev"
 SIGNUP_ALLOWLIST = "andriipap01@gmail.com"
+ADMIN_EMAILS = "andriipap01@gmail.com"
 OAUTH_CLIENTS = '''[
   {
     "clientId": "devflare-staging",
