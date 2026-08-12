@@ -39,8 +39,9 @@ can rewrite redirect URIs. The check lands before the API, not after.
 
 **Non-goals**
 
-- The UI (003). This spec is curl-complete and tested that way.
-- Bearer-token / cross-origin access. Cookie + same-origin only (see Decisions).
+- The UI (004). This spec is curl-complete and tested that way.
+- Browser-facing CORS. The only cross-origin caller is a server (see Callers).
+- Provider settings — GitHub credentials, signup allowlist — are 003.
 - User management or promoting admins at runtime.
 
 ## 4. Design
@@ -52,16 +53,34 @@ No `role` column. Admin is decided by an `ADMIN_EMAILS` var, mirroring the exist
 the reason it beats a DB column — an attacker who can write the database still
 cannot promote themselves to admin.
 
-`requireAdmin` resolves the session via `auth.api.getSession`, then matches
-`session.user.email` case-insensitively against the parsed list. An empty or unset
-`ADMIN_EMAILS` denies everyone rather than allowing everyone.
+`requireAdmin` resolves the acting user's email, then matches it case-insensitively
+against the parsed list. An empty or unset `ADMIN_EMAILS` denies everyone rather
+than allowing everyone.
+
+### Callers
+
+Two, and the acting user is checked the same way for both.
+
+**Browser on dev-auth's own origin** — session cookie, same-origin: curl during
+development, and any page dev-auth serves itself.
+
+**DevFlare's server** — the UI (004) lives in DevFlare but its browser never reaches
+here. DevFlare's Nitro server calls back-channel with a service token
+(`ADMIN_API_TOKEN`, a Worker secret on dev-auth, matching value in DevFlare's env)
+and forwards the acting user as `x-devauth-actor: <email>`. That header is trusted
+only **because** the token was present; without it it is ignored. dev-auth still
+checks the actor against `ADMIN_EMAILS`, so a non-admin DevFlare user cannot drive
+DevFlare's server into acting as one — the confused-deputy case this would otherwise
+create. The audit row records the human, not "devflare". No CORS entry is needed:
+only servers talk to dev-auth.
 
 ### API
 
 New router at `/admin/clients`, outside the blocked `/api/auth/oauth2/*` prefix.
-Same-origin only — deliberately **not** added to `DEV_AUTH_CORS_ORIGINS`.
-State-changing routes additionally require an `x-devauth-admin: 1` header, which a
-cross-site form post cannot set.
+Deliberately **not** added to `DEV_AUTH_CORS_ORIGINS`. Cookie-authenticated
+state-changing routes additionally require an `x-devauth-admin: 1` header, which a
+cross-site form post cannot set; token-authenticated calls are exempt, a service
+token being unavailable to a cross-site attacker in the first place.
 
 | Method   | Path                                     | Notes                                |
 | -------- | ---------------------------------------- | ------------------------------------ |
@@ -77,21 +96,22 @@ avoids silently orphaning issued tokens.
 
 ### Files
 
-| File                                                    | Change                                |
-| ------------------------------------------------------- | ------------------------------------- |
-| `apps/dev-auth/src/lib/admin.ts`                        | new — `ADMIN_EMAILS` + `requireAdmin` |
-| `apps/dev-auth/src/routes/admin-clients.ts`             | new — the router above                |
-| `apps/dev-auth/src/index.ts`                            | mount it; leave the 404 block intact  |
-| `apps/dev-auth/src/db/schema.ts`                        | new `oauthClientAudit` table          |
-| `apps/dev-auth/src/db/migrations/0004_client_admin.sql` | new — audit table, additive           |
-| `apps/dev-auth/wrangler.toml`                           | `ADMIN_EMAILS` in prod + staging      |
+| File                                                    | Change                                           |
+| ------------------------------------------------------- | ------------------------------------------------ |
+| `apps/dev-auth/src/lib/admin.ts`                        | new — `ADMIN_EMAILS`, `requireAdmin`, token auth |
+| `apps/dev-auth/src/routes/admin-clients.ts`             | new — the router above                           |
+| `apps/dev-auth/src/index.ts`                            | mount it; leave the 404 block intact             |
+| `apps/dev-auth/src/db/schema.ts`                        | new `oauthClientAudit` table                     |
+| `apps/dev-auth/src/db/migrations/0004_client_admin.sql` | new — audit table, additive                      |
+| `apps/dev-auth/wrangler.toml`                           | `ADMIN_EMAILS` in prod + staging                 |
 
 ### Decisions & trade-offs
 
-- **Cookie + same-origin, not a bearer scope.** A `clients:manage` scope would let
-  DevFlare call this cross-origin, but that means a CORS exception on the most
-  sensitive API here to save a click. 003 explains the additive path if it ever
-  becomes worth it.
+- **Service token, not a `clients:manage` OAuth scope.** A scope is the tidier
+  answer on paper, but the provider deliberately refuses `client_credentials`
+  ([oauth-clients.ts:376](../../apps/dev-auth/src/oauth-clients.ts#L376)), so a scope
+  would mean re-enabling a grant type that was switched off on purpose. A shared
+  service token between two servers I control is smaller and reversible.
 - **Delete revokes tokens.** Leaving them to expire means a deleted client keeps
   working for the refresh-token lifetime, which is not what "delete" reads as.
 - **Audit is a table, not just logs.** Worker logs are not retained long enough to
@@ -110,7 +130,10 @@ Unit (`src/__tests__/admin-clients.spec.ts`, new):
 
 - anonymous → 302 `/login`; signed-in non-admin → 403; admin → 200
 - unset `ADMIN_EMAILS` denies an otherwise-valid admin
-- missing `x-devauth-admin` header on a mutation → 403
+- missing `x-devauth-admin` header on a cookie-authed mutation → 403
+- `x-devauth-actor` **without** a valid service token is ignored, not trusted
+- a valid service token with a non-admin actor → 403
+- the audit row records the forwarded actor, not the service token
 - `POST` returns a plaintext secret; the stored value is a hash, not that string
 - `PATCH`/`DELETE` on a config client → 4xx with a clear message, not a 500
 - an invalid or already-claimed redirect URI is rejected before any write
@@ -129,10 +152,12 @@ Manual, against a local `pnpm dev:all`:
 ## 7. Tasks
 
 - [ ] 1. `oauthClientAudit` table + migration `0004_client_admin.sql`.
-- [ ] 2. `lib/admin.ts` (`ADMIN_EMAILS`, `requireAdmin`) + unit tests.
+- [ ] 2. `lib/admin.ts`: `ADMIN_EMAILS`, cookie + service-token auth, actor
+     resolution, `requireAdmin` + unit tests.
 - [ ] 3. `GET` + `POST /admin/clients` with audit logging + tests.
 - [ ] 4. `PATCH`, `DELETE`, `rotate-secret` + tests.
-- [ ] 5. Set `ADMIN_EMAILS` in wrangler.toml (prod + staging).
+- [ ] 5. Set `ADMIN_EMAILS` in wrangler.toml; `ADMIN_API_TOKEN` as a Worker secret
+     on both sides.
 - [ ] 6. Run quality gates (`pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`).
 - [ ] 7. Manual verification (section 6).
 - [ ] 8. Update `docs/ai/STATE.md` + the index in `docs/specs/README.md`.

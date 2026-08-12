@@ -7,8 +7,9 @@
 | Created | 2026-08-12                           |
 | Updated | 2026-08-12                           |
 
-First of three: **001** makes the registry capable of holding runtime clients,
-**002** exposes the admin API that writes them, **003** builds the UI.
+First of four: **001** lets the registry hold runtime clients, **002** exposes the
+admin API that writes them, **003** does the same for provider settings, **004**
+builds the DevFlare UI over both.
 
 ## 1. Summary
 
@@ -42,7 +43,7 @@ app on this SSO. Loosening it is worth doing carefully and in one place.
 
 **Non-goals**
 
-- The admin API (002) and the UI (003). Nothing writes D1 clients after this spec —
+- The admin API (002) and the UI (004). Nothing writes D1 clients after this spec —
   rows can only appear via direct SQL, which is intentional for testing it in
   isolation.
 - Public dynamic registration (RFC 7591). `/oauth2/register` and friends stay 404
