@@ -212,6 +212,33 @@ export const jwks = sqliteTable('jwks', {
   expiresAt: integer('expiresAt', { mode: 'timestamp' }),
 });
 
+/**
+ * Who changed which OAuth client, when, and to what.
+ *
+ * A table rather than log lines: Worker logs are not retained long enough to
+ * answer "when did this redirect URI change, and who changed it", which is the
+ * question that matters once clients can be edited from a UI instead of by a
+ * reviewed commit.
+ *
+ * `actorEmail` is denormalised on purpose — it records who acted at the time,
+ * and must survive that account being renamed or deleted. `clientId` is plain
+ * text with no foreign key: the row it names may be gone (that is what a
+ * `delete` entry means), and configured clients never had a row at all.
+ */
+export const oauthClientAudit = sqliteTable('oauthClientAudit', {
+  id: text('id').primaryKey(),
+  actorUserId: text('actorUserId'),
+  actorEmail: text('actorEmail').notNull(),
+  /** create | update | delete | rotate-secret, plus settings actions later. */
+  action: text('action').notNull(),
+  clientId: text('clientId'),
+  /** JSON: the changed fields, before and after. Never contains a secret. */
+  changes: text('changes'),
+  createdAt: integer('createdAt', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
 export type User = typeof user.$inferSelect;
 export type Session = typeof session.$inferSelect;
 export type Account = typeof account.$inferSelect;
@@ -221,3 +248,4 @@ export type OAuthRefreshToken = typeof oauthRefreshToken.$inferSelect;
 export type OAuthAccessToken = typeof oauthAccessToken.$inferSelect;
 export type OAuthConsent = typeof oauthConsent.$inferSelect;
 export type Jwks = typeof jwks.$inferSelect;
+export type OAuthClientAudit = typeof oauthClientAudit.$inferSelect;

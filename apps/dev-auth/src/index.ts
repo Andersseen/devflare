@@ -11,6 +11,7 @@ import { securityHeaders } from './middleware/security-headers';
 import authRoutes from './routes/auth';
 import setupRoutes from './routes/setup';
 import adminRoutes from './routes/admin';
+import adminClientRoutes from './routes/admin-clients';
 import analyticsRoutes from './routes/analytics';
 import { renderLoginPage } from './pages/login';
 import { renderSignupPage } from './pages/signup';
@@ -29,7 +30,19 @@ export interface Env {
   RATE_LIMIT_KV?: KVNamespace;
   ENVIRONMENT?: string;
   SENTRY_DSN?: string;
+  /** Legacy machine token for /api/admin (backup, stats). Not the client API. */
   ADMIN_SECRET?: string;
+  /**
+   * Comma-separated addresses allowed to administer the provider: the OAuth
+   * client registry and, from spec 003, provider settings. Unlike
+   * SIGNUP_ALLOWLIST, empty means *nobody*. See src/lib/admin.ts.
+   */
+  ADMIN_EMAILS?: string;
+  /**
+   * Shared secret letting another server of mine call /admin/* back-channel on
+   * behalf of a named admin (DevFlare's dashboard). A Worker secret, never a var.
+   */
+  ADMIN_API_TOKEN?: string;
   GITHUB_CLIENT_ID?: string;
   GITHUB_CLIENT_SECRET?: string;
   /** Comma-separated addresses allowed to sign up. Empty means unrestricted. */
@@ -156,8 +169,14 @@ app.get('/.well-known/oauth-authorization-server', async (c) => {
 // Setup API — disabled in production
 app.route('/api/setup', setupRoutes);
 
-// Admin API — protected by secret token
+// Admin API — protected by secret token. Machine operations (backup, stats)
+// with no acting human; distinct from the client registry API below.
 app.route('/api/admin', adminRoutes);
+
+// Client registry administration. Authenticated as a *person*: an admin session
+// on this origin, or one of my own servers presenting a service token and naming
+// the admin it acts for. See src/lib/admin.ts.
+app.route('/admin/clients', adminClientRoutes);
 
 // Analytics API
 app.route('/api/analytics', analyticsRoutes);

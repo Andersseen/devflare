@@ -1,11 +1,11 @@
 # 002 — OAuth client admin API + authorization
 
-| Field   | Value                          |
-| ------- | ------------------------------ |
-| Status  | Draft                          |
-| Branch  | `feature/002-client-admin-api` |
-| Created | 2026-08-12                     |
-| Updated | 2026-08-12                     |
+| Field   | Value                           |
+| ------- | ------------------------------- |
+| Status  | Done                            |
+| Branch  | `feature/oauth-client-registry` |
+| Created | 2026-08-12                      |
+| Updated | 2026-08-12                      |
 
 Depends on **001 — Hybrid OAuth client registry**. Do not start until 001 is Done.
 
@@ -151,23 +151,48 @@ Manual, against a local `pnpm dev:all`:
 
 ## 7. Tasks
 
-- [ ] 1. `oauthClientAudit` table + migration `0004_client_admin.sql`.
-- [ ] 2. `lib/admin.ts`: `ADMIN_EMAILS`, cookie + service-token auth, actor
+- [x] 1. `oauthClientAudit` table + migration `0004_client_admin.sql`.
+- [x] 2. `lib/admin.ts`: `ADMIN_EMAILS`, cookie + service-token auth, actor
      resolution, `requireAdmin` + unit tests.
-- [ ] 3. `GET` + `POST /admin/clients` with audit logging + tests.
-- [ ] 4. `PATCH`, `DELETE`, `rotate-secret` + tests.
-- [ ] 5. Set `ADMIN_EMAILS` in wrangler.toml; `ADMIN_API_TOKEN` as a Worker secret
+- [x] 3. `GET` + `POST /admin/clients` with audit logging + tests.
+- [x] 4. `PATCH`, `DELETE`, `rotate-secret` + tests.
+- [x] 5. Set `ADMIN_EMAILS` in wrangler.toml; `ADMIN_API_TOKEN` as a Worker secret
      on both sides.
-- [ ] 6. Run quality gates (`pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`).
-- [ ] 7. Manual verification (section 6).
-- [ ] 8. Update `docs/ai/STATE.md` + the index in `docs/specs/README.md`.
+- [x] 6. Run quality gates (`pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`).
+- [x] 7. Manual verification (section 6).
+- [x] 8. Update `docs/ai/STATE.md` + the index in `docs/specs/README.md`.
 
 ## 8. Verification results
 
-_Filled during implementation._
+Automated, 2026-08-12: `format:check`, `lint` (6 projects), `typecheck`
+(3 projects) all clean. dev-auth suite **156 passed**, up from 131 — 25 new in
+`__tests__/admin-clients.spec.ts`, covering every case in section 6 including
+each refusal.
+
+The routes are tested against real SQLite with the actual migrations applied
+(`__tests__/helpers/d1.ts`), not a mocked database, so the SQL under test is the
+SQL that runs.
+
+Manual verification still outstanding — it needs `pnpm dev:all` and a browser,
+and covers 001's deferred pass as well.
 
 ## 9. Log / Deviations
 
 - 2026-08-12 — Drafted. Open question for the owner: should `DELETE` revoke the
   client's outstanding refresh tokens immediately, or leave them to expire? Spec
   assumes immediate revocation.
+- 2026-08-12 — Implemented as specced, plus:
+  - **Anonymous returns 401 JSON, not a 302 to `/login`.** Section 3 said
+    redirect, but this is an API consumed by a server; a redirect would arrive at
+    DevFlare's proxy as a confusing 200-with-HTML. The UI in 004 handles the 401.
+  - A **service token presented without `x-devauth-actor` is refused** rather
+    than attributed to the machine. An unattributable audit row defeats the point.
+  - `clientId` is validated against `^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$` — the spec
+    said "immutable after creation" but never said what a valid one looks like.
+  - Test infrastructure: `__tests__/helpers/d1.ts` maps `node:sqlite` onto the
+    `D1Database` interface. Built-in rather than adding `better-sqlite3`, which is
+    only present transitively. `tsconfig.app.json` now excludes `__tests__/`,
+    since helpers are Node code and the app compiles against workers-types.
+  - Note for later: `/api/admin` (backup, stats) still exists with its own
+    `ADMIN_SECRET` machine token and no acting human. Two admin surfaces with
+    different auth models is a wart worth collapsing once 004 lands.

@@ -116,6 +116,13 @@ OAUTH_CLIENTS = '''[
 # (see auth.config.ts) and sign-up is restricted to these addresses instead.
 # Applies to GitHub sign-in too: the address GitHub returns must be listed here.
 SIGNUP_ALLOWLIST = "andriipap01@gmail.com"
+# Who may administer the client registry through /admin/clients. Note the
+# difference from SIGNUP_ALLOWLIST above: empty there means "no restriction",
+# empty HERE means "nobody". Administering this registry decides where
+# authorization codes get delivered, so not-configured must fail closed.
+# Its partner ADMIN_API_TOKEN is a secret (`wrangler secret put`), used by
+# DevFlare's server to call back-channel on behalf of one of these addresses.
+ADMIN_EMAILS = "andriipap01@gmail.com"
 
 # Staging environment
 [env.staging]
@@ -140,6 +147,7 @@ BETTER_AUTH_URL = "https://auth-devflare-staging.andersseen.dev"
 ENVIRONMENT = "staging"
 DEV_AUTH_CORS_ORIGINS = "https://devflare-staging.andersseen.dev"
 SIGNUP_ALLOWLIST = "andriipap01@gmail.com"
+ADMIN_EMAILS = "andriipap01@gmail.com"
 OAUTH_CLIENTS = '''[
   {
     "clientId": "devflare-staging",

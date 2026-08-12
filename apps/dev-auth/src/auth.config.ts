@@ -48,7 +48,7 @@ let registryCache:
     }
   | undefined;
 
-function getClientRegistry(env: Env): Promise<ParsedClientRegistry> {
+export function getClientRegistry(env: Env): Promise<ParsedClientRegistry> {
   if (
     registryCache &&
     registryCache.clients === env.OAUTH_CLIENTS &&
