@@ -1,11 +1,11 @@
 # 001 — Hybrid OAuth client registry
 
-| Field   | Value                                |
-| ------- | ------------------------------------ |
-| Status  | Draft                                |
-| Branch  | `feature/001-hybrid-client-registry` |
-| Created | 2026-08-12                           |
-| Updated | 2026-08-12                           |
+| Field   | Value                           |
+| ------- | ------------------------------- |
+| Status  | Done                            |
+| Branch  | `feature/oauth-client-registry` |
+| Created | 2026-08-12                      |
+| Updated | 2026-08-12                      |
 
 First of four: **001** lets the registry hold runtime clients, **002** exposes the
 admin API that writes them, **003** does the same for provider settings, **004**
@@ -125,16 +125,33 @@ Manual, against a local `pnpm dev:all`:
 
 ## 7. Tasks
 
-- [ ] 1. Extract validators to `lib/redirect-uri.ts`; keep tests green.
-- [ ] 2. `lib/client-row.ts` normaliser + unit tests.
-- [ ] 3. Hybrid precedence in `client-registry.ts` + unit tests.
-- [ ] 4. Run quality gates (`pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`).
-- [ ] 5. Manual verification (section 6).
-- [ ] 6. Update `docs/ai/STATE.md` + the index in `docs/specs/README.md`.
+- [x] 1. Extract validators to `lib/redirect-uri.ts`; keep tests green.
+- [x] 2. `lib/client-row.ts` normaliser + unit tests.
+- [x] 3. Hybrid precedence in `client-registry.ts` + unit tests.
+- [x] 4. Run quality gates (`pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`).
+- [ ] 5. Manual verification (section 6) — deferred, see below.
+- [x] 6. Update the index in `docs/specs/README.md`. STATE.md at the end of 004.
 
 ## 8. Verification results
 
-_Filled during implementation._
+Automated, 2026-08-12:
+
+- `pnpm format:check` — clean.
+- `pnpm lint` — 6 projects, no findings.
+- `pnpm typecheck` — 3 projects, clean.
+- dev-auth suite — **131 passed**, up from 103. New: 21 in
+  `lib/__tests__/client-row.spec.ts`, and `__tests__/client-registry.spec.ts`
+  grew from 9 to 16 covering precedence both ways.
+
+Every case in section 6 is covered by those unit tests, including config winning
+over a same-id row, fall-through for an unconfigured id, rejection of a row whose
+redirect URI the config path would refuse, and a row's inability to turn off PKCE
+or widen `grantTypes`.
+
+The manual pass is deferred rather than skipped: it wants a hand-written D1 row
+with a properly hashed secret, and 002's `POST /admin/clients` is the thing that
+produces one. It runs as part of 002's verification instead of being simulated
+here with SQL that no code path will ever write again.
 
 ## 9. Log / Deviations
 
@@ -142,3 +159,12 @@ _Filled during implementation._
   config-generating UI. Split out of an earlier single spec that also carried the
   admin API and the UI; it exceeded the ~150-line guideline because it was three
   changes.
+- 2026-08-12 — Implemented. Two deviations from the plan, both forced by the code:
+  - `RegisteredClient.skipConsent` was typed as the literal `true`, so reading it
+    from a row could not compile. Widened to `boolean`; configured clients still
+    set `true`, rows default to `false` as designed.
+  - `withConfiguredClients` was renamed `withHybridClients`, since it no longer
+    describes what it does. One caller in `auth.config.ts`.
+  - Added beyond the spec: writes that name **no** client id are refused. A
+    `deleteMany` with an empty clause would otherwise delete rows for clients this
+    layer never checked against configuration.

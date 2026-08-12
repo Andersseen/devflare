@@ -6,7 +6,7 @@ import { oauthProvider } from '@better-auth/oauth-provider';
 import type { DBAdapterInstance } from 'better-auth/types';
 import { createDb } from './db';
 import * as schema from './db/schema';
-import { withConfiguredClients } from './client-registry';
+import { withHybridClients } from './client-registry';
 import { hashClientSecret, verifyClientSecret } from './lib/client-secret';
 import {
   clientOrigins,
@@ -110,9 +110,9 @@ export async function createAuthOptions(env: Env, database: DBAdapterInstance) {
   // through `auth.api.getOpenIdConfig` rather than through the HTTP handler.
   const options = {
     // The provider reads registered clients through the adapter; this wrapper
-    // answers those reads from the configuration above instead of from D1, and
-    // refuses every write. See ./client-registry.ts.
-    database: withConfiguredClients(database, clients),
+    // answers those reads from the configuration above first and from D1 second,
+    // and refuses any write aimed at a configured client. See ./client-registry.ts.
+    database: withHybridClients(database, clients),
     baseURL: env.BETTER_AUTH_URL,
     secret: env.BETTER_AUTH_SECRET,
     // Every callbackURL is validated against this list. Consumer apps live on
