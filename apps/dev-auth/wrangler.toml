@@ -36,7 +36,9 @@ OAUTH_CLIENTS = '''[
 
 # Who may administer the client registry locally. Empty means nobody — see the
 # production block for why this one fails closed where SIGNUP_ALLOWLIST does not.
-ADMIN_EMAILS = "test@devflare.com"
+# Both the seeded test user and the owner's own account: locally you sign in as
+# either, and being an admin as one but not the other is a confusing five minutes.
+ADMIN_EMAILS = "test@devflare.com,andriipap01@gmail.com"
 
 # Secrets (set via: wrangler secret put BETTER_AUTH_SECRET)
 # BETTER_AUTH_SECRET = "change-me-in-production"
