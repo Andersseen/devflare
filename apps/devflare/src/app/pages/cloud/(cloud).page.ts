@@ -1,4 +1,5 @@
 import { Component, afterNextRender, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   VoltCard,
@@ -22,6 +23,7 @@ import { DeploymentStatus } from './deployment-status';
 @Component({
   selector: 'app-cloud-page',
   imports: [
+    RouterLink,
     LucideAngularModule,
     VoltCard,
     VoltCardHeader,
@@ -96,7 +98,11 @@ import { DeploymentStatus } from './deployment-status';
                         class="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2"
                       >
                         <div class="min-w-0">
-                          <p class="font-medium truncate">{{ worker.name }}</p>
+                          <a
+                            [routerLink]="['/cloud/workers', worker.name]"
+                            class="font-medium truncate hover:text-primary hover:underline"
+                            >{{ worker.name }}</a
+                          >
                           @if (worker.domains.length) {
                             <div class="flex flex-wrap gap-x-3 mt-0.5">
                               @for (domain of worker.domains; track domain) {
@@ -149,9 +155,11 @@ import { DeploymentStatus } from './deployment-status';
                       >
                         <div class="min-w-0">
                           <div class="flex items-center gap-2">
-                            <p class="font-medium truncate">
-                              {{ project.name }}
-                            </p>
+                            <a
+                              [routerLink]="['/cloud/pages', project.name]"
+                              class="font-medium truncate hover:text-primary hover:underline"
+                              >{{ project.name }}</a
+                            >
                             @if (project.latestDeployment; as deployment) {
                               <app-deployment-status
                                 [status]="deployment.status"

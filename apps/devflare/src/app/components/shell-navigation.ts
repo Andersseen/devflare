@@ -187,7 +187,10 @@ export const SHELL_SECTIONS: ShellSection[] = [
       },
       {
         label: 'Cloudflare',
-        items: [{ label: 'Cloud', link: '/cloud', icon: 'cloud', exact: true }],
+        items: [
+          { label: 'Cloud', link: '/cloud', icon: 'cloud', exact: true },
+          { label: 'Storage', link: '/cloud/storage', icon: 'database' },
+        ],
       },
     ],
   },

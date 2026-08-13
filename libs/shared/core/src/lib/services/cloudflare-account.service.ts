@@ -52,6 +52,57 @@ export interface CloudPagesProject {
   latestDeployment: CloudDeployment | null;
 }
 
+export interface CloudWorkerVersion {
+  id: string;
+  number: number | null;
+  createdOn: string | null;
+  author: string | null;
+  source: string | null;
+  message: string | null;
+  tag: string | null;
+}
+
+export interface CloudWorkerDetail {
+  worker: CloudWorker;
+  versions: CloudWorkerVersion[];
+}
+
+export interface CloudPagesDetail {
+  project: CloudPagesProject;
+  deployments: CloudDeployment[];
+}
+
+/** Each product is a separate token permission, so each reports its own error. */
+export interface CloudStorageSection<T> {
+  items: T[];
+  error: string | null;
+}
+
+export interface CloudDatabase {
+  id: string;
+  name: string;
+  createdAt: string | null;
+  sizeBytes: number | null;
+  tables: number | null;
+}
+
+export interface CloudNamespace {
+  id: string;
+  name: string;
+}
+
+export interface CloudBucket {
+  name: string;
+  createdAt: string;
+  location: string | null;
+}
+
+export interface CloudStorage {
+  d1: CloudStorageSection<CloudDatabase>;
+  kv: CloudStorageSection<CloudNamespace>;
+  r2: CloudStorageSection<CloudBucket>;
+}
+
 const BASE = '/api/v1/cloud';
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -195,5 +246,26 @@ export class CloudflareAccount {
     } finally {
       this.loadingSignal.set(false);
     }
+  }
+
+  /**
+   * Detail and storage return their payload rather than parking it in a signal:
+   * they belong to one route each, so the page that asked owns the state and it
+   * cannot go stale under a different route.
+   */
+  loadWorker(name: string, refresh = false): Promise<CloudWorkerDetail> {
+    return request<CloudWorkerDetail>(
+      `/workers/${encodeURIComponent(name)}${refresh ? '?refresh=1' : ''}`,
+    );
+  }
+
+  loadPagesProject(name: string, refresh = false): Promise<CloudPagesDetail> {
+    return request<CloudPagesDetail>(
+      `/pages/${encodeURIComponent(name)}${refresh ? '?refresh=1' : ''}`,
+    );
+  }
+
+  loadStorage(refresh = false): Promise<CloudStorage> {
+    return request<CloudStorage>(`/storage${refresh ? '?refresh=1' : ''}`);
   }
 }

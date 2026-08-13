@@ -47,7 +47,10 @@ and other apps in other repositories all authenticate against. Nx 22 monorepo, p
 - Run everything: `pnpm dev:all` → app on :4200, auth on :8787.
 - Test user: `test@devflare.com` / `TestPass123` (create with `pnpm seed:user`).
 - TS path aliases: `@org/core`, `@org/ui`, `@org/auth`, `@org/deploy` (see `tsconfig.base.json`).
-- Main app routes: `apps/devflare/src/app/pages/**/*.page.ts` (AnalogJS file-based).
+- Main app routes: pages live in `apps/devflare/src/app/pages/**/*.page.ts`, but
+  routing is **not** file-based — every route is declared explicitly in
+  `apps/devflare/src/app/app.routes.ts`. A new page is invisible until it is
+  registered there.
 - Main app API: `apps/devflare/src/server/routes/api/**` (Nitro/h3 file-based).
 - Auth service: `apps/dev-auth/src/index.ts` (Hono on Cloudflare Workers).
 - Branch workflow: `feature/*` branches → PR to `main`. Commit style: `feat: …`, `fix: …`.
