@@ -1,6 +1,7 @@
 import {
   Component,
   afterNextRender,
+  computed,
   inject,
   input,
   signal,
@@ -23,10 +24,14 @@ import {
 import { DeploymentStatus } from '../deployment-status';
 
 /**
- * One Pages project: where it lives, and what has been deployed to it.
+ * One Pages project: where it lives, what has been deployed to it, and the two
+ * things worth doing from here — deploy the production branch again, or put an
+ * earlier deployment back.
  *
- * The history is the point — it is the thing the dashboard is otherwise needed
- * for, and the only place a failed build is visible.
+ * Both actions are additive on Cloudflare's side (a rollback creates a new
+ * production deployment from an existing build), so neither can lose history.
+ * Both still ask first: this is the one page in DevFlare that changes what the
+ * public sees.
  */
 @Component({
   selector: 'app-cloud-pages-detail-page',
@@ -82,18 +87,60 @@ import { DeploymentStatus } from '../deployment-status';
             </div>
           }
         </div>
-        <volt-button variant="outline" size="sm" (click)="reload()">
-          <lucide-icon
-            name="refresh-cw"
-            class="w-4 h-4 mr-1"
-            [class.animate-spin]="loading()"
-          />
-          Reload
-        </volt-button>
+
+        <div class="flex items-center gap-2 shrink-0">
+          @if (canDeploy()) {
+            @if (pending()?.kind === 'deploy') {
+              <span class="text-sm text-muted-foreground"
+                >Deploy {{ productionBranch() }}?</span
+              >
+              <volt-button size="sm" [disabled]="acting()" (click)="deploy()">
+                Confirm
+              </volt-button>
+              <volt-button
+                size="sm"
+                variant="outline"
+                [disabled]="acting()"
+                (click)="cancel()"
+              >
+                Cancel
+              </volt-button>
+            } @else {
+              <volt-button
+                size="sm"
+                [disabled]="acting()"
+                (click)="askDeploy()"
+              >
+                <lucide-icon name="rocket" class="w-4 h-4 mr-1" />
+                Deploy
+              </volt-button>
+            }
+          }
+          <volt-button
+            variant="outline"
+            size="sm"
+            [disabled]="acting()"
+            (click)="reload()"
+          >
+            <lucide-icon
+              name="refresh-cw"
+              class="w-4 h-4 mr-1"
+              [class.animate-spin]="loading()"
+            />
+            Reload
+          </volt-button>
+        </div>
       </div>
 
       @if (error()) {
         <volt-error>{{ error() }}</volt-error>
+      }
+      @if (notice()) {
+        <p
+          class="text-sm rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-3 py-2"
+        >
+          {{ notice() }}
+        </p>
       }
 
       @if (loading() && !detail()) {
@@ -115,7 +162,11 @@ import { DeploymentStatus } from '../deployment-status';
               </p>
             } @else {
               <ul class="divide-y divide-border">
-                @for (deployment of loaded.deployments; track deployment.id) {
+                @for (
+                  deployment of loaded.deployments;
+                  track deployment.id;
+                  let first = $first
+                ) {
                   <li class="py-3 space-y-1">
                     <div class="flex items-center justify-between gap-3">
                       <div class="flex items-center gap-2 min-w-0">
@@ -126,12 +177,54 @@ import { DeploymentStatus } from '../deployment-status';
                         <span class="text-sm font-medium truncate">
                           {{ deployment.commitMessage ?? deployment.shortId }}
                         </span>
+                        @if (first) {
+                          <span class="text-xs text-muted-foreground"
+                            >current</span
+                          >
+                        }
                       </div>
-                      <span
-                        class="text-sm text-muted-foreground whitespace-nowrap"
-                      >
-                        {{ relative(deployment.createdOn) }}
-                      </span>
+                      <div class="flex items-center gap-2 shrink-0">
+                        @if (canRollbackTo(deployment, first)) {
+                          @if (pending()?.id === deployment.id) {
+                            <span class="text-sm text-muted-foreground"
+                              >Roll back to this?</span
+                            >
+                            <volt-button
+                              size="sm"
+                              [disabled]="acting()"
+                              (click)="rollback(deployment.id)"
+                            >
+                              Confirm
+                            </volt-button>
+                            <volt-button
+                              size="sm"
+                              variant="outline"
+                              [disabled]="acting()"
+                              (click)="cancel()"
+                            >
+                              Cancel
+                            </volt-button>
+                          } @else {
+                            <volt-button
+                              size="sm"
+                              variant="outline"
+                              [disabled]="acting()"
+                              (click)="askRollback(deployment.id)"
+                            >
+                              <lucide-icon
+                                name="rotate-ccw"
+                                class="w-3.5 h-3.5 mr-1"
+                              />
+                              Rollback
+                            </volt-button>
+                          }
+                        }
+                        <span
+                          class="text-sm text-muted-foreground whitespace-nowrap"
+                        >
+                          {{ relative(deployment.createdOn) }}
+                        </span>
+                      </div>
                     </div>
                     <div
                       class="flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground"
@@ -177,13 +270,85 @@ export default class CloudPagesDetailPage {
   detail = signal<CloudPagesDetail | null>(null);
   loading = signal(true);
   error = signal('');
+  notice = signal('');
+
+  /** The action awaiting a second click, if any. */
+  pending = signal<{ kind: 'deploy' | 'rollback'; id?: string } | null>(null);
+  acting = signal(false);
 
   protected readonly relative = formatRelative;
+
+  /** Only a git-connected project has a branch Cloudflare can build again. */
+  protected readonly canDeploy = computed(
+    () => !!this.detail()?.project.repo && !this.loading(),
+  );
+
+  protected readonly productionBranch = computed(
+    () => this.detail()?.project.productionBranch ?? 'production',
+  );
 
   constructor() {
     // Browser-only: the service fetches a relative URL, which throws
     // `ERR_INVALID_URL` under SSR.
     afterNextRender(() => this.load());
+  }
+
+  /** Rolling back to the deployment already live, or to a failed build, is not
+   * an action worth offering. */
+  protected canRollbackTo(
+    deployment: { status: string; environment: string },
+    isCurrent: boolean,
+  ): boolean {
+    return (
+      !isCurrent &&
+      deployment.status === 'success' &&
+      deployment.environment === 'production'
+    );
+  }
+
+  askDeploy() {
+    this.pending.set({ kind: 'deploy' });
+  }
+
+  askRollback(id: string) {
+    this.pending.set({ kind: 'rollback', id });
+  }
+
+  cancel() {
+    this.pending.set(null);
+  }
+
+  async deploy() {
+    await this.act(
+      () => this.#cloud.deployPages(this.name()),
+      `Deploying ${this.productionBranch()} — the build takes a minute.`,
+    );
+  }
+
+  async rollback(deploymentId: string) {
+    await this.act(
+      () => this.#cloud.rollbackPages(this.name(), deploymentId),
+      'Rolled back. The previous deployment is still in the history.',
+    );
+  }
+
+  private async act(run: () => Promise<unknown>, success: string) {
+    this.acting.set(true);
+    this.error.set('');
+    this.notice.set('');
+    try {
+      await run();
+      this.notice.set(success);
+      this.pending.set(null);
+      // The listing the server memoized is now wrong by definition.
+      await this.load(true);
+    } catch (error: unknown) {
+      this.error.set(
+        error instanceof Error ? error.message : 'The action failed',
+      );
+    } finally {
+      this.acting.set(false);
+    }
   }
 
   async reload() {

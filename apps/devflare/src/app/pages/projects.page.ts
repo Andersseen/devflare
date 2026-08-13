@@ -1,4 +1,11 @@
-import { Component, afterNextRender, inject, signal } from '@angular/core';
+import {
+  Component,
+  afterNextRender,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   VoltCard,
@@ -12,11 +19,12 @@ import {
   VoltError,
   VoltBadge,
 } from '@voltui/components';
-import { Projects, type Project } from '@org/core';
+import { CloudflareAccount, Projects, type Project } from '@org/core';
 
 @Component({
   selector: 'app-projects-page',
   imports: [
+    RouterLink,
     LucideAngularModule,
     VoltCard,
     VoltCardHeader,
@@ -133,6 +141,43 @@ import { Projects, type Project } from '@org/core';
                   </div>
                 </div>
                 <div class="flex items-center gap-3 shrink-0">
+                  <!-- Spec 005: what this project actually deploys to.
+                       Only offered when the Cloudflare account is readable —
+                       otherwise there is nothing to pick from. -->
+                  @if (project.cfType && project.cfName) {
+                    <a
+                      [routerLink]="[
+                        project.cfType === 'pages'
+                          ? '/cloud/pages'
+                          : '/cloud/workers',
+                        project.cfName,
+                      ]"
+                      class="text-sm text-muted-foreground hover:text-primary hover:underline whitespace-nowrap"
+                    >
+                      <lucide-icon name="cloud" class="w-3.5 h-3.5 inline" />
+                      {{ project.cfName }}
+                    </a>
+                    <volt-button
+                      size="sm"
+                      variant="outline"
+                      (click)="onUnlink(project)"
+                    >
+                      Unlink
+                    </volt-button>
+                  } @else if (linkOptions().length) {
+                    <select
+                      class="h-9 rounded-md border border-input bg-background px-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      [disabled]="linking() === project.id"
+                      (change)="onLink(project, $event)"
+                    >
+                      <option value="">Link to…</option>
+                      @for (option of linkOptions(); track option.value) {
+                        <option [value]="option.value">
+                          {{ option.label }}
+                        </option>
+                      }
+                    </select>
+                  }
                   <volt-badge variant="secondary">{{
                     formatDate(project.createdAt)
                   }}</volt-badge>
@@ -177,6 +222,7 @@ import { Projects, type Project } from '@org/core';
 })
 export default class ProjectsPage {
   #projectsService = inject(Projects);
+  #cloud = inject(CloudflareAccount);
 
   projects = signal<Project[]>([]);
   isLoading = signal(true);
@@ -184,11 +230,75 @@ export default class ProjectsPage {
   newRepoUrl = signal('');
   isCreating = signal(false);
   createError = signal('');
+  /** Id of the project whose link is being saved, if any. */
+  linking = signal('');
+
+  /**
+   * Everything on the account that a project could point at. Empty when the
+   * viewer cannot read the account, which is what hides the control entirely
+   * rather than offering an empty dropdown.
+   */
+  linkOptions = computed(() => [
+    ...this.#cloud.projects().map((project) => ({
+      value: `pages:${project.name}`,
+      label: `Pages · ${project.name}`,
+    })),
+    ...this.#cloud.workers().map((worker) => ({
+      value: `worker:${worker.name}`,
+      label: `Worker · ${worker.name}`,
+    })),
+  ]);
 
   constructor() {
     // Browser-only: the service fetches a relative URL, which throws
     // `ERR_INVALID_URL` under SSR.
-    afterNextRender(() => this.loadProjects());
+    afterNextRender(() => {
+      this.loadProjects();
+      this.loadCloudResources();
+    });
+  }
+
+  /** Best-effort: not being able to read the account only costs the dropdown. */
+  private async loadCloudResources() {
+    try {
+      const status = await this.#cloud.loadStatus();
+      if (status.admin && status.configured) {
+        await this.#cloud.loadOverview();
+      }
+    } catch (err: unknown) {
+      console.error('Failed to load Cloudflare resources', err);
+    }
+  }
+
+  async onLink(project: Project, event: Event) {
+    const value = (event.target as HTMLSelectElement).value;
+    if (!value) return;
+
+    const [cfType, ...rest] = value.split(':');
+    if (cfType !== 'worker' && cfType !== 'pages') return;
+
+    await this.saveLink(project.id, { cfType, cfName: rest.join(':') });
+  }
+
+  async onUnlink(project: Project) {
+    await this.saveLink(project.id, null);
+  }
+
+  private async saveLink(
+    id: string,
+    link: { cfType: 'worker' | 'pages'; cfName: string } | null,
+  ) {
+    this.linking.set(id);
+    try {
+      const updated = await this.#projectsService.linkProject(id, link);
+      this.projects.update((list) =>
+        list.map((project) => (project.id === id ? updated : project)),
+      );
+    } catch (err: unknown) {
+      console.error('Failed to link project', err);
+    } finally {
+      this.linking.set('');
+    }
   }
 
   async loadProjects() {

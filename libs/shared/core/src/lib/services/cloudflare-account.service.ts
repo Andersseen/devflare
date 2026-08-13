@@ -268,4 +268,28 @@ export class CloudflareAccount {
   loadStorage(refresh = false): Promise<CloudStorage> {
     return request<CloudStorage>(`/storage${refresh ? '?refresh=1' : ''}`);
   }
+
+  /**
+   * Build and deploy the project's production branch again. Additive: the
+   * previous deployment stays in the history and stays rollback-able.
+   */
+  async deployPages(name: string): Promise<CloudDeployment> {
+    const result = await request<{ deployment: CloudDeployment }>(
+      `/pages/${encodeURIComponent(name)}/deploy`,
+      { method: 'POST' },
+    );
+    return result.deployment;
+  }
+
+  /** Put an earlier deployment back in production. Also additive. */
+  async rollbackPages(
+    name: string,
+    deploymentId: string,
+  ): Promise<CloudDeployment> {
+    const result = await request<{ deployment: CloudDeployment }>(
+      `/pages/${encodeURIComponent(name)}/rollback`,
+      { method: 'POST', body: JSON.stringify({ deploymentId }) },
+    );
+    return result.deployment;
+  }
 }

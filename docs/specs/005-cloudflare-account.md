@@ -181,24 +181,68 @@ Additive and replayable-safe; existing rows keep working with both columns null.
 
 ## 7. Tasks
 
-- [ ] **Phase 1 — server foundation.** `cloudflare.ts` + `cloud-admin.ts` +
+- [x] **Phase 1 — server foundation.** `cloudflare.ts` + `cloud-admin.ts` +
       spec, read routes (`status`, `workers`, `pages`, `storage`), wrangler vars.
-- [ ] **Phase 2 — overview UI.** `CloudflareAccount` service + spec, `/cloud`
+- [x] **Phase 2 — overview UI.** `CloudflareAccount` service + spec, `/cloud`
       page with Workers and Pages, connect state, nav entries.
-- [ ] **Phase 3 — detail + storage.** Per-resource routes and pages, deployment
+- [x] **Phase 3 — detail + storage.** Per-resource routes and pages, deployment
       history, `/cloud/storage`.
-- [ ] **Phase 4 — link + actions.** Migration `0002`, projects API and page carry
+- [x] **Phase 4 — link + actions.** Migration `0002`, projects API and page carry
       the link, Pages re-deploy and rollback with confirmation.
-- [ ] 5. Quality gates: `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
-- [ ] 6. Manual verification (section 6)
-- [ ] 7. Update `docs/ai/STATE.md` + the index in `docs/specs/README.md`
+- [x] 5. Quality gates: `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+- [ ] 6. Manual verification (section 6) — **blocked on the owner creating the
+     API token**; steps 1–3 and 6 cannot run without it. Everything reachable
+     without a token was verified (section 8).
+- [x] 7. Update `docs/ai/STATE.md` + the index in `docs/specs/README.md`
 
 ## 8. Verification results
 
-_Filled during implementation._
+**Automated** — `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
+all pass: 59 tests across three projects — 45 in `devflare` (14 new in
+`cloudflare.spec.ts`, 7 new in `project-rows.spec.ts`), 8 in `core`, which had
+no test target at all before this branch, and 6 in `dev-auth`, untouched.
+`pnpm nx build devflare` succeeds and emits all four Cloud page chunks.
+
+**Manual, without a token** (`pnpm dev:app`, migration `0002` applied `--local`):
+
+| Check                                                                    | Result                                                     |
+| ------------------------------------------------------------------------ | ---------------------------------------------------------- |
+| `GET /api/v1/cloud/status` signed out                                    | `{"admin":false,"configured":false,"reason":"signed-out"}` |
+| `GET /api/v1/cloud/workers` signed out                                   | 401                                                        |
+| `GET /api/v1/cloud/storage` signed out                                   | 401                                                        |
+| `/cloud`, `/cloud/storage`, `/cloud/pages/:name`, `/cloud/workers/:name` | 200, SSR renders                                           |
+| Cloud + Storage in the sidebar                                           | present in the served HTML                                 |
+| `wrangler d1 migrations apply --local`                                   | applied, 3 commands OK                                     |
+
+**Not verified** — anything that needs a real `CLOUDFLARE_API_TOKEN`: the
+listings, the storage inventory, and the deploy/rollback calls. The last one is
+the least certain of the set: `POST /pages/projects/{name}/deployments` is sent
+with no body, which is what triggers a production-branch build for a
+git-connected project; if the API turns out to want multipart, the button will
+surface Cloudflare's own error and the fix is local to `deploy.post.ts`.
 
 ## 9. Log / Deviations
 
 - **2026-08-13** — Scope set with the owner: all read surfaces including
   D1/KV/R2; writes limited to Pages re-deploy and rollback; `deploy.page.ts`
   left untouched; analytics deferred.
+- **2026-08-13** — Three things the spec did not anticipate, all found by
+  running the app rather than by building it:
+  1. **Routing is not file-based.** `app.routes.ts` is an explicit table; a new
+     `*.page.ts` compiles into its own chunk and is unreachable until it is
+     registered there. AGENTS.md said otherwise and has been corrected.
+  2. **`lib/projects.ts` cannot exist.** Imported from
+     `routes/api/v1/projects/*` it breaks the Nitro **dev** server for every
+     route (`Could not resolve "../../../../lib/projects"`) while the
+     production build resolves it fine. Renamed to `project-rows.ts`.
+  3. **The projects API was already broken.** db0's `sql` template answers a
+     SELECT with `{ rows, success }`, and both project routes read `.length`
+     off that envelope — so the list came back as an object the page could not
+     iterate, and GET/DELETE of one project always 404'd. Fixed here rather
+     than left: phase 4 links rows that the list must first be able to show.
+- **2026-08-13** — Volt's installed badge (0.5.0) takes no `class` input, so
+  deployment status is a small local component with explicit Tailwind classes
+  instead. Same reason the project link control is a plain `<select>` carrying
+  Volt's own input classes: the installed `VoltNativeSelect` is a component with
+  content projection, while the library source has it as a directive — the two
+  disagree, and this branch should not bet on which one ships.

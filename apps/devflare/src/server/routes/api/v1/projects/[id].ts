@@ -1,6 +1,11 @@
-import { defineEventHandler, getRouterParam, createError } from 'h3';
+import { defineEventHandler, getRouterParam, createError, readBody } from 'h3';
 import { getAppSession, requireAuth } from '../../../../lib/session';
 import { db } from '../../../../db';
+import {
+  parseLink,
+  rowsOf,
+  type ProjectRow,
+} from '../../../../lib/project-rows';
 
 export default defineEventHandler(async (event) => {
   const session = await getAppSession(event);
@@ -14,29 +19,43 @@ export default defineEventHandler(async (event) => {
     });
   }
 
+  const owned = rowsOf<ProjectRow>(
+    await db.sql`SELECT * FROM projects WHERE id = ${id} AND userId = ${user.id}`,
+  );
+
+  if (!owned.length) {
+    throw createError({ statusCode: 404, statusMessage: 'Project not found' });
+  }
+
   if (event.method === 'GET') {
-    const projects =
-      await db.sql`SELECT * FROM projects WHERE id = ${id} AND userId = ${user.id}`;
-    if (!projects.length) {
+    return { project: owned[0] };
+  }
+
+  if (event.method === 'PATCH') {
+    // Spec 005: link this row to the Worker or Pages project it deploys to, or
+    // clear the link. Nothing is verified against Cloudflare here — a name that
+    // stops resolving is shown as unlinked rather than blocking the edit.
+    let link;
+    try {
+      link = parseLink(await readBody(event));
+    } catch (error) {
       throw createError({
-        statusCode: 404,
-        statusMessage: 'Project not found',
+        statusCode: 400,
+        statusMessage:
+          error instanceof Error ? error.message : 'Invalid link payload',
       });
     }
-    return { project: projects[0] };
+
+    await db.sql`UPDATE projects SET cfType = ${link.cfType}, cfName = ${link.cfName} WHERE id = ${id} AND userId = ${user.id}`;
+
+    const project = rowsOf<ProjectRow>(
+      await db.sql`SELECT * FROM projects WHERE id = ${id}`,
+    )[0];
+    return { project };
   }
 
   if (event.method === 'DELETE') {
-    const projects =
-      await db.sql`SELECT * FROM projects WHERE id = ${id} AND userId = ${user.id}`;
-    if (!projects.length) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'Project not found',
-      });
-    }
-
-    await db.sql`DELETE FROM projects WHERE id = ${id}`;
+    await db.sql`DELETE FROM projects WHERE id = ${id} AND userId = ${user.id}`;
     return { success: true };
   }
 
