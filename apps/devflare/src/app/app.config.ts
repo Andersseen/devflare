@@ -48,6 +48,13 @@ import {
   Square,
   X,
   Settings,
+  Cloud,
+  RefreshCw,
+  GitBranch,
+  HardDrive,
+  Boxes,
+  RotateCcw,
+  Rocket,
 } from 'lucide-angular';
 import { appRoutes } from './app.routes';
 
@@ -115,6 +122,13 @@ export const appConfig: ApplicationConfig = {
         Square,
         X,
         Settings,
+        Cloud,
+        RefreshCw,
+        GitBranch,
+        HardDrive,
+        Boxes,
+        RotateCcw,
+        Rocket,
       }),
     ),
   ],

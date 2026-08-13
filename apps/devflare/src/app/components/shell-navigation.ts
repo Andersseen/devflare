@@ -132,6 +132,15 @@ export const PLATFORM_CARDS: Tool[] = [
     colorClass: 'text-primary',
     bgClass: 'bg-primary/10',
   },
+  {
+    title: 'Cloud',
+    description:
+      'See the Workers, Pages and storage on your Cloudflare account.',
+    link: '/cloud',
+    icon: 'cloud',
+    colorClass: 'text-orange-500',
+    bgClass: 'bg-orange-500/10',
+  },
 ];
 
 export interface ShellNavItem {
@@ -161,7 +170,7 @@ export const SHELL_SECTIONS: ShellSection[] = [
     id: 'deployment',
     label: 'Deployment',
     link: '/',
-    matches: ['/', '/deploy', '/projects', '/settings'],
+    matches: ['/', '/deploy', '/projects', '/cloud', '/settings'],
     groups: [
       {
         label: 'Platform',
@@ -175,6 +184,10 @@ export const SHELL_SECTIONS: ShellSection[] = [
           { label: 'Deploy', link: '/deploy', icon: 'zap' },
           { label: 'Projects', link: '/projects', icon: 'folder-open' },
         ],
+      },
+      {
+        label: 'Cloudflare',
+        items: [{ label: 'Cloud', link: '/cloud', icon: 'cloud', exact: true }],
       },
     ],
   },
