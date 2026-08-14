@@ -37,8 +37,21 @@ function stubFetch(...responses: Response[]) {
   return fetchMock;
 }
 
-beforeEach(() => clearCloudflareCache());
-afterEach(() => vi.unstubAllGlobals());
+beforeEach(() => {
+  clearCloudflareCache();
+  // `resolveCloudflareConfig` falls back to process.env by design, for runtimes
+  // that are not Cloudflare. The deploy workflow exports both of these to every
+  // job, so on CI the "no credential" cases would read the runner's real ones
+  // and assert the opposite of what they mean. Pinning them empty here keeps
+  // these tests about the code rather than about where they happen to run.
+  vi.stubEnv('CLOUDFLARE_ACCOUNT_ID', undefined);
+  vi.stubEnv('CLOUDFLARE_API_TOKEN', undefined);
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+});
 
 describe('resolveCloudflareConfig', () => {
   it('reads the Cloudflare binding', () => {
