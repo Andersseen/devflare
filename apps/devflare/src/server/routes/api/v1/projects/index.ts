@@ -1,14 +1,16 @@
 import { defineEventHandler, readBody, createError } from 'h3';
 import { getAppSession, requireAuth } from '../../../../lib/session';
 import { db } from '../../../../db';
+import { rowsOf, type ProjectRow } from '../../../../lib/project-rows';
 
 export default defineEventHandler(async (event) => {
   const session = await getAppSession(event);
 
   if (event.method === 'GET') {
     const user = requireAuth(session);
-    const projects =
-      await db.sql`SELECT * FROM projects WHERE userId = ${user.id} ORDER BY createdAt DESC`;
+    const projects = rowsOf<ProjectRow>(
+      await db.sql`SELECT * FROM projects WHERE userId = ${user.id} ORDER BY createdAt DESC`,
+    );
     return { projects };
   }
 
@@ -25,8 +27,10 @@ export default defineEventHandler(async (event) => {
 
     await db.sql`INSERT INTO projects (id, userId, name, repoUrl, createdAt) VALUES (${id}, ${user.id}, ${body.name}, ${body.repoUrl ?? null}, ${createdAt})`;
 
-    const project = await db.sql`SELECT * FROM projects WHERE id = ${id}`;
-    return { project: project[0] };
+    const project = rowsOf<ProjectRow>(
+      await db.sql`SELECT * FROM projects WHERE id = ${id}`,
+    )[0];
+    return { project };
   }
 
   throw createError({ statusCode: 405, statusMessage: 'Method Not Allowed' });

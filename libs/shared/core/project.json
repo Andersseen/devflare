@@ -7,6 +7,12 @@
   "targets": {
     "lint": {
       "executor": "@nx/eslint:lint"
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "options": {
+        "configFile": "libs/shared/core/vite.config.ts"
+      }
     }
   }
 }

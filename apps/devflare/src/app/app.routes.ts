@@ -23,6 +23,27 @@ export const appRoutes: Route[] = [
         loadComponent: () => import('./pages/projects.page'),
       },
       {
+        path: 'cloud',
+        canActivate: [authGuard],
+        loadComponent: () => import('./pages/cloud/(cloud).page'),
+      },
+      {
+        path: 'cloud/storage',
+        canActivate: [authGuard],
+        loadComponent: () => import('./pages/cloud/storage.page'),
+      },
+      {
+        // `:name` reaches the page as an input, via withComponentInputBinding().
+        path: 'cloud/workers/:name',
+        canActivate: [authGuard],
+        loadComponent: () => import('./pages/cloud/workers/[name].page'),
+      },
+      {
+        path: 'cloud/pages/:name',
+        canActivate: [authGuard],
+        loadComponent: () => import('./pages/cloud/pages/[name].page'),
+      },
+      {
         path: 'tools',
         loadComponent: () => import('./pages/tools/(tools).page'),
       },

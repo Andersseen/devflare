@@ -48,6 +48,15 @@ DEV_AUTH_REDIRECT_URI = "http://localhost:4200/api/auth/callback"
 # ADMIN_API_TOKEN on the dev-auth side. Without it the Identity tab stays hidden
 # and the proxy answers 503 — sign-in is unaffected either way.
 
+# Spec 005: the Cloud section reads this account through the Cloudflare API.
+# The account id is not a credential (it appears in every API URL); the token
+# that goes with it is, and lives in apps/devflare/.dev.vars locally or
+# `wrangler secret put CLOUDFLARE_API_TOKEN` for a deployed environment.
+# Scopes: Workers Scripts:Read, Cloudflare Pages:Edit, D1:Read,
+# Workers KV Storage:Read, Workers R2 Storage:Read.
+# Without the token the Cloud pages show a connect prompt instead of failing.
+CLOUDFLARE_ACCOUNT_ID = "c32a93ee83fe9b5d53c63fcc73b90bb9"
+
 [observability]
 enabled = true
 
@@ -71,6 +80,7 @@ migrations_dir = "src/server/db/migrations"
 DEV_AUTH_URL = "https://auth-devflare.andersseen.dev"
 DEV_AUTH_CLIENT_ID = "devflare"
 DEV_AUTH_REDIRECT_URI = "https://devflare.andersseen.dev/api/auth/callback"
+CLOUDFLARE_ACCOUNT_ID = "c32a93ee83fe9b5d53c63fcc73b90bb9"
 
 [env.production.observability]
 enabled = true

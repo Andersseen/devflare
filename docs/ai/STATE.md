@@ -8,15 +8,18 @@
 > to the last ~5 entries, newest first. Update the date. Facts only; no plans
 > you didn't verify.
 
-_Last updated: 2026-08-12_
+_Last updated: 2026-08-14_
 
 ## Branch & repo status
 
-- On `feature/oauth-client-registry`, **not pushed**. Eight commits on top of
-  `main` (`63f908c`). The owner does the push and the PR.
-- That branch carries two things: the imageryx registration (`0f79dce`) and
-  specs 001–004 implemented (`d655957`, `e3558a5`, `07138a0`, and the UI).
-- Nothing on it is deployed. `main` is still what production runs.
+- On `feature/005-cloudflare-account`, **not pushed**. Six commits on top of
+  `main` (`36399ff`). The owner does the push and the PR.
+- It carries spec 005 in five commits: the server client and read routes, the
+  `/cloud` overview, per-resource detail plus storage, the project↔resource link
+  with Pages deploy/rollback, and the fixes the first run against real data
+  exposed.
+- `feature/oauth-client-registry` (specs 001–004) is **merged** — PR #17.
+- Nothing on this branch is deployed. `main` is what production runs.
 
 ## 2026-08-10 — first real browser walkthrough of prod auth, and what it found
 
@@ -313,9 +316,21 @@ dev-auth's auth pages were migrated from inline HTML-in-TypeScript strings
   (`test@devflare.com` / `TestPass123`).
 - DevFlare's dashboard (`/`) now requires a session (`authGuard`), same as
   `/deploy`, `/projects`, `/settings`. `/tools/*` stays public.
-- Projects API (`GET/POST /api/v1/projects`, `/api/v1/projects/[id]`), auth-gated,
-  now backed by Cloudflare D1 — locally via miniflare state in `.wrangler/`.
-  Verified end to end in dev (insert/select/delete against the `DB` binding).
+- Projects API (`GET/POST /api/v1/projects`, `GET/PATCH/DELETE
+/api/v1/projects/[id]`), auth-gated, backed by Cloudflare D1 — locally via
+  miniflare state in `.wrangler/`. The `{ rows }` envelope bug that broke the
+  list and made single-project GET/DELETE always 404 is fixed (spec 005).
+- **Cloud section (spec 005, verified against the real account 2026-08-14).**
+  `/cloud`,
+  `/cloud/storage` and per-resource detail pages read the account through
+  `/api/v1/cloud/*`, which is admin-gated and holds `CLOUDFLARE_API_TOKEN`
+  server-side. With no token configured every page shows a connect prompt
+  rather than an error. With the token in `apps/devflare/.dev.vars` it lists 15
+  Workers, 10 Pages projects, 9 D1 databases, 2 KV namespaces and 7 R2 buckets,
+  with deployment history, Worker versions and working project links.
+  **Every Pages project on this account is a direct upload (`ad_hoc`), not
+  git-connected**, so Cloudflare has no source to rebuild and the Deploy button
+  never appears — correctly. Rollback is offered and has not been fired.
 
 ## Known gaps / not production-ready
 
@@ -335,13 +350,16 @@ dev-auth's auth pages were migrated from inline HTML-in-TypeScript strings
 - ng-primitives 0.110.2 logs `nativeElement.addEventListener is not a function`
   (from `NgpLabel`) on every SSR render of a page with a Volt form field. Noisy
   but non-fatal — the HTML still renders and e2e is green. Upstream issue.
-- **`db.sql` returns `{ rows, success }`, not an array**, and the projects routes
-  treat it as one: `projects/index.ts` returns `{projects: {rows: […]}}` (the
-  Angular `Projects` service reads `data.projects` as an array), and
-  `projects/[id].ts` checks `.length` on that object so GET/DELETE of a single
-  project always 404s. Pre-existing, unrelated to the provider work, and invisible
-  because `tsconfig.app.json` excludes `src/server/routes` — it cannot be
-  typechecked without Nitro's generated types.
+- **`db.sql` returns `{ rows, success }`, not an array.** Fixed for the projects
+  routes in spec 005 (`server/lib/project-rows.ts` reads the envelope in one
+  place, with tests), but the shape is still a trap for any new route. It stayed
+  invisible for as long as it did because `tsconfig.app.json` excludes
+  `src/server/routes` — that code cannot be typechecked without Nitro's
+  generated types, so `pnpm typecheck` never looks at it.
+- **A `server/lib/<x>.ts` cannot share a name with a `server/routes/**/<x>/`directory.**`lib/projects.ts`imported from`routes/api/v1/projects/\*`breaks
+the Nitro **dev** server for every route with`Could not resolve
+  "../../../../lib/projects"`, while `nx build`resolves it fine — so the
+failure only appears when the app is actually run. Hence`project-rows.ts`.
 - The deprecated `oidc-provider` plugin is **gone** (2026-08-09) — dev-auth runs
   on `@better-auth/oauth-provider`. What remains from it: the three
   `*_legacy_oidc` tables, kept rather than dropped so nothing was destroyed in
@@ -353,27 +371,38 @@ dev-auth's auth pages were migrated from inline HTML-in-TypeScript strings
 
 ## Next steps (owner's apparent intent — confirm before large work)
 
-1. **Push `feature/oauth-client-registry` and open the PR.** Before merging,
-   check `OAUTH_CLIENT_SECRETS` in production actually contains an `imageryx`
-   key — it could not be verified from a dev machine, and without it the client
-   is dropped at parse time and keeps returning `invalid_client`.
-2. **Set two Worker secrets before the Identity UI can do anything in
-   production**, neither of which this branch can set:
+1. **Create the Cloudflare API token — the Cloud section does nothing without
+   it.** At dash.cloudflare.com/profile/api-tokens, account permissions:
+   Workers Scripts (Read), Cloudflare Pages (Edit — Read is enough for
+   everything except deploy/rollback), D1 (Read), Workers KV Storage (Read),
+   Workers R2 Storage (Read). Then `CLOUDFLARE_API_TOKEN` into
+   `apps/devflare/.dev.vars` for dev and `wrangler secret put` for production.
+   `CLOUDFLARE_ACCOUNT_ID` is already in `wrangler.toml`. Nothing on `/cloud`
+   has ever run against real data, so treat the first load as the real test.
+2. **Push `feature/005-cloudflare-account` and open the PR.** Migration
+   `0002_project_cloudflare_link.sql` must be applied before the new code serves
+   traffic; CI applies migrations before deploying, so the deployed path is
+   covered. It has been applied `--local`.
+3. **Set two Worker secrets before the Identity UI can do anything in
+   production**, neither of which that branch could set:
    - `ADMIN_API_TOKEN` on dev-auth **and** the same value as
-     `DEV_AUTH_ADMIN_TOKEN` on DevFlare. Without it the tab stays hidden.
+     `DEV_AUTH_ADMIN_TOKEN` on DevFlare. Without it the Identity tab stays
+     hidden — and since spec 005 the whole Cloud section goes with it, because
+     `requireCloudAdmin` asks dev-auth who is an administrator rather than
+     keeping a second list. Both show "Identity service unavailable".
    - `SECRET_ENCRYPTION_KEY` on dev-auth (`openssl rand -base64 32`). Without
      it GitHub credentials keep coming from the config vars and the settings
      API refuses to store a secret rather than storing it in the clear.
-3. Migration `0005_provider_settings.sql` must be applied **before** the new
+4. Migration `0005_provider_settings.sql` must be applied **before** the new
    code serves traffic. CI applies migrations before deploying, so the deployed
    path is covered — but if it is ever run out of order the settings read fails
    and, by design, sign-ups close.
-4. Wire up a transactional email provider, then re-enable
+5. Wire up a transactional email provider, then re-enable
    `requireEmailVerification` / `sendOnSignUp`. Widening who may sign up no
    longer needs a deploy — it is the Access panel in Settings → Identity.
-5. Release `@andersseen/icon` with the `lock`/`user` fix, then bump `CDN.icon`
+6. Release `@andersseen/icon` with the `lock`/`user` fix, then bump `CDN.icon`
    in `apps/dev-auth/src/pages/layout.ts`.
-6. Two follow-ups this work surfaced but did not fix:
+7. Two follow-ups this work surfaced but did not fix:
    - `VoltInput` has no `label` input, so every `label="…"` in
      `settings.page.ts` renders nothing. The Profile tab's fields are unlabelled
      as a result.
@@ -383,6 +412,29 @@ dev-auth's auth pages were migrated from inline HTML-in-TypeScript strings
 
 ## Session log
 
+- **2026-08-13** — Built the Cloud section (spec 005) on
+  `feature/005-cloudflare-account`, four commits, one PR. DevFlare had never
+  called the account API: `projects` was a hand-typed table, `deployments` was
+  written by nobody, and `deploy.page.ts` faked its upload with a `setTimeout`.
+  Now `/api/v1/cloud/*` reads Workers, Pages, D1, KV and R2 with a token that
+  stays server-side, gated on being an administrator because that token sees
+  the whole account.
+  Three things only running the app revealed, none of which the build catches:
+  routing is a manual table so the four new pages were compiled and unreachable
+  until registered (AGENTS.md claimed file-based routing and was corrected); a
+  `server/lib/projects.ts` breaks the Nitro dev server for every route while
+  building fine, hence `project-rows.ts`; and the projects API was already
+  broken by the `{ rows }` envelope, so phase 4 had to fix the list before it
+  could link anything to it.
+  `@org/core` also got a `test` target — CONVENTIONS.md had asked for colocated
+  specs in a project that had no runner to execute them.
+  Verified against the real account on 2026-08-14 once the owner created the
+  token: 15 Workers, 10 Pages projects, 9 D1, 2 KV, 7 R2, deployment history and
+  a working project link. Three mapping bugs only real data could show — D1's
+  list endpoint reports `num_tables: 0` for everything, every Pages project here
+  is a direct upload rather than git-connected (so Deploy correctly never
+  appears), and wrangler-uploaded Worker versions carry no message, so the list
+  was leading with raw uuids. Rollback renders but has not been fired.
 - **2026-08-12** — Registered imageryx, then made the whole registry editable
   without a deploy (specs 001–004, all Done). Findings that mattered more than
   the code: imageryx was **not registered at all** — both its URIs returned
