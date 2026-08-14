@@ -43,6 +43,11 @@ export default defineEventHandler((event) =>
         repo: project.source?.config?.repo_name
           ? `${project.source.config.owner ?? ''}/${project.source.config.repo_name}`
           : null,
+        // Only a git-connected project has a branch Cloudflare can build from.
+        // A direct-upload project (CI running `wrangler pages deploy`) still
+        // records branch and commit on each deployment, so this is the only
+        // reliable signal — and it is what gates the Deploy button.
+        gitConnected: Boolean(project.source?.type),
         latestDeployment: project.latest_deployment
           ? toDeploymentSummary(project.latest_deployment)
           : null,

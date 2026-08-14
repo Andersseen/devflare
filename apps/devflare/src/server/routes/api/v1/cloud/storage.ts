@@ -50,7 +50,11 @@ export default defineEventHandler((event) =>
           name: database.name,
           createdAt: database.created_at ?? null,
           sizeBytes: database.file_size ?? null,
-          tables: database.num_tables ?? null,
+          // The list endpoint reports `num_tables: 0` for every database — it
+          // does not count them, it just sends the zero value. Reported as
+          // "unknown" so the UI omits it rather than claiming every database is
+          // empty. (`file_size` on the same response is real and varies.)
+          tables: database.num_tables ? database.num_tables : null,
         })),
       },
       kv: {

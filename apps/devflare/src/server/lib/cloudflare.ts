@@ -302,6 +302,13 @@ export interface DeploymentSummary {
   url: string;
   environment: string;
   createdOn: string;
+  /**
+   * `github:push`, `ad_hoc` (a direct upload, e.g. `wrangler pages deploy` from
+   * CI), … Worth surfacing because a direct-upload project carries branch and
+   * commit metadata exactly like a git-connected one, so the history alone
+   * cannot tell you whether Cloudflare could rebuild it.
+   */
+  trigger: string | null;
   /** Of the latest stage: `success`, `failure`, `active`, `canceled`, … */
   status: string;
   /** Which stage that status belongs to: `queued`, `build`, `deploy`, … */
@@ -322,6 +329,7 @@ export function toDeploymentSummary(
     url: deployment.url,
     environment: deployment.environment,
     createdOn: deployment.created_on,
+    trigger: deployment.deployment_trigger?.type ?? null,
     status: deployment.latest_stage?.status ?? 'unknown',
     stage: deployment.latest_stage?.name ?? 'unknown',
     branch: trigger?.branch ?? null,

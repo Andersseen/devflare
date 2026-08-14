@@ -2,10 +2,10 @@
 
 | Field   | Value                            |
 | ------- | -------------------------------- |
-| Status  | Approved                         |
+| Status  | Done                             |
 | Branch  | `feature/005-cloudflare-account` |
 | Created | 2026-08-13                       |
-| Updated | 2026-08-13                       |
+| Updated | 2026-08-14                       |
 
 ## 1. Summary
 
@@ -114,7 +114,8 @@ mirroring `projects.service.ts`. Owns the typed shapes and the pure presentation
 helpers (deployment stage → badge variant, relative "2h ago"), which is what the
 colocated `.spec.ts` tests.
 
-Pages (AnalogJS file-based, `export default class`, signals, thin):
+Pages (`export default class`, signals, thin). Routing is **not** file-based
+despite the naming — each route is registered in `app/app.routes.ts`:
 
 | File                                     | Route                  |
 | ---------------------------------------- | ---------------------- |
@@ -190,9 +191,9 @@ Additive and replayable-safe; existing rows keep working with both columns null.
 - [x] **Phase 4 — link + actions.** Migration `0002`, projects API and page carry
       the link, Pages re-deploy and rollback with confirmation.
 - [x] 5. Quality gates: `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`
-- [ ] 6. Manual verification (section 6) — **blocked on the owner creating the
-     API token**; steps 1–3 and 6 cannot run without it. Everything reachable
-     without a token was verified (section 8).
+- [x] 6. Manual verification (section 6) — done against the real account on
+     2026-08-14, except the re-deploy step, which this account cannot exercise:
+     no git-connected Pages project exists. See section 8.
 - [x] 7. Update `docs/ai/STATE.md` + the index in `docs/specs/README.md`
 
 ## 8. Verification results
@@ -214,12 +215,41 @@ no test target at all before this branch, and 6 in `dev-auth`, untouched.
 | Cloud + Storage in the sidebar                                           | present in the served HTML                                 |
 | `wrangler d1 migrations apply --local`                                   | applied, 3 commands OK                                     |
 
-**Not verified** — anything that needs a real `CLOUDFLARE_API_TOKEN`: the
-listings, the storage inventory, and the deploy/rollback calls. The last one is
-the least certain of the set: `POST /pages/projects/{name}/deployments` is sent
-with no body, which is what triggers a production-branch build for a
-git-connected project; if the API turns out to want multipart, the button will
-surface Cloudflare's own error and the fix is local to `deploy.post.ts`.
+**Manual, against the real account** (token created 2026-08-14, browser
+walkthrough as `test@devflare.com`, who is in the local `ADMIN_EMAILS`):
+
+| Check                         | Result                                                                        |
+| ----------------------------- | ----------------------------------------------------------------------------- |
+| `/cloud`                      | 15 Workers and 10 Pages projects, custom domains resolved per Worker          |
+| Pages detail (`imageryx-web`) | 20 deployments with commit message, branch, short SHA, preview URL, "current" |
+| Worker detail (`devflare`)    | versions v13→v4, source `wrangler`, author, dates                             |
+| `/cloud/storage`              | 9 D1, 2 KV, 7 R2, sizes and ids                                               |
+| Link a project                | PATCH persisted (`cfType: pages`, `cfName: imageryx-web`), row links through  |
+| Projects list                 | now a real array — the `{ rows }` fix confirmed against D1                    |
+
+Three mapping bugs the real data exposed, all fixed in the same branch:
+
+1. D1's **list** endpoint returns `num_tables: 0` for every database — it does
+   not count them. The UI was captioning every database "0 tables". Now reported
+   as unknown and omitted. (`file_size` on the same response is real.)
+2. `repo` was null on every Pages project, so the Deploy button never appeared
+   and there was no way to tell whether that was correct. It was: **all ten
+   projects are `ad_hoc` direct uploads**, not git-connected — CI runs
+   `wrangler pages deploy`. Cloudflare holds no source to rebuild. The project
+   now carries `gitConnected` explicitly, the button keys off it, and the page
+   says "Direct upload — deploys come from CI" instead of showing nothing.
+   `DeploymentSummary.trigger` was added for the same reason: a direct-upload
+   deployment records branch and commit exactly like a git one, so the history
+   alone cannot tell them apart.
+3. Worker versions from `wrangler` carry no message or tag, so the list led with
+   a raw uuid. Now "Version 13", with the short id demoted to metadata.
+
+**Still not verified** — `deploy.post.ts`. It cannot be exercised on this
+account at all: it needs a git-connected Pages project and there are none. The
+button is correctly hidden everywhere, so the code path is unreachable rather
+than broken. `rollback.post.ts` is reachable and its button renders on every
+non-current successful production deployment, but firing it changes what the
+public sees on a live site, so it was left for the owner.
 
 ## 9. Log / Deviations
 

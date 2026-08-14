@@ -24,6 +24,7 @@ export default defineEventHandler((event) =>
         repo: project.source?.config?.repo_name
           ? `${project.source.config.owner ?? ''}/${project.source.config.repo_name}`
           : null,
+        gitConnected: Boolean(project.source?.type),
         latestDeployment: project.latest_deployment
           ? toDeploymentSummary(project.latest_deployment)
           : null,

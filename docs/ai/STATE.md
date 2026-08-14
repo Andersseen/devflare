@@ -8,15 +8,16 @@
 > to the last ~5 entries, newest first. Update the date. Facts only; no plans
 > you didn't verify.
 
-_Last updated: 2026-08-13_
+_Last updated: 2026-08-14_
 
 ## Branch & repo status
 
-- On `feature/005-cloudflare-account`, **not pushed**. Five commits on top of
+- On `feature/005-cloudflare-account`, **not pushed**. Six commits on top of
   `main` (`36399ff`). The owner does the push and the PR.
-- It carries spec 005 in four commits: the server client and read routes, the
-  `/cloud` overview, per-resource detail plus storage, and the project↔resource
-  link with Pages deploy/rollback.
+- It carries spec 005 in five commits: the server client and read routes, the
+  `/cloud` overview, per-resource detail plus storage, the project↔resource link
+  with Pages deploy/rollback, and the fixes the first run against real data
+  exposed.
 - `feature/oauth-client-registry` (specs 001–004) is **merged** — PR #17.
 - Nothing on this branch is deployed. `main` is what production runs.
 
@@ -319,14 +320,17 @@ dev-auth's auth pages were migrated from inline HTML-in-TypeScript strings
 /api/v1/projects/[id]`), auth-gated, backed by Cloudflare D1 — locally via
   miniflare state in `.wrangler/`. The `{ rows }` envelope bug that broke the
   list and made single-project GET/DELETE always 404 is fixed (spec 005).
-- **Cloud section (spec 005, unverified against a real token).** `/cloud`,
+- **Cloud section (spec 005, verified against the real account 2026-08-14).**
+  `/cloud`,
   `/cloud/storage` and per-resource detail pages read the account through
   `/api/v1/cloud/*`, which is admin-gated and holds `CLOUDFLARE_API_TOKEN`
   server-side. With no token configured every page shows a connect prompt
-  rather than an error — which is the state it is in today, because the token
-  has not been created yet. Routing, SSR, the 401s and the signed-out status
-  answer were verified in dev; the listings and the Pages deploy/rollback calls
-  were not, and cannot be until the token exists.
+  rather than an error. With the token in `apps/devflare/.dev.vars` it lists 15
+  Workers, 10 Pages projects, 9 D1 databases, 2 KV namespaces and 7 R2 buckets,
+  with deployment history, Worker versions and working project links.
+  **Every Pages project on this account is a direct upload (`ad_hoc`), not
+  git-connected**, so Cloudflare has no source to rebuild and the Deploy button
+  never appears — correctly. Rollback is offered and has not been fired.
 
 ## Known gaps / not production-ready
 
@@ -424,9 +428,13 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
   could link anything to it.
   `@org/core` also got a `test` target — CONVENTIONS.md had asked for colocated
   specs in a project that had no runner to execute them.
-  **Nothing here has run against a real Cloudflare token.** Every page shows the
-  connect prompt until the owner creates one; deploy/rollback in particular have
-  never been exercised.
+  Verified against the real account on 2026-08-14 once the owner created the
+  token: 15 Workers, 10 Pages projects, 9 D1, 2 KV, 7 R2, deployment history and
+  a working project link. Three mapping bugs only real data could show — D1's
+  list endpoint reports `num_tables: 0` for everything, every Pages project here
+  is a direct upload rather than git-connected (so Deploy correctly never
+  appears), and wrangler-uploaded Worker versions carry no message, so the list
+  was leading with raw uuids. Rollback renders but has not been fired.
 - **2026-08-12** — Registered imageryx, then made the whole registry editable
   without a deploy (specs 001–004, all Done). Findings that mattered more than
   the code: imageryx was **not registered at all** — both its URIs returned

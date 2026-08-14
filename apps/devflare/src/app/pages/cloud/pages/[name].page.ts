@@ -115,6 +115,13 @@ import { DeploymentStatus } from '../deployment-status';
                 Deploy
               </volt-button>
             }
+          } @else if (detail()) {
+            <!-- Saying nothing here reads as a missing feature. Cloudflare
+                 genuinely cannot rebuild a direct-upload project: it holds no
+                 source to build from, only the artefacts CI pushed. -->
+            <span class="text-sm text-muted-foreground">
+              Direct upload — deploys come from CI
+            </span>
           }
           <volt-button
             variant="outline"
@@ -280,7 +287,7 @@ export default class CloudPagesDetailPage {
 
   /** Only a git-connected project has a branch Cloudflare can build again. */
   protected readonly canDeploy = computed(
-    () => !!this.detail()?.project.repo && !this.loading(),
+    () => !!this.detail()?.project.gitConnected && !this.loading(),
   );
 
   protected readonly productionBranch = computed(

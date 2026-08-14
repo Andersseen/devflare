@@ -110,21 +110,24 @@ import {
                     class="py-3 flex items-start justify-between gap-3 text-sm"
                   >
                     <div class="min-w-0">
+                      <!-- A wrangler upload carries neither message nor tag, so
+                           most versions have only a number. Leading with the
+                           uuid there turns the list into a wall of hex. -->
                       <p class="font-medium truncate">
-                        {{ version.message ?? version.tag ?? version.id }}
+                        {{ versionLabel(version) }}
                       </p>
                       <div
                         class="flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground mt-0.5"
                       >
-                        @if (version.number !== null) {
-                          <span>v{{ version.number }}</span>
-                        }
                         @if (version.source) {
                           <span>{{ version.source }}</span>
                         }
                         @if (version.author) {
                           <span>{{ version.author }}</span>
                         }
+                        <span class="font-mono">{{
+                          version.id.slice(0, 8)
+                        }}</span>
                       </div>
                     </div>
                     <span class="text-muted-foreground whitespace-nowrap">
@@ -151,6 +154,16 @@ export default class CloudWorkerDetailPage {
   error = signal('');
 
   protected readonly relative = formatRelative;
+
+  protected versionLabel(version: {
+    message: string | null;
+    tag: string | null;
+    number: number | null;
+  }): string {
+    if (version.message) return version.message;
+    if (version.tag) return version.tag;
+    return version.number === null ? 'Version' : `Version ${version.number}`;
+  }
 
   constructor() {
     // Browser-only: the service fetches a relative URL, which throws

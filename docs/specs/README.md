@@ -34,12 +34,12 @@ the code is the implementation of it.
 
 ## Index
 
-| #   | Spec                                                           | Status      |
-| --- | -------------------------------------------------------------- | ----------- |
-| 001 | [Hybrid OAuth client registry](001-hybrid-client-registry.md)  | Done        |
-| 002 | [OAuth client admin API](002-client-admin-api.md)              | Done        |
-| 003 | [Provider settings: GitHub + access](003-provider-settings.md) | Done        |
-| 004 | [DevFlare admin UI for dev-auth](004-devflare-admin-ui.md)     | Done        |
-| 005 | [Cloudflare account](005-cloudflare-account.md)                | In progress |
+| #   | Spec                                                           | Status |
+| --- | -------------------------------------------------------------- | ------ |
+| 001 | [Hybrid OAuth client registry](001-hybrid-client-registry.md)  | Done   |
+| 002 | [OAuth client admin API](002-client-admin-api.md)              | Done   |
+| 003 | [Provider settings: GitHub + access](003-provider-settings.md) | Done   |
+| 004 | [DevFlare admin UI for dev-auth](004-devflare-admin-ui.md)     | Done   |
+| 005 | [Cloudflare account](005-cloudflare-account.md)                | Done   |
 
 (Keep this table updated — it's how agents discover active work.)

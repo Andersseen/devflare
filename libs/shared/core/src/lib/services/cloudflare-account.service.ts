@@ -35,6 +35,8 @@ export interface CloudDeployment {
   url: string;
   environment: string;
   createdOn: string;
+  /** `github:push`, `ad_hoc` (direct upload), … */
+  trigger: string | null;
   status: string;
   stage: string;
   branch: string | null;
@@ -49,6 +51,12 @@ export interface CloudPagesProject {
   productionBranch: string;
   createdOn: string;
   repo: string | null;
+  /**
+   * True only when Cloudflare builds this project from a connected repository.
+   * A direct-upload project records branch and commit on every deployment, so
+   * the history cannot be used to infer this.
+   */
+  gitConnected: boolean;
   latestDeployment: CloudDeployment | null;
 }
 
