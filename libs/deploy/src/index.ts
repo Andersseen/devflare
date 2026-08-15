@@ -35,6 +35,10 @@ export {
   type BucketLimits,
 } from './lib/bucket';
 
+export { readBase64, toDeployFiles } from './lib/browser-files';
+
+export { createHttpTransport } from './lib/http-transport';
+
 export {
   runDeploy,
   type DeployFile,

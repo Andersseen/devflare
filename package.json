@@ -69,7 +69,6 @@
     "@noble/hashes": "^2.3.0",
     "@sentry/angular": "^10.53.1",
     "@voltui/components": "^0.5.0",
-    "@webcontainer/api": "^1.6.4",
     "better-auth": "^1.6.26",
     "browser-image-compression": "^2.0.2",
     "colorthief": "^2.6.0",
