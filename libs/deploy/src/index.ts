@@ -34,3 +34,15 @@ export {
   MAX_BUCKET_FILES,
   type BucketLimits,
 } from './lib/bucket';
+
+export {
+  runDeploy,
+  type DeployFile,
+  type DeploymentResult,
+  type DeployPhase,
+  type DeployProgress,
+  type DeployTransport,
+  type PublishRequest,
+  type RunDeployOptions,
+  type UploadAsset,
+} from './lib/deploy-client';
