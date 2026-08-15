@@ -8,18 +8,18 @@
 > to the last ~5 entries, newest first. Update the date. Facts only; no plans
 > you didn't verify.
 
-_Last updated: 2026-08-14_
+_Last updated: 2026-08-15_
 
 ## Branch & repo status
 
-- On `feature/005-cloudflare-account`, **not pushed**. Six commits on top of
-  `main` (`36399ff`). The owner does the push and the PR.
-- It carries spec 005 in five commits: the server client and read routes, the
-  `/cloud` overview, per-resource detail plus storage, the project↔resource link
-  with Pages deploy/rollback, and the fixes the first run against real data
-  exposed.
-- `feature/oauth-client-registry` (specs 001–004) is **merged** — PR #17.
-- Nothing on this branch is deployed. `main` is what production runs.
+- On `feature/006-pages-direct-upload`. Spec 006 is approved; implementation in
+  progress. See [../specs/006-pages-direct-upload.md](../specs/006-pages-direct-upload.md).
+- `main` is `8fda3c0` and **is deployed**. Specs 001–005 are all merged and live:
+  001–004 as PR #17, 005 as PR #18, plus PR #19 for the CI fix below.
+- The production deploy of PR #18 **failed**; PR #19 fixed it and production has
+  been current since 2026-08-14T07:56Z. Both deploy workflows had been handing
+  Cloudflare credentials to the test job, which is what broke it.
+- Nothing is in flight besides 006.
 
 ## 2026-08-10 — first real browser walkthrough of prod auth, and what it found
 
@@ -371,20 +371,19 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
 
 ## Next steps (owner's apparent intent — confirm before large work)
 
-1. **Create the Cloudflare API token — the Cloud section does nothing without
-   it.** At dash.cloudflare.com/profile/api-tokens, account permissions:
-   Workers Scripts (Read), Cloudflare Pages (Edit — Read is enough for
-   everything except deploy/rollback), D1 (Read), Workers KV Storage (Read),
-   Workers R2 Storage (Read). Then `CLOUDFLARE_API_TOKEN` into
-   `apps/devflare/.dev.vars` for dev and `wrangler secret put` for production.
-   `CLOUDFLARE_ACCOUNT_ID` is already in `wrangler.toml`. Nothing on `/cloud`
-   has ever run against real data, so treat the first load as the real test.
-2. **Push `feature/005-cloudflare-account` and open the PR.** Migration
-   `0002_project_cloudflare_link.sql` must be applied before the new code serves
-   traffic; CI applies migrations before deploying, so the deployed path is
-   covered. It has been applied `--local`.
-3. **Set two Worker secrets before the Identity UI can do anything in
-   production**, neither of which that branch could set:
+0. **In progress: spec 006** — real deploy via Pages direct upload, replacing the
+   WebContainer mock in `deploy.page.ts` and finally writing the `deployments`
+   table. Approved 2026-08-15.
+1. **Confirm `CLOUDFLARE_API_TOKEN` is set on the production Worker.** It is in
+   `apps/devflare/.dev.vars` and the Cloud section was verified against the real
+   account locally on 2026-08-14, but whether `wrangler secret put` was ever run
+   for production is **unverified** — check with `wrangler secret list --env
+production` before assuming `/cloud` works on the live site. Token scopes:
+   Workers Scripts (Read), Cloudflare Pages (Edit), D1 (Read), Workers KV
+   Storage (Read), Workers R2 Storage (Read). `CLOUDFLARE_ACCOUNT_ID` is already
+   in `wrangler.toml`.
+2. **Set two Worker secrets before the Identity UI can do anything in
+   production**, neither of which the spec 001–004 branch could set:
    - `ADMIN_API_TOKEN` on dev-auth **and** the same value as
      `DEV_AUTH_ADMIN_TOKEN` on DevFlare. Without it the Identity tab stays
      hidden — and since spec 005 the whole Cloud section goes with it, because
@@ -393,16 +392,12 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
    - `SECRET_ENCRYPTION_KEY` on dev-auth (`openssl rand -base64 32`). Without
      it GitHub credentials keep coming from the config vars and the settings
      API refuses to store a secret rather than storing it in the clear.
-4. Migration `0005_provider_settings.sql` must be applied **before** the new
-   code serves traffic. CI applies migrations before deploying, so the deployed
-   path is covered — but if it is ever run out of order the settings read fails
-   and, by design, sign-ups close.
-5. Wire up a transactional email provider, then re-enable
+3. Wire up a transactional email provider, then re-enable
    `requireEmailVerification` / `sendOnSignUp`. Widening who may sign up no
    longer needs a deploy — it is the Access panel in Settings → Identity.
-6. Release `@andersseen/icon` with the `lock`/`user` fix, then bump `CDN.icon`
+4. Release `@andersseen/icon` with the `lock`/`user` fix, then bump `CDN.icon`
    in `apps/dev-auth/src/pages/layout.ts`.
-7. Two follow-ups this work surfaced but did not fix:
+5. Two follow-ups this work surfaced but did not fix:
    - `VoltInput` has no `label` input, so every `label="…"` in
      `settings.page.ts` renders nothing. The Profile tab's fields are unlabelled
      as a result.
