@@ -19,7 +19,12 @@ import {
   VoltError,
   VoltBadge,
 } from '@voltui/components';
-import { CloudflareAccount, Projects, type Project } from '@org/core';
+import {
+  CloudflareAccount,
+  Projects,
+  type Deployment,
+  type Project,
+} from '@org/core';
 
 @Component({
   selector: 'app-projects-page',
@@ -111,85 +116,131 @@ import { CloudflareAccount, Projects, type Project } from '@org/core';
         <div class="grid grid-cols-1 gap-4">
           @for (project of projects(); track project.id) {
             <volt-card>
-              <volt-card-content
-                class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-4"
-              >
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-3">
-                    <div
-                      class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0"
-                    >
-                      <lucide-icon
-                        name="folder-open"
-                        class="w-5 h-5 text-primary"
-                      />
-                    </div>
-                    <div>
-                      <h3 class="font-semibold text-lg truncate">
-                        {{ project.name }}
-                      </h3>
-                      @if (project.repoUrl) {
-                        <a
-                          [href]="project.repoUrl"
-                          target="_blank"
-                          class="text-sm text-muted-foreground hover:text-primary hover:underline truncate block max-w-md"
-                        >
-                          {{ project.repoUrl }}
-                        </a>
-                      }
+              <volt-card-content class="py-4 space-y-3">
+                <div
+                  class="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                >
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-3">
+                      <div
+                        class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0"
+                      >
+                        <lucide-icon
+                          name="folder-open"
+                          class="w-5 h-5 text-primary"
+                        />
+                      </div>
+                      <div>
+                        <h3 class="font-semibold text-lg truncate">
+                          {{ project.name }}
+                        </h3>
+                        @if (project.repoUrl) {
+                          <a
+                            [href]="project.repoUrl"
+                            target="_blank"
+                            class="text-sm text-muted-foreground hover:text-primary hover:underline truncate block max-w-md"
+                          >
+                            {{ project.repoUrl }}
+                          </a>
+                        }
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div class="flex items-center gap-3 shrink-0">
-                  <!-- Spec 005: what this project actually deploys to.
+                  <div class="flex items-center gap-3 shrink-0">
+                    <!-- Spec 005: what this project actually deploys to.
                        Only offered when the Cloudflare account is readable —
                        otherwise there is nothing to pick from. -->
-                  @if (project.cfType && project.cfName) {
-                    <a
-                      [routerLink]="[
-                        project.cfType === 'pages'
-                          ? '/cloud/pages'
-                          : '/cloud/workers',
-                        project.cfName,
-                      ]"
-                      class="text-sm text-muted-foreground hover:text-primary hover:underline whitespace-nowrap"
-                    >
-                      <lucide-icon name="cloud" class="w-3.5 h-3.5 inline" />
-                      {{ project.cfName }}
-                    </a>
+                    @if (project.cfType && project.cfName) {
+                      <a
+                        [routerLink]="[
+                          project.cfType === 'pages'
+                            ? '/cloud/pages'
+                            : '/cloud/workers',
+                          project.cfName,
+                        ]"
+                        class="text-sm text-muted-foreground hover:text-primary hover:underline whitespace-nowrap"
+                      >
+                        <lucide-icon name="cloud" class="w-3.5 h-3.5 inline" />
+                        {{ project.cfName }}
+                      </a>
+                      <volt-button
+                        size="sm"
+                        variant="outline"
+                        (click)="onUnlink(project)"
+                      >
+                        Unlink
+                      </volt-button>
+                    } @else if (linkOptions().length) {
+                      <select
+                        class="h-9 rounded-md border border-input bg-background px-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        [disabled]="linking() === project.id"
+                        (change)="onLink(project, $event)"
+                      >
+                        <option value="">Link to…</option>
+                        @for (option of linkOptions(); track option.value) {
+                          <option [value]="option.value">
+                            {{ option.label }}
+                          </option>
+                        }
+                      </select>
+                    }
+                    <volt-badge variant="secondary">{{
+                      formatDate(project.createdAt)
+                    }}</volt-badge>
                     <volt-button
                       size="sm"
-                      variant="outline"
-                      (click)="onUnlink(project)"
+                      variant="destructive"
+                      (click)="onDelete(project.id)"
                     >
-                      Unlink
+                      <lucide-icon name="x" class="w-4 h-4 mr-1" />
+                      Delete
                     </volt-button>
-                  } @else if (linkOptions().length) {
-                    <select
-                      class="h-9 rounded-md border border-input bg-background px-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      [disabled]="linking() === project.id"
-                      (change)="onLink(project, $event)"
-                    >
-                      <option value="">Link to…</option>
-                      @for (option of linkOptions(); track option.value) {
-                        <option [value]="option.value">
-                          {{ option.label }}
-                        </option>
-                      }
-                    </select>
-                  }
-                  <volt-badge variant="secondary">{{
-                    formatDate(project.createdAt)
-                  }}</volt-badge>
-                  <volt-button
-                    size="sm"
-                    variant="destructive"
-                    (click)="onDelete(project.id)"
-                  >
-                    <lucide-icon name="x" class="w-4 h-4 mr-1" />
-                    Delete
-                  </volt-button>
+                  </div>
                 </div>
+
+                <!-- Spec 006: what DevFlare itself has deployed here. Only what
+                     went out through this app, which is what distinguishes it
+                     from /cloud — that lists everything, from any source. -->
+                @if (deploymentsOf(project.id); as history) {
+                  @if (history.length) {
+                    <div class="border-t pt-3 space-y-1.5">
+                      <p class="text-xs font-medium text-muted-foreground">
+                        Deployed from DevFlare
+                      </p>
+                      @for (deployment of history; track deployment.id) {
+                        <div class="flex items-center gap-2 text-sm">
+                          <span
+                            class="w-1.5 h-1.5 rounded-full shrink-0"
+                            [class]="
+                              deployment.status === 'success'
+                                ? 'bg-primary'
+                                : 'bg-muted-foreground'
+                            "
+                          ></span>
+                          @if (deployment.previewUrl) {
+                            <a
+                              [href]="deployment.previewUrl"
+                              target="_blank"
+                              rel="noreferrer"
+                              class="text-muted-foreground hover:text-primary hover:underline truncate"
+                            >
+                              {{ deployment.previewUrl }}
+                            </a>
+                          } @else {
+                            <span class="text-muted-foreground truncate">
+                              {{ deployment.id }}
+                            </span>
+                          }
+                          <span
+                            class="text-muted-foreground/70 shrink-0 ml-auto"
+                          >
+                            {{ formatDate(deployment.createdAt) }}
+                          </span>
+                        </div>
+                      }
+                    </div>
+                  }
+                }
               </volt-card-content>
             </volt-card>
           }
@@ -232,6 +283,16 @@ export default class ProjectsPage {
   createError = signal('');
   /** Id of the project whose link is being saved, if any. */
   linking = signal('');
+
+  /**
+   * Deployment history per project id. One signal rather than one per card
+   * keeps the fetch fan-out in `loadProjects` and the template a pure read.
+   */
+  deployments = signal<Record<string, Deployment[]>>({});
+
+  deploymentsOf(projectId: string): Deployment[] {
+    return this.deployments()[projectId] ?? [];
+  }
 
   /**
    * Everything on the account that a project could point at. Empty when the
@@ -306,11 +367,34 @@ export default class ProjectsPage {
     try {
       const list = await this.#projectsService.getProjects();
       this.projects.set(list);
+      void this.loadDeployments(list);
     } catch (err: unknown) {
       console.error('Failed to load projects', err);
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  /**
+   * Best-effort and deliberately not awaited by `loadProjects`: history is an
+   * extra, so a project list must not wait on it or fail with it. A project
+   * that has never been deployed from here simply has none.
+   */
+  private async loadDeployments(list: Project[]) {
+    const entries = await Promise.all(
+      list.map(async (project) => {
+        try {
+          return [
+            project.id,
+            await this.#projectsService.getDeployments(project.id),
+          ] as const;
+        } catch {
+          return [project.id, []] as const;
+        }
+      }),
+    );
+
+    this.deployments.set(Object.fromEntries(entries));
   }
 
   async onCreate(event: Event) {
