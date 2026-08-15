@@ -12,7 +12,7 @@
  * ./oidc.ts and ./devauth-admin.ts).
  */
 
-const API_BASE = 'https://api.cloudflare.com/client/v4';
+export const API_BASE = 'https://api.cloudflare.com/client/v4';
 
 /** How long a GET is served from memory before going back to the API. */
 const CACHE_TTL_MS = 60_000;
@@ -132,40 +132,40 @@ export interface CfRequestInit {
   refresh?: boolean;
 }
 
+export interface CfRawRequestInit {
+  method?: string;
+  headers?: Record<string, string>;
+  /** Passed to `fetch` untouched — a JSON string, or a `FormData`. */
+  body?: BodyInit;
+  timeoutMs?: number;
+}
+
 /**
- * Calls one account-scoped endpoint. `path` is appended to `/accounts/{id}` and
- * is always written by this server, never taken from a browser, so a caller
- * cannot steer it at another account.
+ * One call to the v4 API with the envelope unwrapped and the error semantics
+ * this server depends on: a refusal upstream arrives as a refusal, with its own
+ * status, rather than as a 500 or as a silently empty result.
+ *
+ * Lower-level than `cfFetch` because two things the Pages direct upload needs
+ * cannot be expressed through it — `/pages/assets/*` is not account-scoped and
+ * authenticates with a per-project JWT rather than the account token, and
+ * creating a deployment is `multipart/form-data`. Sharing this instead of
+ * hand-rolling a second fetch is what keeps those paths from growing their own,
+ * subtly different, idea of what a failure looks like.
  */
-export async function cfFetch<T>(
-  config: CloudflareConfig,
-  path: `/${string}`,
-  init: CfRequestInit = {},
+export async function cfRequest<T>(
+  url: string,
+  init: CfRawRequestInit = {},
 ): Promise<T> {
-  const method = init.method ?? 'GET';
-  const url = `${API_BASE}/accounts/${config.accountId}${path}`;
-  const cacheKey = `${config.accountId}${path}`;
-
-  if (method === 'GET' && !init.refresh) {
-    const hit = readCache(cacheKey);
-    if (hit !== undefined) return hit as T;
-  }
-
   let response: Response;
   try {
     response = await fetch(url, {
-      method,
-      headers: {
-        Authorization: `Bearer ${config.token}`,
-        ...(init.body === undefined
-          ? {}
-          : { 'Content-Type': 'application/json' }),
-      },
-      body: init.body === undefined ? undefined : JSON.stringify(init.body),
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      method: init.method ?? 'GET',
+      headers: init.headers,
+      body: init.body,
+      signal: AbortSignal.timeout(init.timeoutMs ?? REQUEST_TIMEOUT_MS),
     });
   } catch {
-    // Never include the URL or headers here — the token must not reach a log.
+    // Never include the URL or headers here — no credential may reach a log.
     throw new CloudflareApiError('Could not reach the Cloudflare API', 504);
   }
 
@@ -190,10 +190,43 @@ export async function cfFetch<T>(
     );
   }
 
-  if (method === 'GET') writeCache(cacheKey, payload.result);
+  return payload.result;
+}
+
+/**
+ * Calls one account-scoped endpoint. `path` is appended to `/accounts/{id}` and
+ * is always written by this server, never taken from a browser, so a caller
+ * cannot steer it at another account.
+ */
+export async function cfFetch<T>(
+  config: CloudflareConfig,
+  path: `/${string}`,
+  init: CfRequestInit = {},
+): Promise<T> {
+  const method = init.method ?? 'GET';
+  const url = `${API_BASE}/accounts/${config.accountId}${path}`;
+  const cacheKey = `${config.accountId}${path}`;
+
+  if (method === 'GET' && !init.refresh) {
+    const hit = readCache(cacheKey);
+    if (hit !== undefined) return hit as T;
+  }
+
+  const result = await cfRequest<T>(url, {
+    method,
+    headers: {
+      Authorization: `Bearer ${config.token}`,
+      ...(init.body === undefined
+        ? {}
+        : { 'Content-Type': 'application/json' }),
+    },
+    body: init.body === undefined ? undefined : JSON.stringify(init.body),
+  });
+
+  if (method === 'GET') writeCache(cacheKey, result);
   else clearCloudflareCache();
 
-  return payload.result;
+  return result;
 }
 
 function safeParse<T>(text: string): T | null {
