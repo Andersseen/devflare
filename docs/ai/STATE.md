@@ -12,8 +12,10 @@ _Last updated: 2026-08-15_
 
 ## Branch & repo status
 
-- On `feature/006-pages-direct-upload`. Spec 006 is approved; implementation in
-  progress. See [../specs/006-pages-direct-upload.md](../specs/006-pages-direct-upload.md).
+- On `feature/006-pages-direct-upload`, **not pushed**. Spec 006 is code-complete
+  (tasks 1–8, 10 of 10); only the manual verification against the real account is
+  outstanding, and it needs a scratch Pages project plus an admin session.
+  See [../specs/006-pages-direct-upload.md](../specs/006-pages-direct-upload.md).
 - `main` is `8fda3c0` and **is deployed**. Specs 001–005 are all merged and live:
   001–004 as PR #17, 005 as PR #18, plus PR #19 for the CI fix below.
 - The production deploy of PR #18 **failed**; PR #19 fixed it and production has
@@ -406,6 +408,37 @@ production` before assuming `/cloud` works on the live site. Token scopes:
      admin surfaces with different auth models is worth collapsing.
 
 ## Session log
+
+- **2026-08-15** — Built spec 006 on `feature/006-pages-direct-upload`: `/deploy`
+  now uploads a built folder straight to a Pages project through the direct
+  upload API, and the `deployments` table finally has a writer and a reader.
+  The load-bearing discovery came from reading `wrangler`'s bundled source in
+  `node_modules` rather than any documentation: the hash Pages identifies an
+  asset by is **BLAKE3 over the base64 text of the file concatenated with its
+  extension**, truncated to 32 hex chars. WebCrypto cannot do BLAKE3, and no
+  public API reference describes the construction. Getting it wrong fails
+  silently and expensively — `check-missing` would report every asset as absent,
+  so deploys keep succeeding while re-uploading the whole site forever. Pinned
+  with six vectors generated from `blake3-wasm@2.1.5`, the package wrangler
+  itself bundles, then checked again over all 37 files of a real `dist/`: zero
+  divergence across 9 extension types including `.wasm`, `.ico` and
+  extensionless files.
+  Hashing and base64 run in the browser because a Worker is billed on CPU time,
+  not wall time — waiting on `fetch` is free, but encoding 25 MiB would blow the
+  free plan's 10 ms budget. The Worker holds the credential and forwards bytes.
+  `libs/deploy` was an Nx library with no source files and `targets: {}`; both
+  its `project.json` and `tsconfig.json` reached three levels up for a repo root
+  two levels away, so they pointed outside the repository. Nothing had noticed
+  because there was no code to break.
+  The WebContainer mock is gone. It was dead twice over: it faked build and
+  upload with `setTimeout`, and no COOP/COEP headers exist anywhere in this
+  repo, so `crossOriginIsolated` is false in production and it could never have
+  booted at all.
+  Two corrections worth recording. dev-auth's 182 tests **are** running under
+  `pnpm test` — an earlier conclusion that they were silently skipped was wrong,
+  and was settled by making one fail on purpose; the `@nx/vitest` executor just
+  prints no summary for that project. And `apps/dev-auth/vitest.config.ts` does
+  exist; an `ls` that said otherwise had run from a stale working directory.
 
 - **2026-08-13** — Built the Cloud section (spec 005) on
   `feature/005-cloudflare-account`, four commits, one PR. DevFlare had never

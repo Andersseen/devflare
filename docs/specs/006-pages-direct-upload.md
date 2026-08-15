@@ -229,23 +229,74 @@ during verification.
 
 ## 7. Tasks
 
-- [ ] 1. `libs/deploy`: real Nx targets, `asset-hash.ts` + spec (the hash first —
+- [x] 1. `libs/deploy`: real Nx targets, `asset-hash.ts` + spec (the hash first —
      everything else is worthless if it is wrong)
-- [ ] 2. `collect-assets.ts` + `bucket.ts` + specs
-- [ ] 3. `server/lib/pages-upload.ts` + spec (JWT memo, the two non-`cfFetch`
+- [x] 2. `collect-assets.ts` + `bucket.ts` + specs
+- [x] 3. `server/lib/pages-upload.ts` + spec (JWT memo, the two non-`cfFetch`
      request shapes)
-- [ ] 4. The three `upload/*` routes, admin-gated
-- [ ] 5. `deploy-client.ts` + spec — orchestration over a transport interface
-- [ ] 6. Rewrite `deploy.page.ts`; delete `webcontainer.service.ts` and drop
+- [x] 4. The three `upload/*` routes, admin-gated
+- [x] 5. `deploy-client.ts` + spec — orchestration over a transport interface
+- [x] 6. Rewrite `deploy.page.ts`; delete `webcontainer.service.ts` and drop
      `@webcontainer/api`
-- [ ] 7. `deployments` row on publish; history on `projects.page.ts`
-- [ ] 8. Quality gates (`pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`)
-- [ ] 9. Manual verification (section 6), including the re-deploy-is-a-no-op check
-- [ ] 10. Update `docs/ai/STATE.md` + the index in `docs/specs/README.md`
+- [x] 7. `deployments` row on publish; history on `projects.page.ts`
+- [x] 8. Quality gates (`pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`)
+- [ ] 9. Manual verification (section 6), including the re-deploy-is-a-no-op
+     check — **blocked on the owner**: needs a scratch Pages project and an
+     admin session. Everything that does not need the account is done; see
+     section 8.
+- [x] 10. Update `docs/ai/STATE.md` + the index in `docs/specs/README.md`
 
 ## 8. Verification results
 
-_Filled during implementation._
+**Quality gates** — all green on `feature/006-pages-direct-upload`:
+`pnpm format:check`, `pnpm lint` (7 projects), `pnpm typecheck` (5 projects),
+`pnpm test` (5 projects). 147 tests print summaries (65 deploy, 68 devflare, 8
+core, 6 auth); dev-auth runs a further 182 without printing one. Its target does
+execute them — confirmed by making one fail on purpose and watching the target
+go red, after an earlier guess that they were not running at all turned out to
+be wrong.
+
+**The hash, against a real build output.** The six vectors in
+`asset-hash.spec.ts` prove the algorithm; this proves it against the
+distribution a deployment is actually made of. Every file of
+`dist/apps/devflare/analog/public`, hashed twice — once through wrangler's own
+`blake3-wasm@2.1.5` running its exact `hashFile`, once through the
+`@noble/hashes` implementation that ships here:
+
+```
+files hashed:  37
+extensions:    js:27 (none):2 mjs:2 svg:1 css:1 wasm:1 ico:1 html:1 json:1
+mismatches:    0
+IDENTICAL TO WRANGLER
+```
+
+Binary content (`.wasm`, `.ico`) and extensionless files included — the two
+cases most likely to diverge.
+
+**The routes, against a running server** (`pnpm dev:all`):
+
+| Request                                        | Result                       |
+| ---------------------------------------------- | ---------------------------- |
+| `GET /deploy`                                  | 200                          |
+| `POST /api/v1/cloud/pages/test/upload/check`   | 401, via `requireCloudAdmin` |
+| `POST /api/v1/cloud/pages/test/upload/assets`  | 401                          |
+| `POST /api/v1/cloud/pages/test/upload/publish` | 401                          |
+| `GET /api/v1/projects/abc/deployments`         | 401                          |
+
+The 401s arrive through `requireCloudAdmin → requireAuth`, so the gate on the
+routes holding an account-wide token is reached rather than decorative.
+
+Nitro's built route table lists all four new paths — checked deliberately,
+because spec 005 shipped four pages that compiled and were unreachable, which a
+build alone never showed.
+
+`/deploy` renders 3,262 bytes under SSR, the same as the untouched `/projects`:
+the established behaviour for an `authGuard`ed route, which renders after
+client-side hydration. The public `/tools` renders 23,689.
+
+**Not yet verified** — everything needing the real account: an end-to-end
+deploy, the re-deploy-uploads-nothing check that is the true proof of the hash
+in production, and the `deployments` rows it would write.
 
 ## 9. Log / Deviations
 
