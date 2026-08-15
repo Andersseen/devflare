@@ -16,3 +16,21 @@ export {
   MAX_ASSET_COUNT,
   MAX_ASSET_SIZE,
 } from './lib/asset-hash';
+
+export {
+  AssetPlanError,
+  planAssets,
+  stripCommonRoot,
+  type AssetPlan,
+  type PickedFile,
+  type SkippedFile,
+  type SkipReason,
+} from './lib/collect-assets';
+
+export {
+  packBuckets,
+  DEFAULT_BUCKET_LIMITS,
+  MAX_BUCKET_BYTES,
+  MAX_BUCKET_FILES,
+  type BucketLimits,
+} from './lib/bucket';
