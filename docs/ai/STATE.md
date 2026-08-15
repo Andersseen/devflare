@@ -8,18 +8,20 @@
 > to the last ~5 entries, newest first. Update the date. Facts only; no plans
 > you didn't verify.
 
-_Last updated: 2026-08-14_
+_Last updated: 2026-08-15_
 
 ## Branch & repo status
 
-- On `feature/005-cloudflare-account`, **not pushed**. Six commits on top of
-  `main` (`36399ff`). The owner does the push and the PR.
-- It carries spec 005 in five commits: the server client and read routes, the
-  `/cloud` overview, per-resource detail plus storage, the project↔resource link
-  with Pages deploy/rollback, and the fixes the first run against real data
-  exposed.
-- `feature/oauth-client-registry` (specs 001–004) is **merged** — PR #17.
-- Nothing on this branch is deployed. `main` is what production runs.
+- On `feature/006-pages-direct-upload`, **not pushed**. Spec 006 is code-complete
+  (tasks 1–8, 10 of 10); only the manual verification against the real account is
+  outstanding, and it needs a scratch Pages project plus an admin session.
+  See [../specs/006-pages-direct-upload.md](../specs/006-pages-direct-upload.md).
+- `main` is `8fda3c0` and **is deployed**. Specs 001–005 are all merged and live:
+  001–004 as PR #17, 005 as PR #18, plus PR #19 for the CI fix below.
+- The production deploy of PR #18 **failed**; PR #19 fixed it and production has
+  been current since 2026-08-14T07:56Z. Both deploy workflows had been handing
+  Cloudflare credentials to the test job, which is what broke it.
+- Nothing is in flight besides 006.
 
 ## 2026-08-10 — first real browser walkthrough of prod auth, and what it found
 
@@ -371,20 +373,19 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
 
 ## Next steps (owner's apparent intent — confirm before large work)
 
-1. **Create the Cloudflare API token — the Cloud section does nothing without
-   it.** At dash.cloudflare.com/profile/api-tokens, account permissions:
-   Workers Scripts (Read), Cloudflare Pages (Edit — Read is enough for
-   everything except deploy/rollback), D1 (Read), Workers KV Storage (Read),
-   Workers R2 Storage (Read). Then `CLOUDFLARE_API_TOKEN` into
-   `apps/devflare/.dev.vars` for dev and `wrangler secret put` for production.
-   `CLOUDFLARE_ACCOUNT_ID` is already in `wrangler.toml`. Nothing on `/cloud`
-   has ever run against real data, so treat the first load as the real test.
-2. **Push `feature/005-cloudflare-account` and open the PR.** Migration
-   `0002_project_cloudflare_link.sql` must be applied before the new code serves
-   traffic; CI applies migrations before deploying, so the deployed path is
-   covered. It has been applied `--local`.
-3. **Set two Worker secrets before the Identity UI can do anything in
-   production**, neither of which that branch could set:
+0. **In progress: spec 006** — real deploy via Pages direct upload, replacing the
+   WebContainer mock in `deploy.page.ts` and finally writing the `deployments`
+   table. Approved 2026-08-15.
+1. **Confirm `CLOUDFLARE_API_TOKEN` is set on the production Worker.** It is in
+   `apps/devflare/.dev.vars` and the Cloud section was verified against the real
+   account locally on 2026-08-14, but whether `wrangler secret put` was ever run
+   for production is **unverified** — check with `wrangler secret list --env
+production` before assuming `/cloud` works on the live site. Token scopes:
+   Workers Scripts (Read), Cloudflare Pages (Edit), D1 (Read), Workers KV
+   Storage (Read), Workers R2 Storage (Read). `CLOUDFLARE_ACCOUNT_ID` is already
+   in `wrangler.toml`.
+2. **Set two Worker secrets before the Identity UI can do anything in
+   production**, neither of which the spec 001–004 branch could set:
    - `ADMIN_API_TOKEN` on dev-auth **and** the same value as
      `DEV_AUTH_ADMIN_TOKEN` on DevFlare. Without it the Identity tab stays
      hidden — and since spec 005 the whole Cloud section goes with it, because
@@ -393,16 +394,12 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
    - `SECRET_ENCRYPTION_KEY` on dev-auth (`openssl rand -base64 32`). Without
      it GitHub credentials keep coming from the config vars and the settings
      API refuses to store a secret rather than storing it in the clear.
-4. Migration `0005_provider_settings.sql` must be applied **before** the new
-   code serves traffic. CI applies migrations before deploying, so the deployed
-   path is covered — but if it is ever run out of order the settings read fails
-   and, by design, sign-ups close.
-5. Wire up a transactional email provider, then re-enable
+3. Wire up a transactional email provider, then re-enable
    `requireEmailVerification` / `sendOnSignUp`. Widening who may sign up no
    longer needs a deploy — it is the Access panel in Settings → Identity.
-6. Release `@andersseen/icon` with the `lock`/`user` fix, then bump `CDN.icon`
+4. Release `@andersseen/icon` with the `lock`/`user` fix, then bump `CDN.icon`
    in `apps/dev-auth/src/pages/layout.ts`.
-7. Two follow-ups this work surfaced but did not fix:
+5. Two follow-ups this work surfaced but did not fix:
    - `VoltInput` has no `label` input, so every `label="…"` in
      `settings.page.ts` renders nothing. The Profile tab's fields are unlabelled
      as a result.
@@ -411,6 +408,37 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
      admin surfaces with different auth models is worth collapsing.
 
 ## Session log
+
+- **2026-08-15** — Built spec 006 on `feature/006-pages-direct-upload`: `/deploy`
+  now uploads a built folder straight to a Pages project through the direct
+  upload API, and the `deployments` table finally has a writer and a reader.
+  The load-bearing discovery came from reading `wrangler`'s bundled source in
+  `node_modules` rather than any documentation: the hash Pages identifies an
+  asset by is **BLAKE3 over the base64 text of the file concatenated with its
+  extension**, truncated to 32 hex chars. WebCrypto cannot do BLAKE3, and no
+  public API reference describes the construction. Getting it wrong fails
+  silently and expensively — `check-missing` would report every asset as absent,
+  so deploys keep succeeding while re-uploading the whole site forever. Pinned
+  with six vectors generated from `blake3-wasm@2.1.5`, the package wrangler
+  itself bundles, then checked again over all 37 files of a real `dist/`: zero
+  divergence across 9 extension types including `.wasm`, `.ico` and
+  extensionless files.
+  Hashing and base64 run in the browser because a Worker is billed on CPU time,
+  not wall time — waiting on `fetch` is free, but encoding 25 MiB would blow the
+  free plan's 10 ms budget. The Worker holds the credential and forwards bytes.
+  `libs/deploy` was an Nx library with no source files and `targets: {}`; both
+  its `project.json` and `tsconfig.json` reached three levels up for a repo root
+  two levels away, so they pointed outside the repository. Nothing had noticed
+  because there was no code to break.
+  The WebContainer mock is gone. It was dead twice over: it faked build and
+  upload with `setTimeout`, and no COOP/COEP headers exist anywhere in this
+  repo, so `crossOriginIsolated` is false in production and it could never have
+  booted at all.
+  Two corrections worth recording. dev-auth's 182 tests **are** running under
+  `pnpm test` — an earlier conclusion that they were silently skipped was wrong,
+  and was settled by making one fail on purpose; the `@nx/vitest` executor just
+  prints no summary for that project. And `apps/dev-auth/vitest.config.ts` does
+  exist; an `ls` that said otherwise had run from a stale working directory.
 
 - **2026-08-13** — Built the Cloud section (spec 005) on
   `feature/005-cloudflare-account`, four commits, one PR. DevFlare had never
