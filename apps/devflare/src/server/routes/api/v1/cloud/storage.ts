@@ -4,15 +4,17 @@ import {
   CloudflareApiError,
   listD1Databases,
   listKvNamespaces,
-  listR2Buckets,
 } from '../../../../lib/cloudflare';
 
 /**
- * GET /api/v1/cloud/storage — the D1 / KV / R2 inventory.
+ * GET /api/v1/cloud/storage — the D1 / KV inventory.
  *
  * Each product is a separate token permission, so each is reported separately:
- * a token without R2 access should still show the databases rather than turning
+ * a token without KV access should still show the databases rather than turning
  * the whole page into an error.
+ *
+ * R2 left here in spec 008 and lives under /api/v1/cloud/buckets, because a
+ * bucket is the one resource here you can open rather than merely count.
  */
 
 interface Section<T> {
@@ -36,10 +38,9 @@ async function settle<T>(load: Promise<T[]>): Promise<Section<T>> {
 
 export default defineEventHandler((event) =>
   withCloudflare(event, async (config, refresh) => {
-    const [d1, kv, r2] = await Promise.all([
+    const [d1, kv] = await Promise.all([
       settle(listD1Databases(config, refresh)),
       settle(listKvNamespaces(config, refresh)),
-      settle(listR2Buckets(config, refresh)),
     ]);
 
     return {
@@ -62,14 +63,6 @@ export default defineEventHandler((event) =>
         items: kv.items.map((namespace) => ({
           id: namespace.id,
           name: namespace.title,
-        })),
-      },
-      r2: {
-        error: r2.error,
-        items: r2.items.map((bucket) => ({
-          name: bucket.name,
-          createdAt: bucket.creation_date,
-          location: bucket.location ?? null,
         })),
       },
     };

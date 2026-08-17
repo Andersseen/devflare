@@ -87,7 +87,19 @@ interface Envelope<T> {
   success: boolean;
   errors?: { code: number; message: string }[];
   result: T;
-  result_info?: { page: number; per_page: number; total_count: number };
+  /**
+   * Usually pagination bookkeeping. The R2 object listing is the exception:
+   * `delimited` is the list of "folders" at the requested level, so for that
+   * endpoint this field carries answer, not metadata.
+   */
+  result_info?: {
+    page?: number;
+    per_page?: number;
+    total_count?: number;
+    delimited?: string[];
+    cursor?: string;
+    is_truncated?: boolean;
+  };
 }
 
 interface CacheEntry {
@@ -156,6 +168,19 @@ export async function cfRequest<T>(
   url: string,
   init: CfRawRequestInit = {},
 ): Promise<T> {
+  return (await cfRequestEnvelope<T>(url, init)).result;
+}
+
+/**
+ * The same call with the envelope left on. Only worth reaching for when
+ * `result_info` carries part of the answer rather than bookkeeping — the R2
+ * object listing puts its folders and its cursor there, so unwrapping to
+ * `result` would throw away half of what was asked for.
+ */
+export async function cfRequestEnvelope<T>(
+  url: string,
+  init: CfRawRequestInit = {},
+): Promise<Envelope<T>> {
   let response: Response;
   try {
     response = await fetch(url, {
@@ -190,7 +215,7 @@ export async function cfRequest<T>(
     );
   }
 
-  return payload.result;
+  return payload;
 }
 
 /**
@@ -441,4 +466,63 @@ export function listR2Buckets(
   return cfFetch<{ buckets?: R2Bucket[] }>(config, '/r2/buckets', {
     refresh,
   }).then((result) => result?.buckets ?? []);
+}
+
+export interface R2Object {
+  key: string;
+  size: number;
+  last_modified: string;
+  etag?: string;
+  storage_class?: string;
+}
+
+export interface R2Listing {
+  /** Objects directly at the requested level. */
+  objects: R2Object[];
+  /** Key prefixes one level down, each ending in `/`. */
+  folders: string[];
+  /** Present only when the listing was cut short. */
+  cursor: string | null;
+}
+
+/**
+ * One level of one bucket.
+ *
+ * `delimiter=/` is what makes this a level rather than a dump: Cloudflare then
+ * returns the objects directly under `prefix` in `result`, and everything
+ * deeper collapsed into folder prefixes in `result_info.delimited`. Asking
+ * without it would return every key in the bucket and leave the hierarchy to be
+ * rebuilt here, for a view that only ever shows one level at a time.
+ *
+ * Deliberately not routed through `cfFetch`: that memo is keyed on the path and
+ * would fill up with prefix/cursor combinations nobody asks for twice, and it
+ * unwraps to `result`, discarding the half of the answer that lives in
+ * `result_info`.
+ */
+export async function listR2Objects(
+  config: CloudflareConfig,
+  bucket: string,
+  options: { prefix?: string; cursor?: string; perPage?: number } = {},
+): Promise<R2Listing> {
+  const query = new URLSearchParams({
+    delimiter: '/',
+    per_page: String(options.perPage ?? 100),
+  });
+  // Sent only when set: an empty `prefix` is the root, and Cloudflare treats
+  // the parameter's presence as meaningful.
+  if (options.prefix) query.set('prefix', options.prefix);
+  if (options.cursor) query.set('cursor', options.cursor);
+
+  const envelope = await cfRequestEnvelope<R2Object[] | null>(
+    `${API_BASE}/accounts/${config.accountId}/r2/buckets/${encodeURIComponent(bucket)}/objects?${query}`,
+    { headers: { Authorization: `Bearer ${config.token}` } },
+  );
+
+  return {
+    objects: envelope.result ?? [],
+    folders: envelope.result_info?.delimited ?? [],
+    cursor: envelope.result_info?.is_truncated
+      ? (envelope.result_info.cursor ?? null)
+      : null,
+  };
 }

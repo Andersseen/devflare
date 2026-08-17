@@ -129,7 +129,36 @@ export interface CloudBucket {
 export interface CloudStorage {
   d1: CloudStorageSection<CloudDatabase>;
   kv: CloudStorageSection<CloudNamespace>;
-  r2: CloudStorageSection<CloudBucket>;
+}
+
+/**
+ * A key prefix, which R2 does not have directories to explain. Cloudflare
+ * groups them when the listing is asked for with a delimiter, so what looks
+ * like a folder here is one level of the keys, computed upstream.
+ */
+export interface CloudFolder {
+  /** Full prefix, ending in `/` — what to ask for to descend into it. */
+  prefix: string;
+  /** Just the last segment, which is what the row shows. */
+  name: string;
+}
+
+export interface CloudObject {
+  key: string;
+  /** The key with the current prefix removed. */
+  name: string;
+  size: number;
+  lastModified: string;
+  storageClass: string | null;
+}
+
+/** One level of one bucket. */
+export interface CloudObjectPage {
+  prefix: string;
+  folders: CloudFolder[];
+  objects: CloudObject[];
+  /** Non-null when Cloudflare cut the listing short. */
+  cursor: string | null;
 }
 
 const BASE = '/api/v1/cloud';
@@ -267,6 +296,33 @@ export class CloudflareAccount {
   async disconnect(): Promise<CloudStatus> {
     await request<{ disconnected: boolean }>('/connect', { method: 'DELETE' });
     return this.loadStatus();
+  }
+
+  /** The R2 buckets. Not held in a signal: one page reads it, once. */
+  async loadBuckets(refresh = false): Promise<CloudBucket[]> {
+    const payload = await request<{ items: CloudBucket[] }>(
+      `/buckets${refresh ? '?refresh=1' : ''}`,
+    );
+    return payload.items;
+  }
+
+  /**
+   * One level of one bucket. `prefix` is the folder being looked at ('' is the
+   * root); `cursor` continues a listing Cloudflare cut short.
+   */
+  async loadObjects(
+    bucket: string,
+    prefix = '',
+    cursor?: string,
+  ): Promise<CloudObjectPage> {
+    const query = new URLSearchParams();
+    if (prefix) query.set('prefix', prefix);
+    if (cursor) query.set('cursor', cursor);
+
+    const search = query.toString();
+    return request<CloudObjectPage>(
+      `/buckets/${encodeURIComponent(bucket)}/objects${search ? `?${search}` : ''}`,
+    );
   }
 
   /**

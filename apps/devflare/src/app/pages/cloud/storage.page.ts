@@ -17,11 +17,14 @@ import {
 import { CloudGate } from './cloud-gate';
 
 /**
- * The data side of the account: D1 databases, KV namespaces, R2 buckets.
+ * The data side of the account: D1 databases and KV namespaces.
  *
  * Each product is reported separately because each is a separate token
- * permission — a token without R2 access still shows the databases, with the
- * refusal printed against R2 rather than swallowing the whole page.
+ * permission — a token without KV access still shows the databases, with the
+ * refusal printed against KV rather than swallowing the whole page.
+ *
+ * R2 moved to its own section in spec 008: a bucket is the one resource here
+ * that can be opened rather than only counted.
  */
 @Component({
   selector: 'app-cloud-storage-page',
@@ -41,7 +44,7 @@ import { CloudGate } from './cloud-gate';
         <div>
           <h1 class="text-3xl font-bold tracking-tight">Storage</h1>
           <p class="text-muted-foreground mt-1">
-            Databases, namespaces and buckets on your account
+            Databases and namespaces on your account
           </p>
         </div>
         @if (status()?.configured) {
@@ -148,48 +151,6 @@ import { CloudGate } from './cloud-gate';
                         <p class="text-xs text-muted-foreground font-mono">
                           {{ namespace.id }}
                         </p>
-                      </li>
-                    }
-                  </ul>
-                }
-              </volt-card-content>
-            </volt-card>
-
-            <volt-card>
-              <volt-card-header
-                class="flex flex-row items-center justify-between"
-              >
-                <volt-card-title class="flex items-center gap-2">
-                  <lucide-icon
-                    name="hard-drive"
-                    class="w-5 h-5 text-orange-500"
-                  />
-                  R2
-                </volt-card-title>
-                <span class="text-sm text-muted-foreground"
-                  >{{ data.r2.items.length }} buckets</span
-                >
-              </volt-card-header>
-              <volt-card-content>
-                @if (data.r2.error) {
-                  <volt-error>{{ data.r2.error }}</volt-error>
-                } @else if (data.r2.items.length === 0) {
-                  <p class="text-muted-foreground py-6 text-center">
-                    No buckets yet.
-                  </p>
-                } @else {
-                  <ul class="divide-y divide-border">
-                    @for (bucket of data.r2.items; track bucket.name) {
-                      <li class="py-3 flex items-center justify-between gap-3">
-                        <p class="font-medium truncate">{{ bucket.name }}</p>
-                        <span
-                          class="text-sm text-muted-foreground whitespace-nowrap"
-                        >
-                          @if (bucket.location) {
-                            {{ bucket.location }} ·
-                          }
-                          created {{ relative(bucket.createdAt) }}
-                        </span>
                       </li>
                     }
                   </ul>
