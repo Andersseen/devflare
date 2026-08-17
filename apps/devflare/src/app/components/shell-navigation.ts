@@ -118,7 +118,8 @@ export const TOOLS: Tool[] = [
 export const PLATFORM_CARDS: Tool[] = [
   {
     title: 'Deploy',
-    description: 'Build and deploy Node.js applications using WebContainers.',
+    description:
+      'Upload a built folder to one of your Cloudflare Pages projects.',
     link: '/deploy',
     icon: 'zap',
     colorClass: 'text-green-500',
