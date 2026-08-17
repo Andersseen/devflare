@@ -35,7 +35,7 @@ migrations_dir = "src/server/db/migrations"
 #
 # Base URL of the provider. Local dev falls back to :8787 when unset.
 DEV_AUTH_URL = "http://localhost:8787"
-DEV_AUTH_CLIENT_ID = "devflare-dev"
+DEV_AUTH_CLIENT_ID = "5246101a6b6132f12492e3f025354eca"
 # Compared byte for byte against the registered redirect URIs, so it is spelled
 # out rather than derived from the request host.
 DEV_AUTH_REDIRECT_URI = "http://localhost:4200/api/auth/callback"
@@ -64,10 +64,10 @@ CLOUDFLARE_ACCOUNT_ID = "c32a93ee83fe9b5d53c63fcc73b90bb9"
 # `OAuth Clients Write`) and register this exact redirect URI — it is compared
 # byte for byte.
 #
-# CLOUDFLARE_OAUTH_CLIENT_ID is commented out until the client exists: with it
-# set and no client behind it, the UI would offer a flow that dead-ends on
-# Cloudflare's consent screen.
-# CLOUDFLARE_OAUTH_CLIENT_ID = "…"
+# The client id is not a credential — it travels in the authorization URL.
+# Created 2026-08-17 as the private client "Devflare"; both redirect URIs below
+# are registered on it and were verified against the live authorization endpoint.
+CLOUDFLARE_OAUTH_CLIENT_ID = "5246101a6b6132f12492e3f025354eca"
 CLOUDFLARE_OAUTH_REDIRECT_URI = "http://localhost:4200/api/v1/cloud/connect/callback"
 # CLOUDFLARE_OAUTH_CLIENT_SECRET is a secret (apps/devflare/.dev.vars locally,
 # `wrangler secret put` for a deployed environment), and so is
@@ -98,7 +98,7 @@ DEV_AUTH_URL = "https://auth-devflare.andersseen.dev"
 DEV_AUTH_CLIENT_ID = "devflare"
 DEV_AUTH_REDIRECT_URI = "https://devflare.andersseen.dev/api/auth/callback"
 CLOUDFLARE_ACCOUNT_ID = "c32a93ee83fe9b5d53c63fcc73b90bb9"
-# CLOUDFLARE_OAUTH_CLIENT_ID = "…"   (see the development block above)
+CLOUDFLARE_OAUTH_CLIENT_ID = "5246101a6b6132f12492e3f025354eca"
 CLOUDFLARE_OAUTH_REDIRECT_URI = "https://devflare.andersseen.dev/api/v1/cloud/connect/callback"
 
 [env.production.observability]
