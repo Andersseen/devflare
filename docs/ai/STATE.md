@@ -8,20 +8,21 @@
 > to the last ~5 entries, newest first. Update the date. Facts only; no plans
 > you didn't verify.
 
-_Last updated: 2026-08-15_
+_Last updated: 2026-08-17_
 
 ## Branch & repo status
 
-- On `feature/006-pages-direct-upload`, **not pushed**. Spec 006 is code-complete
-  (tasks 1–8, 10 of 10); only the manual verification against the real account is
-  outstanding, and it needs a scratch Pages project plus an admin session.
-  See [../specs/006-pages-direct-upload.md](../specs/006-pages-direct-upload.md).
-- `main` is `8fda3c0` and **is deployed**. Specs 001–005 are all merged and live:
-  001–004 as PR #17, 005 as PR #18, plus PR #19 for the CI fix below.
+- On `feature/007-cloudflare-oauth-connect`, **not pushed**. Spec 007 is
+  code-complete and every gate is green, but it cannot be verified until an
+  OAuth client exists in the Cloudflare account — see Next steps 0.
+  See [../specs/007-cloudflare-oauth-connect.md](../specs/007-cloudflare-oauth-connect.md).
+- `main` is `457a4d0`. Spec 006 merged as PR #20; specs 001–005 merged earlier
+  (001–004 as PR #17, 005 as PR #18, plus PR #19 for the CI fix below). Spec 006
+  still has no live verification against the real account.
 - The production deploy of PR #18 **failed**; PR #19 fixed it and production has
   been current since 2026-08-14T07:56Z. Both deploy workflows had been handing
   Cloudflare credentials to the test job, which is what broke it.
-- Nothing is in flight besides 006.
+- Nothing is in flight besides 007.
 
 ## 2026-08-10 — first real browser walkthrough of prod auth, and what it found
 
@@ -373,10 +374,23 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
 
 ## Next steps (owner's apparent intent — confirm before large work)
 
-0. **In progress: spec 006** — real deploy via Pages direct upload, replacing the
-   WebContainer mock in `deploy.page.ts` and finally writing the `deployments`
-   table. Approved 2026-08-15.
-1. **Confirm `CLOUDFLARE_API_TOKEN` is set on the production Worker.** It is in
+0. **In progress: spec 007** — connect the Cloudflare account from a consent
+   screen instead of a hand-made API token. The code is done; three things are
+   needed before it can run, none of which an agent can do:
+   - Create the OAuth client. Either Manage Account → OAuth clients, or
+     `CF_ADMIN_TOKEN=… ./scripts/create-cloudflare-oauth-client.sh` with an API
+     token holding `OAuth Clients Write` (the Cloud section's token does **not**
+     have it, confirmed: `Authentication error` on `GET
+/accounts/{id}/oauth_clients`).
+   - Put the client id in `apps/devflare/wrangler.toml` (both `[vars]` blocks,
+     currently commented out) and the secret in `.dev.vars` /
+     `wrangler secret put CLOUDFLARE_OAUTH_CLIENT_SECRET`.
+   - `SECRET_ENCRYPTION_KEY` on the DevFlare Worker as well — a local one was
+     generated into `apps/devflare/.dev.vars` already. Note this is a _second_
+     key, unrelated to the dev-auth one in step 2.
+1. **Confirm `CLOUDFLARE_API_TOKEN` is set on the production Worker.** Still the
+   fallback credential, and still what the Cloud section runs on until 007 is
+   connected. It is in
    `apps/devflare/.dev.vars` and the Cloud section was verified against the real
    account locally on 2026-08-14, but whether `wrangler secret put` was ever run
    for production is **unverified** — check with `wrangler secret list --env
@@ -408,6 +422,35 @@ production` before assuming `/cloud` works on the live site. Token scopes:
      admin surfaces with different auth models is worth collapsing.
 
 ## Session log
+
+- **2026-08-17** — Built spec 007 on `feature/007-cloudflare-oauth-connect`: the
+  Cloud section can now be connected from Cloudflare's own consent screen
+  instead of a token pasted into a secret store. This only became possible on
+  2026-06-03, when Cloudflare shipped self-managed OAuth clients — the earlier
+  assumption that Cloudflare had no third-party OAuth was simply out of date.
+  Everything protocol-shaped was read from the live service rather than guessed:
+  the four endpoints, `S256` and `client_secret_post` from
+  `dash.cloudflare.com/.well-known/openid-configuration`, and all eight scope ids
+  from `GET /client/v4/oauth/scopes` (383 of them). Worth recording that the same
+  discovery document declares `claims_supported: ["sub"]` and no email — so
+  Cloudflare cannot be a login provider for dev-auth even if that were wanted,
+  which is the question this work started from.
+  Tokens live in D1 sealed with AES-GCM rather than in a Worker secret, because
+  a secret cannot be rewritten from inside a request and a rotated refresh token
+  that cannot be persisted works exactly once. Two failure modes got explicit
+  handling for the same reason: concurrent refreshes are serialised per isolate
+  (rotation would otherwise burn the token), and an `invalid_grant` clears the
+  refresh token so the UI asks for a reconnect instead of retrying forever.
+  Not verified: anything past the consent screen. No OAuth client exists yet, and
+  the account's current API token cannot create one — it lacks `OAuth Clients
+Write`, which is deliberate and should stay that way.
+  `pnpm format:check`, `lint`, `typecheck`, `test` (8 files / 100 tests in
+  devflare, 32 new) and `nx build devflare` all green; migration 0003 applied
+  locally. One real fix fell out of the build rather than the tests: TS 5.9 types
+  `TextEncoder.encode` as writing into an arbitrary `ArrayBufferLike`, which Web
+  Crypto's `BufferSource` rejects — `typecheck` misses it because
+  `tsconfig.app.json` excludes `src/server/routes`, so it only surfaced when a
+  spec imported the module.
 
 - **2026-08-15** — Built spec 006 on `feature/006-pages-direct-upload`: `/deploy`
   now uploads a built folder straight to a Pages project through the direct
