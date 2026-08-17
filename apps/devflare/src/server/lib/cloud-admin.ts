@@ -15,11 +15,8 @@
 import { createError, getQuery, type H3Event } from 'h3';
 import { getAppSession, requireAuth, type AppUser } from './session';
 import { callDevAuthAdmin, DevAuthAdminError } from './devauth-admin';
-import {
-  CloudflareApiError,
-  resolveCloudflareConfig,
-  type CloudflareConfig,
-} from './cloudflare';
+import { CloudflareApiError, type CloudflareConfig } from './cloudflare';
+import { resolveCloudflareCredential } from './cloudflare-connection';
 
 const ADMIN_TTL_MS = 60_000;
 
@@ -85,6 +82,11 @@ export async function requireCloudAdmin(event: H3Event): Promise<AppUser> {
  * the upstream's own status preserved — a 403 from Cloudflare because the token
  * lacks a scope should not reach the browser as a 500.
  *
+ * Resolving the credential is asynchronous since spec 007: it may read the
+ * stored OAuth connection and renew it. Routes are unaffected — they still
+ * receive a `CloudflareConfig` and cannot tell whether it came from a consent
+ * screen or from `CLOUDFLARE_API_TOKEN`.
+ *
  * `?refresh=1` bypasses the client's 60s memo, which is what the reload button
  * in the UI sends.
  */
@@ -97,7 +99,7 @@ export async function withCloudflare<T>(
   const refresh = getQuery(event)['refresh'] === '1';
 
   try {
-    return await run(resolveCloudflareConfig(event.context), refresh);
+    return await run(await resolveCloudflareCredential(event.context), refresh);
   } catch (error) {
     if (error instanceof CloudflareApiError) {
       throw createError({

@@ -15,10 +15,31 @@ export type CloudStatusReason =
   | 'not-admin'
   | 'unavailable';
 
+/**
+ * How the server reaches Cloudflare: an OAuth grant the owner consented to
+ * (spec 007), the older `CLOUDFLARE_API_TOKEN`, or nothing yet.
+ */
+export type CloudConnectionKind = 'oauth' | 'token' | 'none';
+
+export interface CloudConnection {
+  kind: CloudConnectionKind;
+  accountId: string | null;
+  accountName: string | null;
+  /** Space-separated, as granted. Null when there is no OAuth grant. */
+  scope: string | null;
+  connectedAt: string | null;
+  expiresAt: string | null;
+  /** A grant that exists but can no longer be renewed. */
+  needsReconnect: boolean;
+}
+
 export interface CloudStatus {
   admin: boolean;
-  /** Whether an API token is wired up. False means "connect", not "broken". */
+  /** Whether a credential is wired up. False means "connect", not "broken". */
   configured: boolean;
+  /** Whether this server can offer the Cloudflare consent flow at all. */
+  canConnect: boolean;
+  connection: CloudConnection;
   reason: CloudStatusReason;
 }
 
@@ -230,6 +251,22 @@ export class CloudflareAccount {
     const status = await request<CloudStatus>('/status');
     this.statusSignal.set(status);
     return status;
+  }
+
+  /**
+   * Where the connect flow starts. A plain navigation rather than a fetch: it
+   * ends on Cloudflare's consent screen, which cannot be reached with XHR.
+   */
+  readonly connectUrl = `${BASE}/connect/start`;
+
+  /**
+   * Hands the grant back and re-reads the status, so the section immediately
+   * shows what it is left with — which may still be a working environment
+   * token rather than nothing at all.
+   */
+  async disconnect(): Promise<CloudStatus> {
+    await request<{ disconnected: boolean }>('/connect', { method: 'DELETE' });
+    return this.loadStatus();
   }
 
   /**

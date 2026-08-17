@@ -57,6 +57,23 @@ DEV_AUTH_REDIRECT_URI = "http://localhost:4200/api/auth/callback"
 # Without the token the Cloud pages show a connect prompt instead of failing.
 CLOUDFLARE_ACCOUNT_ID = "c32a93ee83fe9b5d53c63fcc73b90bb9"
 
+# Spec 007: the same account, connected from a consent screen instead. When an
+# OAuth client is configured the Cloud pages offer "Connect with Cloudflare" and
+# the token above becomes a fallback. Create the client under Manage Account →
+# OAuth clients (or POST /accounts/{id}/oauth_clients with an API token holding
+# `OAuth Clients Write`) and register this exact redirect URI — it is compared
+# byte for byte.
+#
+# CLOUDFLARE_OAUTH_CLIENT_ID is commented out until the client exists: with it
+# set and no client behind it, the UI would offer a flow that dead-ends on
+# Cloudflare's consent screen.
+# CLOUDFLARE_OAUTH_CLIENT_ID = "…"
+CLOUDFLARE_OAUTH_REDIRECT_URI = "http://localhost:4200/api/v1/cloud/connect/callback"
+# CLOUDFLARE_OAUTH_CLIENT_SECRET is a secret (apps/devflare/.dev.vars locally,
+# `wrangler secret put` for a deployed environment), and so is
+# SECRET_ENCRYPTION_KEY (`openssl rand -base64 32`) — without the latter the
+# tokens have nowhere safe to live and connecting is refused up front.
+
 [observability]
 enabled = true
 
@@ -81,6 +98,8 @@ DEV_AUTH_URL = "https://auth-devflare.andersseen.dev"
 DEV_AUTH_CLIENT_ID = "devflare"
 DEV_AUTH_REDIRECT_URI = "https://devflare.andersseen.dev/api/auth/callback"
 CLOUDFLARE_ACCOUNT_ID = "c32a93ee83fe9b5d53c63fcc73b90bb9"
+# CLOUDFLARE_OAUTH_CLIENT_ID = "…"   (see the development block above)
+CLOUDFLARE_OAUTH_REDIRECT_URI = "https://devflare.andersseen.dev/api/v1/cloud/connect/callback"
 
 [env.production.observability]
 enabled = true
