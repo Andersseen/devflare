@@ -54,6 +54,12 @@ import { DeploymentStatus } from './deployment-status';
           </p>
         </div>
         <div class="flex items-center gap-2">
+          @if (canConnect()) {
+            <volt-button variant="outline" size="sm" (click)="connect()">
+              <lucide-icon name="cloud" class="w-4 h-4 mr-1" />
+              Connect with Cloudflare
+            </volt-button>
+          }
           @if (canDisconnect()) {
             <volt-button
               variant="ghost"
@@ -284,6 +290,22 @@ export default class CloudPage {
   readonly canDisconnect = computed(
     () => this.status()?.connection.kind === 'oauth',
   );
+
+  /**
+   * Offered here as well as on the gate, because the gate only appears when
+   * nothing is configured — a server already running on `CLOUDFLARE_API_TOKEN`
+   * would otherwise have no way to reach the flow at all, which is exactly the
+   * server most likely to want to move off it.
+   */
+  readonly canConnect = computed(() => {
+    const state = this.status();
+    return Boolean(state?.canConnect) && state?.connection.kind !== 'oauth';
+  });
+
+  /** A full navigation: the flow ends on Cloudflare's consent screen. */
+  connect(): void {
+    window.location.href = this.#cloud.connectUrl;
+  }
 
   readonly disconnecting = signal(false);
 
