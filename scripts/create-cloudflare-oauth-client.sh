@@ -31,6 +31,10 @@ fi
 # Local dev is registered alongside production because the flow can only be
 # tested end to end where the app actually runs. If Cloudflare refuses the
 # http://localhost entry, drop it and test through a tunnel instead.
+# `refresh_token` is asked for as a grant type rather than through the
+# `offline_access` scope: that scope is refused by the authorization server and
+# does not exist in the catalog clients are registered from (checked
+# 2026-08-17), so the grant type is the only place left to ask.
 read -r -d '' PAYLOAD <<'JSON' || true
 {
   "client_name": "DevFlare",
@@ -43,7 +47,6 @@ read -r -d '' PAYLOAD <<'JSON' || true
     "http://localhost:4200/api/v1/cloud/connect/callback"
   ],
   "scopes": [
-    "offline_access",
     "memberships.read",
     "page.read",
     "page.write",

@@ -87,11 +87,20 @@ what this uses. Access tokens live 900s and come with a `refresh_token` when
 
 ### Scopes
 
-`offline_access` (refresh), `memberships.read` (resolve the account), and the
-read/write scopes matching the token permissions the UI asks for today:
-`page.read`, `page.write`, `workers-scripts.read`, `d1.read`,
-`workers-kv-storage.read`, `workers-r2.read`. All verified against
-`GET /client/v4/oauth/scopes`.
+`memberships.read` (resolve the account) plus the read/write scopes matching the
+token permissions the UI asks for today: `page.read`, `page.write`,
+`workers-scripts.read`, `d1.read`, `workers-kv-storage.read`, `workers-r2.read`.
+All verified against `GET /client/v4/oauth/scopes`.
+
+**Not `offline_access`.** The standard says that is how a client asks for a
+refresh token, and Cloudflare's discovery document lists it under
+`scopes_supported` — but the real authorization server refuses it
+(`invalid_scope`, "The OAuth 2.0 Client is not allowed to request scope
+'offline_access'"), and the 383-entry catalog clients are registered from
+contains no `offline_access`, `offline` or `openid` at all. One unusable scope
+fails the whole authorization before the consent screen, so it is not requested.
+A refresh token may still arrive from the client's `refresh_token` grant type;
+the store treats one as optional either way.
 
 ### Files
 
@@ -201,9 +210,24 @@ Endpoints and scopes were read from the live service rather than assumed:
 `S256`, and `client_secret_post`; `GET /client/v4/oauth/scopes` (383 scopes) for
 every scope id in `CF_OAUTH_SCOPES`.
 
-Not verified: anything that needs a real consent screen. No OAuth client existed
-when this was written, so the authorize redirect, the code exchange, the refresh
-and the revoke have never run against Cloudflare.
+**The real client, probed against `/oauth2/auth` on 2026-08-17** (private client
+`Devflare`, id `5246101a…`, created from the dashboard):
+
+| Request                                 | Result                                                  |
+| --------------------------------------- | ------------------------------------------------------- |
+| 7 permission scopes, localhost redirect | 302 to `dash.cloudflare.com/login?login_challenge=…` ✅ |
+| same, production redirect               | 302 to `login_challenge` ✅ — both URIs are registered  |
+| unregistered redirect URI               | refused with `invalid_request` ✅                       |
+| `offline_access`                        | `invalid_scope` — client not allowed to request it      |
+| `offline`, `openid`                     | `invalid_scope`                                         |
+
+So client id, client secret placement, both redirect URIs and all seven scopes
+are confirmed against the live server without a browser. What is left is
+everything behind the login challenge.
+
+Not verified: the code exchange, whether the token response carries a
+`refresh_token` at all, the renewal, and the revoke. All four need a real
+consent, which needs a browser session on the account.
 
 ## 9. Log / Deviations
 
@@ -221,6 +245,16 @@ and the revoke have never run against Cloudflare.
   `scripts/create-cloudflare-oauth-client.sh`. It needs an API token with
   `OAuth Clients Write`; the Cloud section's own token does not have it and must
   not gain it, since that permission can mint clients against the whole account.
-- **2026-08-17** — `CLOUDFLARE_OAUTH_CLIENT_ID` is left commented out in
-  `wrangler.toml` until the client exists. Setting it early would make the UI
-  offer a flow that dead-ends on Cloudflare's consent screen.
+- **2026-08-17** — Client created from the dashboard and wired into
+  `wrangler.toml` (both environments). `client_secret_post` was available as the
+  token authentication method, so no code change was needed there.
+- **2026-08-17** — **`offline_access` dropped from the request.** It was in the
+  original design as the way to get a refresh token; the live server refuses it
+  for a self-managed client and the scope catalog does not contain it. The
+  earlier claim in this spec that the token response carries a `refresh_token`
+  came from a search summary, not from Cloudflare's own OAuth docs — those
+  document only the endpoint list and say nothing about refresh at all. So
+  whether renewal is possible is now an open question to settle at the first
+  real consent, not a documented fact. Nothing had to change in the store: it
+  already treated the refresh token as optional and degrades to a reconnect
+  prompt when there is none.

@@ -33,6 +33,18 @@ export const appRoutes: Route[] = [
         loadComponent: () => import('./pages/cloud/storage.page'),
       },
       {
+        path: 'cloud/buckets',
+        canActivate: [authGuard],
+        loadComponent: () => import('./pages/cloud/buckets.page'),
+      },
+      {
+        // `?prefix=` reaches the page as an input too, so walking into a folder
+        // is an ordinary navigation on this same route.
+        path: 'cloud/buckets/:name',
+        canActivate: [authGuard],
+        loadComponent: () => import('./pages/cloud/buckets/[name].page'),
+      },
+      {
         // `:name` reaches the page as an input, via withComponentInputBinding().
         path: 'cloud/workers/:name',
         canActivate: [authGuard],

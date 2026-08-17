@@ -99,11 +99,20 @@ describe('authorizationUrl', () => {
     expect(url.searchParams.get('state')).toBe('st');
   });
 
-  it('requests offline access, or the grant dies in 15 minutes', () => {
+  it('asks for the permissions the Cloud section actually uses', () => {
     const scopes = url.searchParams.get('scope')?.split(' ') ?? [];
-    expect(scopes).toContain('offline_access');
     expect(scopes).toContain('page.write');
     expect(scopes).toEqual([...CF_OAUTH_SCOPES]);
+  });
+
+  it('never asks for a scope no client can be granted', () => {
+    // Verified against the real authorization server on 2026-08-17: each of
+    // these is refused with `invalid_scope`, which fails the whole flow before
+    // the consent screen. None of them exists in the scope catalog either.
+    const scopes = url.searchParams.get('scope')?.split(' ') ?? [];
+    expect(scopes).not.toContain('offline_access');
+    expect(scopes).not.toContain('offline');
+    expect(scopes).not.toContain('openid');
   });
 
   it('never puts the client secret in the redirect', () => {

@@ -4,6 +4,7 @@ import {
   clearCloudflareCache,
   CloudflareApiError,
   isCloudflareConfigured,
+  listR2Objects,
   resolveCloudflareConfig,
   toDeploymentSummary,
   type CloudflareConfig,
@@ -193,6 +194,97 @@ describe('cfFetch', () => {
 
     expect(await cfFetch(CONFIG, '/pages/projects')).toEqual(['after']);
     expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe('listR2Objects', () => {
+  function listing(result: unknown, resultInfo?: unknown) {
+    return new Response(
+      JSON.stringify({ success: true, result, result_info: resultInfo }),
+      { status: 200 },
+    );
+  }
+
+  it('asks for one level, not the whole bucket', async () => {
+    const fetchMock = stubFetch(listing([], { delimited: ['dist/'] }));
+
+    await listR2Objects(CONFIG, 'devflare');
+
+    const url = new URL(fetchMock.mock.calls[0][0] as string);
+    // Without the delimiter Cloudflare returns every key in the bucket and
+    // leaves the hierarchy to be rebuilt here.
+    expect(url.searchParams.get('delimiter')).toBe('/');
+    expect(url.pathname).toBe(
+      '/client/v4/accounts/acc-1/r2/buckets/devflare/objects',
+    );
+  });
+
+  it('encodes a bucket name into the path', async () => {
+    const fetchMock = stubFetch(listing([]));
+
+    await listR2Objects(CONFIG, 'weird name/../etc');
+
+    const url = new URL(fetchMock.mock.calls[0][0] as string);
+    expect(url.pathname).toContain('weird%20name%2F..%2Fetc');
+    expect(url.pathname).not.toContain('/../');
+  });
+
+  it('sends prefix and cursor only when they have a value', async () => {
+    const fetchMock = stubFetch(listing([]), listing([]));
+
+    await listR2Objects(CONFIG, 'b', { prefix: '', cursor: undefined });
+    await listR2Objects(CONFIG, 'b', { prefix: 'a/', cursor: 'c1' });
+
+    const first = new URL(fetchMock.mock.calls[0][0] as string).searchParams;
+    const second = new URL(fetchMock.mock.calls[1][0] as string).searchParams;
+
+    // An empty prefix is the root, and the parameter's presence is meaningful.
+    expect(first.has('prefix')).toBe(false);
+    expect(first.has('cursor')).toBe(false);
+    expect(second.get('prefix')).toBe('a/');
+    expect(second.get('cursor')).toBe('c1');
+  });
+
+  it('reads the folders out of result_info, where the API puts them', async () => {
+    stubFetch(
+      listing(
+        [{ key: 'deploybolt/index.html', size: 12, last_modified: 'x' }],
+        {
+          delimited: ['deploybolt/assets/'],
+        },
+      ),
+    );
+
+    const result = await listR2Objects(CONFIG, 'devflare', {
+      prefix: 'deploybolt/',
+    });
+
+    expect(result.folders).toEqual(['deploybolt/assets/']);
+    expect(result.objects.map((object) => object.key)).toEqual([
+      'deploybolt/index.html',
+    ]);
+  });
+
+  it('surfaces a cursor only when the listing was truncated', async () => {
+    stubFetch(
+      listing([], { cursor: 'more', is_truncated: true }),
+      listing([], { cursor: 'stale', is_truncated: false }),
+    );
+
+    expect((await listR2Objects(CONFIG, 'b')).cursor).toBe('more');
+    // A cursor left over on a complete listing would offer a "load more" that
+    // repeats what is already on screen.
+    expect((await listR2Objects(CONFIG, 'b')).cursor).toBeNull();
+  });
+
+  it('answers empty lists when the bucket has nothing in it', async () => {
+    stubFetch(listing(null));
+
+    await expect(listR2Objects(CONFIG, 'b')).resolves.toEqual({
+      objects: [],
+      folders: [],
+      cursor: null,
+    });
   });
 });
 

@@ -38,17 +38,27 @@ export const CF_TOKEN_URL = `${CF_OAUTH_ISSUER}/oauth2/token`;
 export const CF_REVOKE_URL = `${CF_OAUTH_ISSUER}/oauth2/revoke`;
 
 /**
- * Exactly the permissions the Cloud section used to ask for by hand, plus the
- * two the flow itself needs. Every id was checked against
- * `GET /client/v4/oauth/scopes` — an unknown scope is refused at the consent
- * screen, which would be a dead end the UI cannot explain.
+ * Exactly the permissions the Cloud section used to ask for by hand, plus
+ * `memberships.read`, which is only used to put a name to the account id. Every
+ * id was checked against `GET /client/v4/oauth/scopes` — one unknown scope
+ * fails the whole authorization with `invalid_scope`, before the owner sees a
+ * consent screen at all.
  *
- * `offline_access` is what makes the token endpoint return a refresh token;
- * without it the connection would die 15 minutes after it was made.
- * `memberships.read` is only used to put a name to the account id.
+ * `offline_access` is deliberately **not** here, though the standard says it is
+ * what asks for a refresh token, and Cloudflare's discovery document lists it
+ * under `scopes_supported`. Requesting it against a real self-managed client
+ * (2026-08-17) is refused outright:
+ *
+ *   error=invalid_scope — The OAuth 2.0 Client is not allowed to request scope
+ *   'offline_access'
+ *
+ * and the 383-entry scope catalog a client is registered from contains no
+ * `offline_access`, `offline` or `openid`, so no client can be given it. Whether
+ * a refresh token comes back anyway — from the client's `refresh_token` grant
+ * type rather than from a scope — is not documented either way; ./cloudflare-connection.ts
+ * therefore treats one as optional and degrades to a reconnect prompt without it.
  */
 export const CF_OAUTH_SCOPES = [
-  'offline_access',
   'memberships.read',
   'page.read',
   'page.write',
