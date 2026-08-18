@@ -1,13 +1,13 @@
 import { createError, defineEventHandler, sendRedirect, setCookie } from 'h3';
 import { requireCloudAdmin } from '../../../../../lib/cloud-admin';
-import { encryptionKey } from '../../../../../lib/cloudflare-connection';
 import {
   authorizationUrl,
   codeChallenge,
   createCodeVerifier,
   createState,
-  resolveCloudflareOAuthConfig,
+  encryptionKey,
 } from '../../../../../lib/cloudflare-oauth';
+import { resolveCloudflareOAuthConfig } from '../../../../../lib/cloudflare-oauth-client';
 import { isSecureRequest } from '../../../../../lib/session';
 
 /**
@@ -27,7 +27,7 @@ export const CLOUD_CONNECT_COOKIE = 'df_cf_oauth_tx';
 export default defineEventHandler(async (event) => {
   await requireCloudAdmin(event);
 
-  const config = resolveCloudflareOAuthConfig(event.context);
+  const config = await resolveCloudflareOAuthConfig(event.context);
   if (!config) {
     throw createError({
       statusCode: 503,

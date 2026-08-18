@@ -12,9 +12,9 @@ import {
   CloudflareOAuthError,
   exchangeCode,
   preferredAccountId,
-  resolveCloudflareOAuthConfig,
   resolveConnectedAccount,
 } from '../../../../../lib/cloudflare-oauth';
+import { resolveCloudflareOAuthConfig } from '../../../../../lib/cloudflare-oauth-client';
 import { CLOUD_CONNECT_COOKIE } from './start.get';
 
 interface Transaction {
@@ -70,7 +70,7 @@ export default defineEventHandler(async (event) => {
     return sendRedirect(event, '/cloud?connect=invalid_state');
   }
 
-  const config = resolveCloudflareOAuthConfig(event.context);
+  const config = await resolveCloudflareOAuthConfig(event.context);
   if (!config) return sendRedirect(event, '/cloud?connect=not_configured');
 
   try {

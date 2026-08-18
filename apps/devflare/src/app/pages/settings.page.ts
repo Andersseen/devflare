@@ -19,6 +19,7 @@ import {
 } from '@voltui/components';
 import { Auth } from '@org/auth';
 import { DevAuthAdminService } from '@org/core';
+import { CloudflareSection } from './settings/cloudflare-section';
 import { IdentitySection } from './settings/identity-section';
 
 const BIO_STORAGE_KEY = 'devflare_user_bio';
@@ -42,6 +43,7 @@ const BIO_STORAGE_KEY = 'devflare_user_bio';
     VoltTabsTrigger,
     VoltTabsContent,
     VoltError,
+    CloudflareSection,
     IdentitySection,
   ],
   template: `
@@ -145,24 +147,9 @@ const BIO_STORAGE_KEY = 'devflare_user_bio';
 
         <volt-tabs-content value="integrations">
           <div class="space-y-4">
-            <volt-card>
-              <volt-card-content class="flex items-center justify-between py-4">
-                <div class="flex items-center gap-4">
-                  <div
-                    class="w-10 h-10 rounded-md bg-orange-500/10 flex items-center justify-center text-orange-500"
-                  >
-                    <lucide-icon name="database" class="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 class="font-medium">Cloudflare R2</h4>
-                    <p class="text-sm text-muted-foreground">
-                      Configure bucket and access credentials
-                    </p>
-                  </div>
-                </div>
-                <volt-button variant="outline" size="sm">Configure</volt-button>
-              </volt-card-content>
-            </volt-card>
+            <!-- Renders only for administrators, which the server decides;
+                 everyone else sees the placeholders below. -->
+            <app-cloudflare-section />
 
             <volt-card>
               <volt-card-content

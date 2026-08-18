@@ -4,11 +4,11 @@ import {
   authorizationUrl,
   CF_OAUTH_SCOPES,
   CloudflareOAuthError,
+  envCloudflareOAuthConfig,
   exchangeCode,
   pickAccount,
   preferredAccountId,
   refreshTokens,
-  resolveCloudflareOAuthConfig,
   resolveConnectedAccount,
   revokeToken,
   type CloudflareOAuthConfig,
@@ -46,7 +46,7 @@ function bodyOf(fetchMock: ReturnType<typeof stubFetch>): URLSearchParams {
   );
 }
 
-describe('resolveCloudflareOAuthConfig', () => {
+describe('envCloudflareOAuthConfig', () => {
   const env = {
     CLOUDFLARE_OAUTH_CLIENT_ID: 'client-id',
     CLOUDFLARE_OAUTH_CLIENT_SECRET: 'client-secret-value',
@@ -54,9 +54,7 @@ describe('resolveCloudflareOAuthConfig', () => {
   };
 
   it('reads the Cloudflare binding', () => {
-    expect(resolveCloudflareOAuthConfig({ cloudflare: { env } })).toEqual(
-      CONFIG,
-    );
+    expect(envCloudflareOAuthConfig({ cloudflare: { env } })).toEqual(CONFIG);
   });
 
   it('answers null when any half is missing', () => {
@@ -65,7 +63,7 @@ describe('resolveCloudflareOAuthConfig', () => {
     for (const key of Object.keys(env)) {
       const partial = { ...env, [key]: undefined };
       expect(
-        resolveCloudflareOAuthConfig({ cloudflare: { env: partial } }),
+        envCloudflareOAuthConfig({ cloudflare: { env: partial } }),
       ).toBeNull();
     }
   });

@@ -43,6 +43,26 @@ export interface CloudStatus {
   reason: CloudStatusReason;
 }
 
+/**
+ * Where the OAuth client behind the connection is configured (spec 010): a row
+ * an administrator saved from Settings, the deployment's environment
+ * variables, or nowhere yet.
+ */
+export type CloudOAuthClientSource = 'database' | 'environment' | 'none';
+
+/** How the OAuth client is configured. Never carries the client secret. */
+export interface CloudOAuthClient {
+  clientId: string | null;
+  source: CloudOAuthClientSource;
+  secretConfigured: boolean;
+  /** A stored secret the server's current encryption key cannot open. */
+  secretUnreadable: boolean;
+  /** What must be registered on the Cloudflare client. Null when unset here. */
+  redirectUri: string | null;
+  encryptionKeyConfigured: boolean;
+  updatedAt: string | null;
+}
+
 export interface CloudWorker {
   name: string;
   createdOn: string;
@@ -296,6 +316,60 @@ export class CloudflareAccount {
   async disconnect(): Promise<CloudStatus> {
     await request<{ disconnected: boolean }>('/connect', { method: 'DELETE' });
     return this.loadStatus();
+  }
+
+  // -------------------------------------------------------------------------
+  // The OAuth client the connection is made with (spec 010)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Held in a signal because two cards read it: the connection card explains
+   * *why* it cannot offer a connect button with it, and the client card edits
+   * it.
+   */
+  private readonly oauthClientSignal = signal<CloudOAuthClient | null>(null);
+  readonly oauthClient = this.oauthClientSignal.asReadonly();
+
+  async loadOAuthClient(): Promise<CloudOAuthClient> {
+    const client = await request<CloudOAuthClient>('/oauth-client');
+    this.oauthClientSignal.set(client);
+    return client;
+  }
+
+  /**
+   * A blank `clientSecret` keeps the stored one — the secret is write-only, so
+   * "unchanged" is the only thing an empty field can mean.
+   *
+   * The status is re-read afterwards because saving a client is what turns
+   * `canConnect` on, and the connection card must not keep saying the server
+   * has no OAuth client.
+   */
+  async saveOAuthClient(input: {
+    clientId: string;
+    clientSecret?: string;
+  }): Promise<CloudOAuthClient> {
+    const client = await request<CloudOAuthClient>('/oauth-client', {
+      method: 'PUT',
+      body: JSON.stringify({
+        clientId: input.clientId,
+        clientSecret: input.clientSecret ?? '',
+      }),
+    });
+
+    this.oauthClientSignal.set(client);
+    await this.loadStatus();
+    return client;
+  }
+
+  /** Drops the stored client; the deployment's own variables take over. */
+  async clearOAuthClient(): Promise<CloudOAuthClient> {
+    const client = await request<CloudOAuthClient>('/oauth-client', {
+      method: 'DELETE',
+    });
+
+    this.oauthClientSignal.set(client);
+    await this.loadStatus();
+    return client;
   }
 
   /** The R2 buckets. Not held in a signal: one page reads it, once. */
