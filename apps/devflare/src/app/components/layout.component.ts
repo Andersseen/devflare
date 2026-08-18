@@ -61,11 +61,21 @@ const DEFAULT_PERCENT = 18;
         </div>
 
         @if (!collapsed()) {
+          <!--
+            Wide enough to grab and visible enough to find. A hairline in the
+            border colour is invisible against this background and impossible
+            to aim at, so the divider reads as a divider at rest and grows a
+            grip under the pointer.
+          -->
           <div
             qzSplitterHandle
             aria-label="Resize sidebar"
-            class="hidden w-1 shrink-0 bg-border transition-colors hover:bg-primary/50 focus-visible:bg-primary/50 focus-visible:outline-none md:block"
-          ></div>
+            class="group relative hidden w-1.5 shrink-0 bg-border transition-colors hover:bg-primary/60 focus-visible:bg-primary focus-visible:outline-none md:block"
+          >
+            <span
+              class="pointer-events-none absolute left-1/2 top-1/2 h-8 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-muted-foreground/50 opacity-0 transition-opacity group-hover:opacity-100"
+            ></span>
+          </div>
         }
 
         <main class="min-w-0 flex-1 overflow-y-auto p-6 md:p-8">
