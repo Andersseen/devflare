@@ -45,5 +45,6 @@ the code is the implementation of it.
 | 007 | [Cloudflare OAuth connect](007-cloudflare-oauth-connect.md)    | In progress (code complete; needs the OAuth client)     |
 | 008 | [R2 bucket browser](008-r2-bucket-browser.md)                  | In progress (code complete; needs a browser check)      |
 | 009 | [Resizable sidebar](009-resizable-sidebar.md)                  | In progress (code complete; needs a browser check)      |
+| 010 | [Cloudflare account in Settings](010-cloudflare-settings.md)   | In progress (verified locally; needs a deploy)          |
 
 (Keep this table updated — it's how agents discover active work.)

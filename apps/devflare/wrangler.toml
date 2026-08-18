@@ -72,6 +72,12 @@ CLOUDFLARE_ACCOUNT_ID = "c32a93ee83fe9b5d53c63fcc73b90bb9"
 # The client id is not a credential — it travels in the authorization URL.
 # Created 2026-08-17 as the private client "Devflare"; both redirect URIs below
 # are registered on it and were verified against the live authorization endpoint.
+#
+# Since spec 010 these two are the *fallback*: an administrator can enter the
+# client from Settings → Integrations, which stores it in D1 (sealed with
+# SECRET_ENCRYPTION_KEY) and takes precedence over what is deployed here. The
+# redirect URI stays here either way — it is per-deployment and is compared byte
+# for byte by Cloudflare.
 CLOUDFLARE_OAUTH_CLIENT_ID = "5246101a6b6132f12492e3f025354eca"
 CLOUDFLARE_OAUTH_REDIRECT_URI = "http://localhost:4200/api/v1/cloud/connect/callback"
 # CLOUDFLARE_OAUTH_CLIENT_SECRET is a secret (apps/devflare/.dev.vars locally,

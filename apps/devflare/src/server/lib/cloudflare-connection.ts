@@ -26,12 +26,13 @@ import {
 } from './cloudflare';
 import {
   CloudflareOAuthError,
+  encryptionKey,
   refreshTokens,
-  resolveCloudflareOAuthConfig,
   revokeToken,
   type CloudflareAccountRef,
   type CloudflareTokenResponse,
 } from './cloudflare-oauth';
+import { resolveCloudflareOAuthConfig } from './cloudflare-oauth-client';
 
 /** There is one connection per install. See the migration for why. */
 const ROW_ID = 'default';
@@ -129,19 +130,6 @@ export function toConnection(
 // Storage
 // ---------------------------------------------------------------------------
 
-function env(context: RequestContext, key: string): string | undefined {
-  return context.cloudflare?.env?.[key] ?? process.env[key];
-}
-
-/**
- * Without this there is nowhere safe to put the tokens, so connecting is
- * refused up front rather than storing a credential in the clear — the same
- * call dev-auth's settings API makes about the GitHub secret.
- */
-export function encryptionKey(context: RequestContext): string | null {
-  return env(context, 'SECRET_ENCRYPTION_KEY') || null;
-}
-
 export async function readConnectionRow(): Promise<ConnectionRow | null> {
   const result = await db.sql`SELECT id, accountId, accountName, scope,
       accessToken, refreshToken, expiresAt, connectedBy, connectedAt, updatedAt
@@ -198,7 +186,7 @@ export async function saveConnection(
  */
 export async function clearConnection(context: RequestContext): Promise<void> {
   const row = await readConnectionRow();
-  const config = resolveCloudflareOAuthConfig(context);
+  const config = await resolveCloudflareOAuthConfig(context);
   const key = encryptionKey(context);
 
   if (row && config && key) {
@@ -233,7 +221,7 @@ async function refreshConnection(
   row: ConnectionRow,
   key: string,
 ): Promise<CloudflareConfig> {
-  const config = resolveCloudflareOAuthConfig(context);
+  const config = await resolveCloudflareOAuthConfig(context);
   if (!config) {
     throw new CloudflareApiError(
       'this server has a Cloudflare connection but no OAuth client to renew it with',
@@ -354,7 +342,7 @@ export async function cloudflareConnectionState(
   context: RequestContext,
 ): Promise<CloudflareConnectionState> {
   const canConnect = Boolean(
-    resolveCloudflareOAuthConfig(context) && encryptionKey(context),
+    (await resolveCloudflareOAuthConfig(context)) && encryptionKey(context),
   );
   const hasEnvToken = isCloudflareConfigured(context);
   const row = await readConnectionRow();

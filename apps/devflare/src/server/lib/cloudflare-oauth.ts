@@ -95,20 +95,32 @@ function env(context: RequestContext, key: string): string | undefined {
 }
 
 /**
- * Null when this deployment has no OAuth client — an ordinary state, not a
- * failure: the Cloud section then falls back to `CLOUDFLARE_API_TOKEN` and the
- * UI offers the manual instructions instead of a connect button.
+ * The client this deployment was configured with, or null when it has none —
+ * an ordinary state, not a failure. Since spec 010 this is the *fallback*: a
+ * client entered from Settings is stored in D1 and wins, so callers want
+ * `resolveCloudflareOAuthConfig` from ./cloudflare-oauth-client, not this. It
+ * stays exported because it is the one reader with no database behind it.
  */
-export function resolveCloudflareOAuthConfig(
+export function envCloudflareOAuthConfig(
   context: RequestContext,
 ): CloudflareOAuthConfig | null {
   const clientId = env(context, 'CLOUDFLARE_OAUTH_CLIENT_ID');
   const clientSecret = env(context, 'CLOUDFLARE_OAUTH_CLIENT_SECRET');
-  const redirectUri = env(context, 'CLOUDFLARE_OAUTH_REDIRECT_URI');
+  const redirectUri = oauthRedirectUri(context);
 
   if (!clientId || !clientSecret || !redirectUri) return null;
 
   return { clientId, clientSecret, redirectUri };
+}
+
+/**
+ * Where Cloudflare sends the owner back. Environment-only, and deliberately so:
+ * it is per-deployment, and it is compared byte for byte against what is
+ * registered on the client — a value typed into a form would fail *after* the
+ * consent screen, which is the worst place to learn about a typo.
+ */
+export function oauthRedirectUri(context: RequestContext): string | undefined {
+  return env(context, 'CLOUDFLARE_OAUTH_REDIRECT_URI');
 }
 
 /**
@@ -120,6 +132,18 @@ export function preferredAccountId(
   context: RequestContext,
 ): string | undefined {
   return env(context, 'CLOUDFLARE_ACCOUNT_ID');
+}
+
+/**
+ * The key that seals everything this server has to store reversibly — the
+ * connection's tokens and, since spec 010, the client secret behind them.
+ *
+ * It lives here rather than next to either of them because both need it and
+ * neither owns it. Null means "nothing may be stored", which is a refusal
+ * rather than a fallback: see ./secret-box.ts.
+ */
+export function encryptionKey(context: RequestContext): string | null {
+  return env(context, 'SECRET_ENCRYPTION_KEY') || null;
 }
 
 export function authorizationUrl(

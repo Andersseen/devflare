@@ -12,18 +12,23 @@ _Last updated: 2026-08-18_
 
 ## Branch & repo status
 
-- On `feature/009-resizable-sidebar`, **not pushed**, carrying spec 009 only.
-- `main` is `03ce930` and now contains specs 007 and 008: the OAuth connect flow
-  (PR #21) plus the scope fix, the dashboard fix and the R2 bucket browser
-  (PR #22). Spec 006 merged earlier as PR #20 and still has no live
-  verification; 001–005 merged before that (PRs #17–#19).
-- **Specs 007, 008 and 009 are all code-complete and unverified in a browser.**
-  007 additionally needs a consent completed by hand — see Next steps 0.
-- The production deploy of PR #18 **failed**; PR #19 fixed it and production has
-  been current since 2026-08-14T07:56Z. Both deploy workflows had been handing
-  Cloudflare credentials to the test job, which is what broke it.
-- Nothing is in flight besides 007, plus specs 008 (R2 bucket browser) and 009
-  (resizable sidebar), which ride along on the same unpushed branch.
+- On `feature/010-cloudflare-settings`, **not pushed**, carrying spec 010.
+- `main` is `e6a4150` and contains specs 007, 008 and 009 (PRs #21, #22, #23).
+  Spec 006 merged earlier as PR #20 and still has no live verification;
+  001–005 merged before that (PRs #17–#19).
+- Production is current: the deploy for PR #23 succeeded at 2026-08-18T05:48Z
+  and `wrangler d1 migrations list DB --env production --remote` reports nothing
+  pending. Spec 010 adds migration `0004_cloudflare_oauth_client.sql`, which the
+  deploy workflow will apply.
+- **Spec 010 is verified locally** (Settings → Integrations, save/clear round
+  trip, sealed row in D1). Specs 006–009 are still unverified in a browser.
+- **Production has never had a Cloudflare credential.**
+  `wrangler secret list --env production` on the DevFlare Worker returns only
+  `DEV_AUTH_ADMIN_TOKEN` and `DEV_AUTH_CLIENT_SECRET` — no
+  `SECRET_ENCRYPTION_KEY`, no `CLOUDFLARE_OAUTH_CLIENT_SECRET`, no
+  `CLOUDFLARE_API_TOKEN`. That, and nothing else, is why the live `/cloud`,
+  `/cloud/buckets` and `/cloud/storage` show the "paste an API token" prompt.
+  See Next steps 0.
 - **`quartz-headless` is a new dependency** (spec 009). The app had only
   `@voltui/components`; the splitter behind the resizable sidebar comes from
   Quartz because Volt's own `volt-resizable` keeps no state to persist.
@@ -338,6 +343,12 @@ dev-auth's auth pages were migrated from inline HTML-in-TypeScript strings
   **Every Pages project on this account is a direct upload (`ad_hoc`), not
   git-connected**, so Cloudflare has no source to rebuild and the Deploy button
   never appears — correctly. Rollback is offered and has not been fired.
+- **Cloudflare in Settings → Integrations (spec 010, verified locally
+  2026-08-18).** The connection (account, scopes, connect/disconnect) and the
+  OAuth client itself, whose id and secret can now be entered from the UI and
+  are stored sealed in D1 — `wrangler secret put` is no longer the only way to
+  configure the client. Environment variables remain the fallback. Renders only
+  for administrators, decided by `/api/v1/cloud/status`.
 
 ## Known gaps / not production-ready
 
@@ -378,30 +389,35 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
 
 ## Next steps (owner's apparent intent — confirm before large work)
 
-0. **In progress: spec 007** — connect the Cloudflare account from a consent
-   screen instead of a hand-made API token. The code is done; three things are
-   needed before it can run, none of which an agent can do:
-   - Create the OAuth client. Either Manage Account → OAuth clients, or
-     `CF_ADMIN_TOKEN=… ./scripts/create-cloudflare-oauth-client.sh` with an API
-     token holding `OAuth Clients Write` (the Cloud section's token does **not**
-     have it, confirmed: `Authentication error` on `GET
-/accounts/{id}/oauth_clients`).
-   - Put the client id in `apps/devflare/wrangler.toml` (both `[vars]` blocks,
-     currently commented out) and the secret in `.dev.vars` /
-     `wrangler secret put CLOUDFLARE_OAUTH_CLIENT_SECRET`.
-   - `SECRET_ENCRYPTION_KEY` on the DevFlare Worker as well — a local one was
-     generated into `apps/devflare/.dev.vars` already. Note this is a _second_
-     key, unrelated to the dev-auth one in step 2.
-1. **Confirm `CLOUDFLARE_API_TOKEN` is set on the production Worker.** Still the
-   fallback credential, and still what the Cloud section runs on until 007 is
-   connected. It is in
-   `apps/devflare/.dev.vars` and the Cloud section was verified against the real
-   account locally on 2026-08-14, but whether `wrangler secret put` was ever run
-   for production is **unverified** — check with `wrangler secret list --env
-production` before assuming `/cloud` works on the live site. Token scopes:
-   Workers Scripts (Read), Cloudflare Pages (Edit), D1 (Read), Workers KV
-   Storage (Read), Workers R2 Storage (Read). `CLOUDFLARE_ACCOUNT_ID` is already
-   in `wrangler.toml`.
+0. **Connect Cloudflare in production.** Everything else is in place: the OAuth
+   client exists (`5246101a…`, both redirect URIs registered), the client id is
+   in `[env.production.vars]`, and production runs the current code. Only the
+   Worker secrets are missing — `wrangler secret put` is the one step an agent
+   cannot take here (the permission classifier refuses it), so the owner runs,
+   from `apps/devflare`:
+   - `openssl rand -base64 32 | npx wrangler secret put SECRET_ENCRYPTION_KEY --env production`
+     — nothing is sealed in production yet, so a fresh key is fine and does not
+     have to match the local one. Note this is a _second_ key, unrelated to the
+     dev-auth one in step 2.
+   - Then either `npx wrangler secret put CLOUDFLARE_OAUTH_CLIENT_SECRET --env production`
+     (the value is in `apps/devflare/.dev.vars`), or — once spec 010 is
+     deployed — paste the same secret into Settings → Integrations, which stores
+     it sealed in D1 and needs no deploy.
+   - Then sign in as an admin, open Settings → Integrations or `/cloud`, press
+     **Connect with Cloudflare** and approve the consent screen. That step is
+     the owner's by definition.
+   - Optional but recommended: `npx wrangler secret put CLOUDFLARE_API_TOKEN --env production`
+     as the fallback credential (the same value as in `.dev.vars`; verified
+     working against the live account on 2026-08-18). Cloudflare is not
+     documented to return a refresh token to a self-managed client, so without a
+     fallback the section can go dark 15 minutes after a grant and ask to be
+     reconnected. Token scopes: Workers Scripts (Read), Cloudflare Pages (Edit),
+     D1 (Read), Workers KV Storage (Read), Workers R2 Storage (Read).
+     `CLOUDFLARE_ACCOUNT_ID` is already in `wrangler.toml`.
+1. **Merge spec 010** (`feature/010-cloudflare-settings`) so the Cloudflare
+   section appears in Settings → Integrations and the client can be entered
+   without `wrangler`. It also carries the fix for local sign-in described in
+   the session log.
 2. **Set two Worker secrets before the Identity UI can do anything in
    production**, neither of which the spec 001–004 branch could set:
    - `ADMIN_API_TOKEN` on dev-auth **and** the same value as
@@ -426,6 +442,28 @@ production` before assuming `/cloud` works on the live site. Token scopes:
      admin surfaces with different auth models is worth collapsing.
 
 ## Session log
+
+- **2026-08-18 (later)** — Spec 010: the Cloudflare account moved into
+  Settings → Integrations, replacing a placeholder card that had a dead
+  "Configure" button. Two cards: the connection (account, scopes, connect /
+  disconnect) and the OAuth client itself, whose id and secret are now stored
+  sealed in D1 with the environment variables as fallback — the resolution order
+  dev-auth already uses for GitHub. `resolveCloudflareOAuthConfig` became async
+  as a result and moved to `lib/cloudflare-oauth-client.ts`; the environment-only
+  reader stayed behind as `envCloudflareOAuthConfig`.
+  Three findings worth keeping:
+  - **Production has no Cloudflare secrets at all** (`wrangler secret list --env
+production`: only the two dev-auth ones). The live "connect your account"
+    prompt was never about the code — see Next steps 0.
+  - **Local sign-in was broken on `main`**: the development `DEV_AUTH_CLIENT_ID`
+    held the Cloudflare OAuth client id instead of `devflare-dev`, so every
+    authorization bounced back to the dev-auth login page with no error. Fixed
+    here. A paste from spec 007.
+  - **Cloudflare cannot be a sign-in provider**, so "add it next to GitHub on
+    the login page" is not implementable: its discovery document advertises
+    `claims_supported: ["sub"]` and nothing else — no email, no profile
+    (re-checked live 2026-08-18). It authorizes API access; identity stays
+    dev-auth's.
 
 - **2026-08-18** — Two rounds of "check before building", both of which changed
   the plan. The R2 bucket browser (spec 008) was going to need a tree component;
