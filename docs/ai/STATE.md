@@ -8,21 +8,25 @@
 > to the last ~5 entries, newest first. Update the date. Facts only; no plans
 > you didn't verify.
 
-_Last updated: 2026-08-17_
+_Last updated: 2026-08-18_
 
 ## Branch & repo status
 
-- On `feature/007-cloudflare-oauth-connect`, **not pushed**. Spec 007 is
-  code-complete and every gate is green, but it cannot be verified until an
-  OAuth client exists in the Cloudflare account — see Next steps 0.
-  See [../specs/007-cloudflare-oauth-connect.md](../specs/007-cloudflare-oauth-connect.md).
-- `main` is `457a4d0`. Spec 006 merged as PR #20; specs 001–005 merged earlier
-  (001–004 as PR #17, 005 as PR #18, plus PR #19 for the CI fix below). Spec 006
-  still has no live verification against the real account.
+- On `feature/009-resizable-sidebar`, **not pushed**, carrying spec 009 only.
+- `main` is `03ce930` and now contains specs 007 and 008: the OAuth connect flow
+  (PR #21) plus the scope fix, the dashboard fix and the R2 bucket browser
+  (PR #22). Spec 006 merged earlier as PR #20 and still has no live
+  verification; 001–005 merged before that (PRs #17–#19).
+- **Specs 007, 008 and 009 are all code-complete and unverified in a browser.**
+  007 additionally needs a consent completed by hand — see Next steps 0.
 - The production deploy of PR #18 **failed**; PR #19 fixed it and production has
   been current since 2026-08-14T07:56Z. Both deploy workflows had been handing
   Cloudflare credentials to the test job, which is what broke it.
-- Nothing is in flight besides 007.
+- Nothing is in flight besides 007, plus specs 008 (R2 bucket browser) and 009
+  (resizable sidebar), which ride along on the same unpushed branch.
+- **`quartz-headless` is a new dependency** (spec 009). The app had only
+  `@voltui/components`; the splitter behind the resizable sidebar comes from
+  Quartz because Volt's own `volt-resizable` keeps no state to persist.
 
 ## 2026-08-10 — first real browser walkthrough of prod auth, and what it found
 
@@ -422,6 +426,26 @@ production` before assuming `/cloud` works on the live site. Token scopes:
      admin surfaces with different auth models is worth collapsing.
 
 ## Session log
+
+- **2026-08-18** — Two rounds of "check before building", both of which changed
+  the plan. The R2 bucket browser (spec 008) was going to need a tree component;
+  Cloudflare's object listing takes `prefix` + `delimiter` and answers one level
+  at a time, so a breadcrumb and a list is not just simpler, it is the shape the
+  API hands you. Then the tree was going to be written for `quartz-headless` —
+  except Quartz already ships `tree` _and_ `splitter`, along with dialog,
+  drag-drop, overlay, toast, tooltip, viewport and virtual-scroll. Its tree does
+  take the whole hierarchy up front (`nodes` is a required input of nested
+  `children`), which is the real gap if anyone wants it for object storage.
+  The resizable sidebar (spec 009) then became integration, not authoring. Two
+  things had to be worked around and are worth remembering: `VoltSidebar`
+  declares **no inputs at all** and hardcodes `w-72`, so the width is overridden
+  from `styles.css` with a two-element selector that outranks the utility class;
+  and the splitter's position is a percentage, which is the wrong unit for a
+  sidebar, so the percent drives the width while CSS clamps it in pixels. The
+  width travels as a custom property rather than an inline style precisely so a
+  media query can ignore it below `md`, where the sidebar is a fixed slide-over.
+  Also fixed: the Deployment dashboard was listing the entire DevTools catalogue
+  (`PLATFORM_CARDS` plus every tool), duplicating `/tools`.
 
 - **2026-08-17** — Built spec 007 on `feature/007-cloudflare-oauth-connect`: the
   Cloud section can now be connected from Cloudflare's own consent screen

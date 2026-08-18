@@ -68,7 +68,7 @@
     "@imgly/background-removal": "^1.7.0",
     "@noble/hashes": "^2.3.0",
     "@sentry/angular": "^10.53.1",
-    "@voltui/components": "^0.5.0",
+    "@voltui/components": "^1.0.0",
     "better-auth": "^1.6.26",
     "browser-image-compression": "^2.0.2",
     "colorthief": "^2.6.0",
@@ -86,6 +86,7 @@
     "papaparse": "^5.5.3",
     "prismjs": "^1.29.0",
     "qrcode": "^1.5.4",
+    "quartz-headless": "^0.0.5",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },
