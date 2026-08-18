@@ -184,3 +184,31 @@ body {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: var(--muted-foreground);
 }
+
+/*
+ * Resizable sidebar (spec 009).
+ *
+ * `volt-sidebar` hardcodes `w-72` (and `w-16` collapsed) and exposes no width
+ * input, so the shell cannot ask it to be narrower — it has to say so here. The
+ * selector is two elements deep, which outranks Tailwind's single utility class
+ * without needing `!important`.
+ *
+ * All of it is behind the md breakpoint on purpose: below it the sidebar is a
+ * `fixed` slide-over, so it is out of flow and the panel must claim no width at
+ * all. That is also why the width travels as a custom property — an inline
+ * style could not be switched off by a media query.
+ */
+@media (min-width: 768px) {
+  .app-sidebar-panel {
+    width: var(--sidebar-w, 18%);
+    /* The limits that actually matter, in pixels: the percentage the splitter
+       drags is meaningless across a laptop and a 34" monitor. */
+    min-width: 14rem;
+    max-width: 26rem;
+    flex-shrink: 0;
+  }
+
+  .app-sidebar-panel > app-sidebar > volt-sidebar {
+    width: 100%;
+  }
+}
