@@ -208,7 +208,22 @@ body {
     flex-shrink: 0;
   }
 
+  /*
+   * The width has to be forced in three places. `volt-sidebar` does not carry
+   * it on its host: it renders an inner <aside> and puts `w-72` / `w-16` there,
+   * so telling only the host to fill the panel leaves the sidebar at its fixed
+   * 288px with a gap between it and the divider. The two hosts also need
+   * `display: block` — an Angular element is inline by default, and `width` on
+   * an inline box does nothing.
+   */
+  .app-sidebar-panel > app-sidebar,
   .app-sidebar-panel > app-sidebar > volt-sidebar {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .app-sidebar-panel > app-sidebar > volt-sidebar > aside {
     width: 100%;
   }
 }

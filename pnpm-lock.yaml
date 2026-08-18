@@ -54,8 +54,8 @@ importers:
         specifier: ^10.53.1
         version: 10.53.1(@angular/common@21.0.6(@angular/core@21.0.6(@angular/compiler@21.0.6)(rxjs@7.8.2)(zone.js@0.16.0))(rxjs@7.8.2))(@angular/core@21.0.6(@angular/compiler@21.0.6)(rxjs@7.8.2)(zone.js@0.16.0))(@angular/router@21.0.6(@angular/common@21.0.6(@angular/core@21.0.6(@angular/compiler@21.0.6)(rxjs@7.8.2)(zone.js@0.16.0))(rxjs@7.8.2))(@angular/core@21.0.6(@angular/compiler@21.0.6)(rxjs@7.8.2)(zone.js@0.16.0))(@angular/platform-browser@21.0.6(@angular/common@21.0.6(@angular/core@21.0.6(@angular/compiler@21.0.6)(rxjs@7.8.2)(zone.js@0.16.0))(rxjs@7.8.2))(@angular/core@21.0.6(@angular/compiler@21.0.6)(rxjs@7.8.2)(zone.js@0.16.0)))(rxjs@7.8.2))(rxjs@7.8.2)
       '@voltui/components':
-        specifier: ^0.5.0
-        version: 0.5.0(fc291d02f6ff190c70bd740d107fa94d)
+        specifier: ^1.0.0
+        version: 1.0.0(fc291d02f6ff190c70bd740d107fa94d)
       better-auth:
         specifier: ^1.6.26
         version: 1.6.26(@cloudflare/workers-types@4.20260523.1)(@opentelemetry/api@1.9.1)(better-sqlite3@12.8.0)(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(@cloudflare/workers-types@4.20260523.1)(@opentelemetry/api@1.9.1)(@types/better-sqlite3@7.6.13)(better-sqlite3@12.8.0)(kysely@0.28.17))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(vitest@4.0.9)
@@ -4878,8 +4878,8 @@ packages:
   '@vitest/utils@4.0.9':
     resolution: {integrity: sha512-cEol6ygTzY4rUPvNZM19sDf7zGa35IYTm9wfzkHoT/f5jX10IOY7QleWSOh5T0e3I3WVozwK5Asom79qW8DiuQ==}
 
-  '@voltui/components@0.5.0':
-    resolution: {integrity: sha512-Kw2RAbsQ/LyKD9nrQRQl0f7eZnz7G/KEDwyztpHakF09HaHvUjeol/svIjNSK+coXl6TB7dsv/Vj/7Oz1JjSfQ==}
+  '@voltui/components@1.0.0':
+    resolution: {integrity: sha512-n8882GvW29sRuW3wzLu+9IOk+15faH9DMZs22R+SehWZ9GFHOzfxTs68wh2JJbfEeR8bAruAO2PLMTB7hnXVPQ==}
     peerDependencies:
       '@angular/common': ^21.2.0
       '@angular/core': ^21.2.0
@@ -16118,7 +16118,7 @@ snapshots:
       '@vitest/pretty-format': 4.0.9
       tinyrainbow: 3.1.0
 
-  '@voltui/components@0.5.0(fc291d02f6ff190c70bd740d107fa94d)':
+  '@voltui/components@1.0.0(fc291d02f6ff190c70bd740d107fa94d)':
     dependencies:
       '@angular/common': 21.0.6(@angular/core@21.0.6(@angular/compiler@21.0.6)(rxjs@7.8.2)(zone.js@0.16.0))(rxjs@7.8.2)
       '@angular/core': 21.0.6(@angular/compiler@21.0.6)(rxjs@7.8.2)(zone.js@0.16.0)

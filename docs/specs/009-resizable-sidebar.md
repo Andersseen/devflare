@@ -55,10 +55,12 @@ enough.
 ### The two problems worth naming
 
 **Volt's sidebar has no width input.** `VoltSidebar` declares no inputs at all
-and hardcodes `w-72` (`w-16` collapsed). So `styles.css` overrides it:
-`.app-sidebar-panel > app-sidebar > volt-sidebar { width: 100% }` — two elements
-deep, which outranks a Tailwind utility class without `!important`. The panel
-owns the width; the sidebar fills it.
+and hardcodes `w-72` (`w-16` collapsed) — still true in 1.0.0. So `styles.css`
+overrides it, and it has to reach three elements, not one: the width is on an
+inner `<aside>`, not on the `volt-sidebar` host, and both hosts are Angular
+elements that are `display: inline` by default, where `width` does nothing.
+Overriding only the host leaves the sidebar at 288px with a visible gap between
+it and the divider — which is exactly what the first attempt shipped.
 
 **Percent versus pixels.** The splitter's position is a percentage, which is
 wrong for a sidebar: 18% is cramped on a laptop and absurd on a 34" monitor. So
