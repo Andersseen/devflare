@@ -35,7 +35,12 @@ migrations_dir = "src/server/db/migrations"
 #
 # Base URL of the provider. Local dev falls back to :8787 when unset.
 DEV_AUTH_URL = "http://localhost:8787"
-DEV_AUTH_CLIENT_ID = "5246101a6b6132f12492e3f025354eca"
+# The local registry in apps/dev-auth/wrangler.toml registers exactly this id,
+# and OAUTH_CLIENT_SECRETS in apps/dev-auth/.dev.vars keys its secret by it. Any
+# other value makes the provider answer invalid_client and sign-in dead-ends on
+# its login page with no error — which is what a paste of the Cloudflare OAuth
+# client id below did to local development between specs 007 and 010.
+DEV_AUTH_CLIENT_ID = "devflare-dev"
 # Compared byte for byte against the registered redirect URIs, so it is spelled
 # out rather than derived from the request host.
 DEV_AUTH_REDIRECT_URI = "http://localhost:4200/api/auth/callback"
