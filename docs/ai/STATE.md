@@ -465,9 +465,10 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
     see Next steps 1.
   - **`imageryx` was preserved** from the local `.dev.vars` copy on the
     reasoning that its dev server runs against this production issuer (its
-    `localhost:5173` callback is registered here). Authorization confirms it has
-    a registered secret, but only Imageryx completing a token exchange proves
-    the value still matches what that app holds.
+    `localhost:5173` callback is registered here). **Confirmed correct** — the
+    owner signed in to both DevFlare and Imageryx after the rotation, which is
+    the only thing that proves a secret matches, since authorization alone never
+    checks it.
   - Three actions were refused by the permission classifier and are the owner's
     by design: `gh pr merge`, `wrangler secret put`, and reading secrets out of
     `.dev.vars` to assemble them.
