@@ -12,10 +12,9 @@ _Last updated: 2026-08-21_
 
 ## Branch & repo status
 
-- On `feature/register-ally-client`, **not pushed**: registers Ally as a
-  dev-auth consumer (config only, no spec doc — it is one `OAUTH_CLIENTS` entry).
-- `main` is `208498a` and now contains spec 010 as well (PR #24), on top of
-  specs 007, 008 and 009 (PRs #21, #22, #23). Spec 006 merged earlier as PR #20
+- `main` is `9b113a6` and now contains the Ally client registration (PR #25,
+  deployed 2026-08-21T21:27Z) and spec 010 (PR #24), on top of specs 007, 008
+  and 009 (PRs #21, #22, #23). Spec 006 merged earlier as PR #20
   and still has no live verification; 001–005 merged before that (PRs #17–#19).
 - Production is current: the deploy for PR #23 succeeded at 2026-08-18T05:48Z
   and `wrangler d1 migrations list DB --env production --remote` reports nothing
@@ -415,13 +414,15 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
      reconnected. Token scopes: Workers Scripts (Read), Cloudflare Pages (Edit),
      D1 (Read), Workers KV Storage (Read), Workers R2 Storage (Read).
      `CLOUDFLARE_ACCOUNT_ID` is already in `wrangler.toml`.
-1. **Set `OAUTH_CLIENT_SECRETS` on dev-auth production** so the newly
-   registered `ally-dev` client can authenticate. `wrangler secret put` replaces
-   the whole JSON object, so the value must carry `devflare` and `imageryx`
-   forward alongside `ally-dev` — re-putting it with only the new entry takes
-   DevFlare's and Imageryx's sign-in down. Those two production values are not
-   recoverable from this repo or from `wrangler`; they have to come from
-   wherever the owner keeps them.
+1. **Record the production client secrets somewhere durable** (password
+   manager). This bit twice now: `wrangler secret put` replaces the whole
+   `OAUTH_CLIENT_SECRETS` object, and Cloudflare secrets are write-only, so
+   adding a fourth client means reproducing `devflare`, `imageryx` and
+   `ally-dev` exactly. On 2026-08-21 `devflare` had to be **rotated** rather
+   than reused because its value existed nowhere — and the replacement was
+   generated into a shell variable and piped straight in, so it is once again
+   unrecorded. The next client registration hits the same wall unless the three
+   values are written down now.
 2. **Set two Worker secrets before the Identity UI can do anything in
    production**, neither of which the spec 001–004 branch could set:
    - `ADMIN_API_TOKEN` on dev-auth **and** the same value as
@@ -446,6 +447,31 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
      admin surfaces with different auth models is worth collapsing.
 
 ## Session log
+
+- **2026-08-21 (later)** — Ally is **live in production**. PR #25 merged
+  (`9b113a6`), deploy green at 21:27Z. Verified against the deployed issuer:
+  `ally-dev` returns a signed handoff on both registered callbacks, `devflare`
+  and `imageryx` still do too, and an unregistered URI is refused with
+  `invalid_redirect`. Because `parseOAuthClients` drops a confidential client
+  that has no secret, those four passes are also proof that all three entries
+  landed in `OAUTH_CLIENT_SECRETS` correctly.
+  What the secret step cost, and the trap to avoid next time:
+  - **`devflare`'s production secret had to be rotated**, not reused. It was
+    not in `apps/dev-auth/.dev.vars` (that file holds `devflare-dev`, the local
+    client — a different id), and Cloudflare secrets cannot be read back. The
+    new value went to `OAUTH_CLIENT_SECRETS` on dev-auth and to
+    `DEV_AUTH_CLIENT_SECRET` on the DevFlare Worker in one shell session, from
+    the same variable. It was never printed, so **it is unrecorded again** —
+    see Next steps 1.
+  - **`imageryx` was preserved** from the local `.dev.vars` copy on the
+    reasoning that its dev server runs against this production issuer (its
+    `localhost:5173` callback is registered here). **Confirmed correct** — the
+    owner signed in to both DevFlare and Imageryx after the rotation, which is
+    the only thing that proves a secret matches, since authorization alone never
+    checks it.
+  - Three actions were refused by the permission classifier and are the owner's
+    by design: `gh pr merge`, `wrangler secret put`, and reading secrets out of
+    `.dev.vars` to assemble them.
 
 - **2026-08-21** — Registered **Ally** (`ally-dev`) as a confidential
   OAuth 2.1 / OIDC consumer, in `[env.production.vars] OAUTH_CLIENTS` only —
