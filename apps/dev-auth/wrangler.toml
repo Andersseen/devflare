@@ -117,6 +117,15 @@ OAUTH_CLIENTS = '''[
       "https://imageryx-dashboard.pages.dev/proxy/auth/callback",
       "http://localhost:5173/proxy/auth/callback"
     ]
+  },
+  {
+    "clientId": "ally-dev",
+    "name": "Ally",
+    "type": "web",
+    "redirectURIs": [
+      "https://ally.andersseen.dev/api/auth/callback",
+      "http://127.0.0.1:8787/api/auth/callback"
+    ]
   }
 ]'''
 # Imageryx is the worked example of an app registered from outside this
@@ -128,6 +137,13 @@ OAUTH_CLIENTS = '''[
 # it runs its local dev server against this production issuer. Loopback http is
 # accepted for exactly that reason (see redirectUriError in oauth-clients.ts).
 # Both URIs are matched byte for byte; a trailing slash is a different URI.
+#
+# Ally is registered the same way, and for the same reason lists a loopback
+# callback (http://127.0.0.1:8787/...) next to its deployed one: it has no
+# development provider of its own and points DEV_AUTH_URL at this issuer even
+# when running locally. Note that :8787 is Ally's own local port here, not this
+# service's — running `pnpm dev:auth` and Ally's local server at the same time
+# would collide, which is why Ally is expected to use the deployed provider.
 # No transactional email provider is wired up yet, so email verification is off
 # (see auth.config.ts) and sign-up is restricted to these addresses instead.
 # Applies to GitHub sign-in too: the address GitHub returns must be listed here.

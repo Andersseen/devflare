@@ -8,14 +8,15 @@
 > to the last ~5 entries, newest first. Update the date. Facts only; no plans
 > you didn't verify.
 
-_Last updated: 2026-08-18_
+_Last updated: 2026-08-21_
 
 ## Branch & repo status
 
-- On `feature/010-cloudflare-settings`, **not pushed**, carrying spec 010.
-- `main` is `e6a4150` and contains specs 007, 008 and 009 (PRs #21, #22, #23).
-  Spec 006 merged earlier as PR #20 and still has no live verification;
-  001–005 merged before that (PRs #17–#19).
+- On `feature/register-ally-client`, **not pushed**: registers Ally as a
+  dev-auth consumer (config only, no spec doc — it is one `OAUTH_CLIENTS` entry).
+- `main` is `208498a` and now contains spec 010 as well (PR #24), on top of
+  specs 007, 008 and 009 (PRs #21, #22, #23). Spec 006 merged earlier as PR #20
+  and still has no live verification; 001–005 merged before that (PRs #17–#19).
 - Production is current: the deploy for PR #23 succeeded at 2026-08-18T05:48Z
   and `wrangler d1 migrations list DB --env production --remote` reports nothing
   pending. Spec 010 adds migration `0004_cloudflare_oauth_client.sql`, which the
@@ -414,10 +415,13 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
      reconnected. Token scopes: Workers Scripts (Read), Cloudflare Pages (Edit),
      D1 (Read), Workers KV Storage (Read), Workers R2 Storage (Read).
      `CLOUDFLARE_ACCOUNT_ID` is already in `wrangler.toml`.
-1. **Merge spec 010** (`feature/010-cloudflare-settings`) so the Cloudflare
-   section appears in Settings → Integrations and the client can be entered
-   without `wrangler`. It also carries the fix for local sign-in described in
-   the session log.
+1. **Set `OAUTH_CLIENT_SECRETS` on dev-auth production** so the newly
+   registered `ally-dev` client can authenticate. `wrangler secret put` replaces
+   the whole JSON object, so the value must carry `devflare` and `imageryx`
+   forward alongside `ally-dev` — re-putting it with only the new entry takes
+   DevFlare's and Imageryx's sign-in down. Those two production values are not
+   recoverable from this repo or from `wrangler`; they have to come from
+   wherever the owner keeps them.
 2. **Set two Worker secrets before the Identity UI can do anything in
    production**, neither of which the spec 001–004 branch could set:
    - `ADMIN_API_TOKEN` on dev-auth **and** the same value as
@@ -442,6 +446,29 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
      admin surfaces with different auth models is worth collapsing.
 
 ## Session log
+
+- **2026-08-21** — Registered **Ally** (`ally-dev`) as a confidential
+  OAuth 2.1 / OIDC consumer, in `[env.production.vars] OAUTH_CLIENTS` only —
+  Ally points `DEV_AUTH_URL` at the deployed issuer even in local development,
+  which is the Imageryx precedent, so it needs no entry in the local `[vars]`
+  block (and would be dropped there anyway without a matching local secret).
+  Its two callbacks are `https://ally.andersseen.dev/api/auth/callback` and the
+  loopback `http://127.0.0.1:8787/api/auth/callback`. Verified by running the
+  edited production `OAUTH_CLIENTS` through the real `parseOAuthClients`: three
+  clients register, no errors, no warnings, the secret is stored hashed, and
+  both Ally origins land in `clientOrigins`.
+  Three things worth carrying forward:
+  - **The production domain is unverified.** Nothing in this repo references
+    Ally, so `ally.andersseen.dev` is the value supplied in the request, not one
+    that was checked against a live deployment. Redirect URIs are matched byte
+    for byte, so if the deployed host differs, authorization fails with
+    `invalid_request` until this entry is corrected.
+  - **`:8787` in Ally's loopback callback is Ally's own port**, and it collides
+    with local dev-auth (`pnpm dev:auth` binds the same one). They cannot both
+    run locally; using the deployed provider is the way around it.
+  - **`SIGNUP_ALLOWLIST` still gates who can reach Ally at all** — it is
+    `andriipap01@gmail.com` in production, and it applies to GitHub sign-in too.
+    Any other Ally user gets refused at sign-up, not at the client registration.
 
 - **2026-08-18 (later)** — Spec 010: the Cloudflare account moved into
   Settings → Integrations, replacing a placeholder card that had a dead
