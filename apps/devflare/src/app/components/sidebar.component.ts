@@ -1,11 +1,10 @@
 import { Component, inject } from '@angular/core';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   VoltSidebar,
   VoltSidebarHeader,
   VoltSidebarContent,
-  VoltSidebarGroup,
-  VoltSidebarItem,
   VoltSidebarFooter,
   VoltSidebarService,
 } from '@voltui/components';
@@ -19,11 +18,11 @@ import {
   selector: 'app-sidebar',
   imports: [
     LucideAngularModule,
+    RouterLink,
+    RouterLinkActive,
     VoltSidebar,
     VoltSidebarHeader,
     VoltSidebarContent,
-    VoltSidebarGroup,
-    VoltSidebarItem,
     VoltSidebarFooter,
   ],
   template: `
@@ -66,42 +65,68 @@ import {
       </volt-sidebar-header>
 
       <volt-sidebar-content>
-        @for (group of activeSection().groups; track group.label) {
-          <volt-sidebar-group [label]="group.label">
-            @for (item of group.items; track item.link) {
-              <volt-sidebar-item
-                [routerLink]="item.link"
-                [label]="item.label"
-                [exact]="item.exact ?? false"
-              >
-                <lucide-icon
-                  slot="icon"
-                  [name]="item.icon"
-                  class="h-5 w-5 shrink-0"
-                />
-              </volt-sidebar-item>
-            }
-          </volt-sidebar-group>
-        }
+        <nav class="space-y-6 px-3 py-4" aria-label="Section navigation">
+          @for (group of activeSection().groups; track group.label) {
+            <section class="space-y-1">
+              <div class="flex items-center gap-2 px-2 pb-1">
+                <span class="h-px w-4 shrink-0 bg-border"></span>
+                @if (!sidebarService.isCollapsed()) {
+                  <span
+                    class="text-[0.68rem] font-semibold uppercase text-muted-foreground/70"
+                  >
+                    {{ group.label }}
+                  </span>
+                  <span class="h-px flex-1 bg-border"></span>
+                }
+              </div>
+
+              <div class="space-y-1">
+                @for (item of group.items; track item.link) {
+                  <a
+                    [routerLink]="item.link"
+                    routerLinkActive="bg-primary/15 text-foreground ring-1 ring-primary/30"
+                    [routerLinkActiveOptions]="{ exact: item.exact ?? false }"
+                    class="group flex h-11 items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    [class.justify-center]="sidebarService.isCollapsed()"
+                    [attr.aria-label]="
+                      sidebarService.isCollapsed() ? item.label : null
+                    "
+                  >
+                    <lucide-icon [name]="item.icon" class="h-5 w-5 shrink-0" />
+                    @if (!sidebarService.isCollapsed()) {
+                      <span class="truncate">{{ item.label }}</span>
+                    }
+                  </a>
+                }
+              </div>
+            </section>
+          }
+        </nav>
       </volt-sidebar-content>
 
       <volt-sidebar-footer>
-        <volt-sidebar-item
-          [routerLink]="settingsItem.link"
-          [label]="settingsItem.label"
-        >
-          <lucide-icon
-            slot="icon"
-            [name]="settingsItem.icon"
-            class="h-5 w-5 shrink-0"
-          />
-        </volt-sidebar-item>
+        <div class="border-t border-border px-3 py-4">
+          <a
+            [routerLink]="settingsItem.link"
+            routerLinkActive="bg-primary/15 text-foreground ring-1 ring-primary/30"
+            class="group flex h-11 items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            [class.justify-center]="sidebarService.isCollapsed()"
+            [attr.aria-label]="
+              sidebarService.isCollapsed() ? settingsItem.label : null
+            "
+          >
+            <lucide-icon [name]="settingsItem.icon" class="h-5 w-5 shrink-0" />
+            @if (!sidebarService.isCollapsed()) {
+              <span class="truncate">{{ settingsItem.label }}</span>
+            }
+          </a>
 
-        @if (!sidebarService.isCollapsed()) {
-          <p class="px-3 pt-3 text-xs text-muted-foreground">
-            DevFlare v{{ version }}
-          </p>
-        }
+          @if (!sidebarService.isCollapsed()) {
+            <p class="px-3 pt-3 text-xs text-muted-foreground">
+              DevFlare v{{ version }}
+            </p>
+          }
+        </div>
       </volt-sidebar-footer>
     </volt-sidebar>
   `,

@@ -14,6 +14,9 @@
   - Single file: inline `template:` with Tailwind classes. No separate `.html`/`.css`.
   - Keep pages thin: state (signals) + event handlers that delegate to a
     `@org/core` service.
+- **Routing**: use AnalogJS file-based routing via `provideFileRouter()`.
+  Layouts live as route-group pages such as `(app).page.ts`; redirects and
+  guards live in each page's `routeMeta`. Do not add a manual route table.
 - **State**: `signal()` / `computed()` / `effect()`. Do not introduce RxJS
   subjects/observables for component state; RxJS only where a library forces it.
 - **DI**: `inject()` function; private services as ECMAScript private fields:
