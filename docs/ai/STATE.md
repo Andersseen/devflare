@@ -473,7 +473,10 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
   `1.0.1`, Quartz Headless to `0.2.0`, added `angular-movement@0.8.0`, and
   bumped dev-auth's Lumen Icons CDN pin to `@andersseen/icon@0.1.1`.
   `angular-movement` is wired globally with subtle dashboard card enter/stagger
-  motion. Verified: `pnpm format:check`, direct `tsc -p
+  motion. Quartz `0.2.0` requires `qzSplitterPanel`; the shell now uses it only
+  for the expanded sidebar panel, lets the main area flex into the remaining
+  space, and sets Volt's `--volt-sidebar-width` so the inner `<aside>` fills the
+  resizable panel. Verified: `pnpm format:check`, direct `tsc -p
 apps/devflare/tsconfig.app.json --noEmit`, direct ESLint over touched files,
   `pnpm exec vite build --config apps/devflare/vite.config.ts`, and Playwright
   route smoke against local Vite (`/projects` and `/projects/imageryx` redirect

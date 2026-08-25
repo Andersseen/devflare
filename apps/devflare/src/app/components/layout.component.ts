@@ -1,9 +1,10 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { VoltSidebarService } from '@voltui/components';
 import {
   SplitterContainerDirective,
   SplitterHandleDirective,
+  SplitterPanelDirective,
 } from 'quartz-headless';
 import { NavbarComponent } from './navbar.component';
 import { SidebarComponent } from './sidebar.component';
@@ -17,8 +18,8 @@ const WIDTH_KEY = 'devflare.sidebar.width';
  * page) are in styles.css, because they have to be pixels — 15% is cramped on a
  * laptop and enormous on a wide monitor. These only stop the drag running away.
  */
-const MIN_PERCENT = 8;
-const MAX_PERCENT = 40;
+const MIN_PERCENT = 14;
+const MAX_PERCENT = 24;
 const DEFAULT_PERCENT = 18;
 
 @Component({
@@ -29,6 +30,7 @@ const DEFAULT_PERCENT = 18;
     SidebarComponent,
     SplitterContainerDirective,
     SplitterHandleDirective,
+    SplitterPanelDirective,
   ],
   template: `
     <!--
@@ -38,29 +40,21 @@ const DEFAULT_PERCENT = 18;
     <div class="flex h-screen flex-col overflow-hidden bg-background">
       <app-navbar />
 
-      <div
-        class="flex min-h-0 flex-1"
-        qzSplitterContainer
-        [minSize]="minPercent"
-        [maxSize]="maxPercent"
-        [defaultPosition]="position()"
-        (positionChange)="onPositionChange($event)"
-        (dragStart)="dragging.set(true)"
-        (dragEnd)="onDragEnd()"
-      >
-        <!--
-          The width is published as a custom property rather than as a plain
-          style, so a media query decides whether it applies at all: below md
-          the sidebar is a fixed slide-over and this panel must take no space.
-        -->
+      @if (!collapsed()) {
         <div
-          [class.app-sidebar-panel]="!collapsed()"
-          [style.--sidebar-w]="widthValue()"
+          class="flex min-h-0 flex-1"
+          qzSplitterContainer
+          [minSize]="minPercent"
+          [maxSize]="maxPercent"
+          [defaultPosition]="position()"
+          (positionChange)="onPositionChange($event)"
+          (dragStart)="dragging.set(true)"
+          (dragEnd)="onDragEnd()"
         >
-          <app-sidebar />
-        </div>
+          <div class="app-sidebar-panel" qzSplitterPanel>
+            <app-sidebar />
+          </div>
 
-        @if (!collapsed()) {
           <!--
             Wide enough to grab and visible enough to find. A hairline in the
             border colour is invisible against this background and impossible
@@ -76,12 +70,22 @@ const DEFAULT_PERCENT = 18;
               class="pointer-events-none absolute left-1/2 top-1/2 h-8 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-muted-foreground/50 opacity-0 transition-opacity group-hover:opacity-100"
             ></span>
           </div>
-        }
 
-        <main class="min-w-0 flex-1 overflow-y-auto p-6 md:p-8">
-          <router-outlet />
-        </main>
-      </div>
+          <main class="min-w-0 flex-1 overflow-y-auto p-6 md:p-8">
+            <router-outlet />
+          </main>
+        </div>
+      } @else {
+        <div class="flex min-h-0 flex-1">
+          <div class="shrink-0">
+            <app-sidebar />
+          </div>
+
+          <main class="min-w-0 flex-1 overflow-y-auto p-6 md:p-8">
+            <router-outlet />
+          </main>
+        </div>
+      }
     </div>
   `,
 })
@@ -96,8 +100,6 @@ export class LayoutComponent {
 
   protected readonly position = signal(readStoredWidth());
   protected readonly dragging = signal(false);
-
-  protected readonly widthValue = computed(() => `${this.position()}%`);
 
   protected onPositionChange(position: number): void {
     this.position.set(position);
