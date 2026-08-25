@@ -22,13 +22,15 @@ _Last updated: 2026-08-25_
   deploy workflow will apply.
 - **Spec 010 is verified locally** (Settings → Integrations, save/clear round
   trip, sealed row in D1). Specs 006–009 are still unverified in a browser.
-- **Production has never had a Cloudflare credential.**
-  `wrangler secret list --env production` on the DevFlare Worker returns only
-  `DEV_AUTH_ADMIN_TOKEN` and `DEV_AUTH_CLIENT_SECRET` — no
-  `SECRET_ENCRYPTION_KEY`, no `CLOUDFLARE_OAUTH_CLIENT_SECRET`, no
-  `CLOUDFLARE_API_TOKEN`. That, and nothing else, is why the live `/cloud`,
-  `/cloud/buckets` and `/cloud/storage` show the "paste an API token" prompt.
-  See Next steps 0.
+- **Production now has the fallback Cloudflare API token.** On 2026-08-25,
+  `CLOUDFLARE_API_TOKEN` was copied from `apps/devflare/.dev.vars` into the
+  DevFlare production Worker with `wrangler secret put CLOUDFLARE_API_TOKEN
+--env production` (value never printed). `wrangler secret list --env
+production` now reports `CLOUDFLARE_API_TOKEN`, `DEV_AUTH_ADMIN_TOKEN` and
+  `DEV_AUTH_CLIENT_SECRET`. Production still has no
+  `SECRET_ENCRYPTION_KEY`/`CLOUDFLARE_OAUTH_CLIENT_SECRET`, so the interactive
+  OAuth connect flow is not configured yet; Cloud pages should run on the
+  fallback API token.
 - **`quartz-headless` is a new dependency** (spec 009). The app had only
   `@voltui/components`; the splitter behind the resizable sidebar comes from
   Quartz because Volt's own `volt-resizable` keeps no state to persist.
