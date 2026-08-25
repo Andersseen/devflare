@@ -468,7 +468,12 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
   `control-bucket` do not appear as separate dashboard cards. The sidebar keeps
   the Volt shell container but now renders custom section headers and links, so
   group names read as non-clickable dividers and navigation options read as
-  clickable rows with hover/active states. Verified: `pnpm format:check`, direct `tsc -p
+  clickable rows with hover/active states. Follow-up dependency refresh kept the
+  app on Angular 21 while moving Angular packages to `21.2.21`, VoltUI to
+  `1.0.1`, Quartz Headless to `0.2.0`, added `angular-movement@0.8.0`, and
+  bumped dev-auth's Lumen Icons CDN pin to `@andersseen/icon@0.1.1`.
+  `angular-movement` is wired globally with subtle dashboard card enter/stagger
+  motion. Verified: `pnpm format:check`, direct `tsc -p
 apps/devflare/tsconfig.app.json --noEmit`, direct ESLint over touched files,
   `pnpm exec vite build --config apps/devflare/vite.config.ts`, and Playwright
   route smoke against local Vite (`/projects` and `/projects/imageryx` redirect

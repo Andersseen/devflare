@@ -6,6 +6,7 @@ import {
   signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { MOVEMENT_DIRECTIVES } from 'angular-movement';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   VoltBadge,
@@ -33,6 +34,7 @@ import {
   selector: 'app-projects-page',
   imports: [
     RouterLink,
+    MOVEMENT_DIRECTIVES,
     LucideAngularModule,
     VoltBadge,
     VoltButton,
@@ -123,10 +125,15 @@ import {
           />
         </div>
       } @else {
-        <section class="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+        <section
+          class="grid gap-4 md:grid-cols-2 2xl:grid-cols-3"
+          [moveStagger]="45"
+        >
           @for (group of groups(); track group.slug) {
             <a
               [routerLink]="['/projects', group.slug]"
+              [move]="'fade-up'"
+              moveDuration="260"
               class="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <volt-card

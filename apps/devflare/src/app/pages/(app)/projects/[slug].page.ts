@@ -7,6 +7,7 @@ import {
   signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { MOVEMENT_DIRECTIVES } from 'angular-movement';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   VoltButton,
@@ -34,6 +35,7 @@ import {
   selector: 'app-project-detail-page',
   imports: [
     RouterLink,
+    MOVEMENT_DIRECTIVES,
     LucideAngularModule,
     VoltButton,
     VoltCard,
@@ -121,9 +123,9 @@ import {
           </div>
 
           @if (projectGroup.pages.length) {
-            <div class="grid gap-4 lg:grid-cols-2">
+            <div class="grid gap-4 lg:grid-cols-2" [moveStagger]="45">
               @for (project of projectGroup.pages; track project.name) {
-                <volt-card>
+                <volt-card [move]="'fade-up'" moveDuration="260">
                   <volt-card-content class="space-y-4 p-5">
                     <div class="flex items-start justify-between gap-3">
                       <div class="min-w-0">
@@ -263,9 +265,9 @@ import {
           </div>
 
           @if (projectGroup.workers.length) {
-            <div class="grid gap-4 lg:grid-cols-2">
+            <div class="grid gap-4 lg:grid-cols-2" [moveStagger]="45">
               @for (worker of projectGroup.workers; track worker.name) {
-                <volt-card>
+                <volt-card [move]="'fade-up'" moveDuration="260">
                   <volt-card-content class="space-y-4 p-5">
                     <div class="min-w-0">
                       <h3 class="truncate text-lg font-semibold">
