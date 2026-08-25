@@ -117,18 +117,10 @@ export const TOOLS: Tool[] = [
 
 export const PLATFORM_CARDS: Tool[] = [
   {
-    title: 'Deploy',
+    title: 'Deployment Dashboard',
     description:
-      'Upload a built folder to one of your Cloudflare Pages projects.',
-    link: '/deploy',
-    icon: 'zap',
-    colorClass: 'text-green-500',
-    bgClass: 'bg-green-500/10',
-  },
-  {
-    title: 'Projects',
-    description: 'Manage your deployed projects and view deployment history.',
-    link: '/projects',
+      'Track your projects, live URLs, Cloudflare deploys and Workers.',
+    link: '/',
     icon: 'folder-open',
     colorClass: 'text-primary',
     bgClass: 'bg-primary/10',
@@ -182,8 +174,6 @@ export const SHELL_SECTIONS: ShellSection[] = [
             icon: 'layout-dashboard',
             exact: true,
           },
-          { label: 'Deploy', link: '/deploy', icon: 'zap' },
-          { label: 'Projects', link: '/projects', icon: 'folder-open' },
         ],
       },
       {

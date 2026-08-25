@@ -16,7 +16,7 @@ const CDN = {
   webComponents: '0.4.0',
   layout: '0.0.1',
   motion: '0.2.0',
-  icon: '0.1.0',
+  icon: '0.1.1',
 } as const;
 
 export interface LayoutOptions {

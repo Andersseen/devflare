@@ -4,9 +4,11 @@ import {
   provideBrowserGlobalErrorListeners,
   ErrorHandler,
 } from '@angular/core';
-import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { withComponentInputBinding } from '@angular/router';
+import { provideFileRouter } from '@analogjs/router';
 import { provideHttpClient } from '@angular/common/http';
 import { importProvidersFrom } from '@angular/core';
+import { provideMovement } from 'angular-movement';
 import * as Sentry from '@sentry/angular';
 import {
   LucideAngularModule,
@@ -55,8 +57,10 @@ import {
   Boxes,
   RotateCcw,
   Rocket,
+  Activity,
+  TerminalSquare,
+  ChevronRight,
 } from 'lucide-angular';
-import { appRoutes } from './app.routes';
 
 // Initialize Sentry in browser
 if (typeof window !== 'undefined') {
@@ -76,8 +80,12 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideZonelessChangeDetection(),
     provideBrowserGlobalErrorListeners(),
-    provideRouter(appRoutes, withComponentInputBinding()),
+    provideFileRouter(withComponentInputBinding()),
     provideHttpClient(),
+    provideMovement({
+      duration: 220,
+      easing: 'cubic-bezier(0.2, 0, 0, 1)',
+    }),
     {
       provide: ErrorHandler,
       useValue: Sentry.createErrorHandler({ showDialog: false }),
@@ -129,6 +137,9 @@ export const appConfig: ApplicationConfig = {
         Boxes,
         RotateCcw,
         Rocket,
+        Activity,
+        TerminalSquare,
+        ChevronRight,
       }),
     ),
   ],

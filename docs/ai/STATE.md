@@ -8,7 +8,7 @@
 > to the last ~5 entries, newest first. Update the date. Facts only; no plans
 > you didn't verify.
 
-_Last updated: 2026-08-21_
+_Last updated: 2026-08-25_
 
 ## Branch & repo status
 
@@ -363,8 +363,9 @@ dev-auth's auth pages were migrated from inline HTML-in-TypeScript strings
   Adding it needs a `devflare-db-staging` D1 plus an `[env.staging]` block.
   Staging also has no GitHub OAuth App: an App takes a single callback URL, so
   staging needs its own before `GITHUB_CLIENT_ID` can be set there.
-- `deployments` table exists but the deploy feature (`libs/deploy`,
-  `deploy.page.ts`) is skeletal.
+- `deployments` table still exists for future history, but the manual deploy UI
+  has been removed from the app surface. The Deployment section is now a
+  personal Cloudflare projects dashboard.
 - ng-primitives 0.110.2 logs `nativeElement.addEventListener is not a function`
   (from `NgpLabel`) on every SSR render of a page with a Volt form field. Noisy
   but non-fatal — the HTML still renders and e2e is green. Upstream issue.
@@ -383,9 +384,9 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
   `*_legacy_oidc` tables, kept rather than dropped so nothing was destroyed in
   the same migration that renamed them. Dropping them is a later, deliberate
   step once their contents have been looked at.
-- Routing is a **manual `app.routes.ts`**, not Analog's file-based router,
-  despite the `*.page.ts` naming. `routeMeta` exports are therefore ignored;
-  guards and route config go in `app.routes.ts`.
+- Routing is AnalogJS file-based routing. `provideFileRouter()` is wired in
+  `app.config.ts`; authenticated routes live under the `(app)` route group, and
+  guards/redirects belong in `routeMeta`.
 
 ## Next steps (owner's apparent intent — confirm before large work)
 
@@ -447,6 +448,41 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
      admin surfaces with different auth models is worth collapsing.
 
 ## Session log
+
+- **2026-08-25** — Deployment was repositioned away from "Vercel clone /
+  upload a folder" and into a personal Cloudflare projects dashboard. The main
+  app now uses AnalogJS file-based routing (`provideFileRouter`) instead of the
+  deleted manual `app.routes.ts`: `(app).page.ts` wraps authenticated
+  dashboard/cloud/settings routes with `routeMeta.canActivateChild`, and
+  `tools.page.ts` wraps public DevTools routes. `/deploy` and `/projects`
+  remain as file-based redirects to `/`; `/login` is the canonical login route,
+  with `/auth/login` redirected for compatibility. The dashboard itself lives
+  at `(app)/(home).page.ts`, tracks the owner's project watchlist, and now shows
+  one high-level card per product/project rather than one card per Cloudflare
+  resource. Shared grouping logic in `(app)/dashboard-projects.ts` merges saved
+  DevFlare metadata with related Cloudflare Pages/Workers; `/projects/[slug]`
+  is the detail page that splits those related resources into Pages and Workers
+  sections and offers redeploy only for git-connected Pages projects. DevFlare
+  itself is one of those high-level groups, so `devflare`, `dev-auth-prod`,
+  `dev-auth-staging`, `worker-devflare-hono`, `devflare-worker` and
+  `control-bucket` do not appear as separate dashboard cards. The sidebar keeps
+  the Volt shell container but now renders custom section headers and links, so
+  group names read as non-clickable dividers and navigation options read as
+  clickable rows with hover/active states. Follow-up dependency refresh kept the
+  app on Angular 21 while moving Angular packages to `21.2.21`, VoltUI to
+  `1.0.1`, Quartz Headless to `0.2.0`, added `angular-movement@0.8.0`, and
+  bumped dev-auth's Lumen Icons CDN pin to `@andersseen/icon@0.1.1`.
+  `angular-movement` is wired globally with subtle dashboard card enter/stagger
+  motion. Quartz `0.2.0` requires `qzSplitterPanel`; the shell now uses it only
+  for the expanded sidebar panel, lets the main area flex into the remaining
+  space, and sets Volt's `--volt-sidebar-width` so the inner `<aside>` fills the
+  resizable panel. Verified: `pnpm format:check`, direct `tsc -p
+apps/devflare/tsconfig.app.json --noEmit`, direct ESLint over touched files,
+  `pnpm exec vite build --config apps/devflare/vite.config.ts`, and Playwright
+  route smoke against local Vite (`/projects` and `/projects/imageryx` redirect
+  to `/login` signed out; `/tools` renders with shell; `/login` renders without
+  shell). Full `pnpm lint` / `pnpm typecheck` through Nx still fail before
+  targets run with `Failed to start plugin worker`.
 
 - **2026-08-21 (later)** — Ally is **live in production**. PR #25 merged
   (`9b113a6`), deploy green at 21:27Z. Verified against the deployed issuer:
