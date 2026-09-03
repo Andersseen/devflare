@@ -4,18 +4,18 @@ import type { AuthUser } from '../types/auth.types';
  * Browser client for *this app's* session endpoints — not for the identity
  * provider.
  *
- * This used to be a better-auth client pointed at dev-auth, which meant the app
- * shared a cookie with the auth service and only worked because both sat on
- * subdomains of one domain. dev-auth is now an OAuth 2.1 / OIDC provider: the app
- * completes an authorization code flow on the server and keeps its own session,
- * so everything the browser needs is same-origin and there is no auth SDK left to
- * configure.
+ * This is the Angular-side half of DevAuth's consumer SDK. It never speaks
+ * OAuth/OIDC itself: dev-auth is the provider, the host application's server
+ * completes the authorization code flow (see @org/dev-auth-core) and keeps its
+ * own session, and this client only ever talks to that application's own
+ * `basePath` — same-origin, cookie-based, no provider credentials in reach of
+ * browser code.
  *
  * Sign-in is deliberately not a fetch: it is a full-page navigation, because the
  * provider has to be able to render its own login page (and hand off to GitHub).
  */
 
-const BASE = '/api/auth';
+export const DEFAULT_BASE_PATH = '/api/auth';
 
 export interface SessionResponse {
   user: AuthUser | null;
@@ -38,15 +38,18 @@ async function json<T>(response: Response): Promise<T> {
  * navigation so it can be asserted on — jsdom will not let a test replace
  * `window.location`.
  */
-export function signInUrl(returnTo = '/'): string {
-  return `${BASE}/login?returnTo=${encodeURIComponent(returnTo)}`;
+export function signInUrl(
+  returnTo = '/',
+  basePath = DEFAULT_BASE_PATH,
+): string {
+  return `${basePath}/login?returnTo=${encodeURIComponent(returnTo)}`;
 }
 
-export function createClient() {
+export function createClient(basePath = DEFAULT_BASE_PATH) {
   return {
     /** Current session, or `{ user: null }`. */
     async getSession(): Promise<SessionResponse> {
-      const response = await fetch(`${BASE}/session`, {
+      const response = await fetch(`${basePath}/session`, {
         credentials: 'include',
       });
       if (!response.ok) return { user: null };
@@ -58,13 +61,13 @@ export function createClient() {
      * server refuses anything that is not (an absolute URL here would be an open
      * redirect).
      */
-    signIn(returnTo = '/'): void {
-      window.location.assign(signInUrl(returnTo));
+    login(returnTo = '/'): void {
+      window.location.assign(signInUrl(returnTo, basePath));
     },
 
-    async signOut(): Promise<void> {
+    async logout(): Promise<void> {
       await json(
-        await fetch(`${BASE}/logout`, {
+        await fetch(`${basePath}/logout`, {
           method: 'POST',
           credentials: 'include',
         }),
@@ -73,7 +76,7 @@ export function createClient() {
 
     async updateUser(input: { name: string }): Promise<SessionResponse> {
       return json<SessionResponse>(
-        await fetch(`${BASE}/user`, {
+        await fetch(`${basePath}/user`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',

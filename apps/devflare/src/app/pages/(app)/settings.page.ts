@@ -17,7 +17,7 @@ import {
   VoltTabsContent,
   VoltError,
 } from '@voltui/components';
-import { Auth } from '@org/auth';
+import { DevAuth } from '@org/auth';
 import { DevAuthAdminService } from '@org/core';
 import { CloudflareSection } from '../settings/cloudflare-section';
 import { IdentitySection } from '../settings/identity/identity-section';
@@ -186,7 +186,7 @@ const BIO_STORAGE_KEY = 'devflare_user_bio';
   `,
 })
 export default class SettingsPage {
-  auth = inject(Auth);
+  auth = inject(DevAuth);
   private readonly devAuthAdmin = inject(DevAuthAdminService);
 
   /**

@@ -5,5 +5,6 @@ export * from './lib/types/auth.types';
 export * from './lib/client/auth-client';
 
 // Angular
+export * from './lib/tokens';
 export * from './lib/services/auth.service';
 export * from './lib/guards/auth.guard';

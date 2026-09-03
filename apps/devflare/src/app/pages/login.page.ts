@@ -10,7 +10,7 @@ import {
   VoltButton,
   VoltError,
 } from '@voltui/components';
-import { Auth } from '@org/auth';
+import { DevAuth } from '@org/auth';
 
 /**
  * DevFlare no longer collects credentials. dev-auth is an OAuth 2.1 / OIDC
@@ -94,7 +94,7 @@ const ERRORS: Record<string, string> = {
   `,
 })
 export default class LoginPage {
-  #auth = inject(Auth);
+  #auth = inject(DevAuth);
   #route = inject(ActivatedRoute);
 
   isRedirecting = signal(false);
@@ -108,8 +108,6 @@ export default class LoginPage {
 
   signIn(): void {
     this.isRedirecting.set(true);
-    this.#auth.signIn(
-      this.#route.snapshot.queryParamMap.get('returnTo') ?? '/',
-    );
+    this.#auth.login(this.#route.snapshot.queryParamMap.get('returnTo') ?? '/');
   }
 }

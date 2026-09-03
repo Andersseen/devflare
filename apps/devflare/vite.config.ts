@@ -53,6 +53,14 @@ export default defineConfig(() => {
             // factory into a Blob worker, which desyncs Rollup's CommonJS
             // transform. See shims/papaparse.server.mjs.
             papaparse: resolve(__dirname, 'shims/papaparse.server.mjs'),
+            // Nitro's server bundle does not go through nxViteTsPaths() — that
+            // only resolves @org/* for the client/SSR builds — so the one
+            // @org/* package a server route imports (the DevAuth OIDC/OAuth
+            // client) needs an explicit alias here.
+            '@org/dev-auth-core': resolve(
+              __dirname,
+              '../../libs/shared/dev-auth-core/src/index.ts',
+            ),
           },
           // Deliberately NOT using `cloudflare.deployConfig`. That makes Nitro
           // emit a merged wrangler.json plus a .wrangler/deploy/config.json

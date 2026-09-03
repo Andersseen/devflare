@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { VoltAvatar, VoltAvatarFallback, VoltButton } from '@voltui/components';
 import { VoltSidebarService } from '@voltui/components';
-import { Auth } from '@org/auth';
+import { DevAuth } from '@org/auth';
 import { injectActiveSection, SHELL_SECTIONS } from './shell-navigation';
 
 @Component({
@@ -84,7 +84,7 @@ import { injectActiveSection, SHELL_SECTIONS } from './shell-navigation';
             <lucide-icon name="log-out" class="h-4 w-4" />
             <span class="sr-only">Log out</span>
           </volt-button>
-        } @else if (!auth.loading()) {
+        } @else if (!auth.isLoading()) {
           <a
             routerLink="/login"
             class="inline-flex h-8 items-center rounded-md px-3 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
@@ -98,7 +98,7 @@ import { injectActiveSection, SHELL_SECTIONS } from './shell-navigation';
 })
 export class NavbarComponent {
   protected readonly sidebarService = inject(VoltSidebarService);
-  protected readonly auth = inject(Auth);
+  protected readonly auth = inject(DevAuth);
   protected readonly sections = SHELL_SECTIONS;
   protected readonly activeSection = injectActiveSection();
 

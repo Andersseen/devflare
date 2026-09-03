@@ -24,11 +24,11 @@ import {
   createCodeVerifier,
   createState,
   type TokenResponse,
-} from './oidc';
+} from '@org/dev-auth-core';
 
-// Generic RFC 6749/7636 primitives that happen to already live next door.
-// Re-exported rather than copied so there is one implementation of the PKCE
-// challenge in this server, not one per authorization server it talks to.
+// Generic RFC 6749/7636 primitives — shared with ./oidc.ts through
+// @org/dev-auth-core rather than copied, so there is one implementation of the
+// PKCE challenge in this server, not one per authorization server it talks to.
 export { codeChallenge, createCodeVerifier, createState };
 
 /** All four endpoints come from https://dash.cloudflare.com/.well-known/openid-configuration. */
