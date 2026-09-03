@@ -20,7 +20,7 @@ import {
 import { Auth } from '@org/auth';
 import { DevAuthAdminService } from '@org/core';
 import { CloudflareSection } from '../settings/cloudflare-section';
-import { IdentitySection } from '../settings/identity-section';
+import { IdentitySection } from '../settings/identity/identity-section';
 
 const BIO_STORAGE_KEY = 'devflare_user_bio';
 

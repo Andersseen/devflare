@@ -45,6 +45,31 @@ export interface ProviderSettings {
   signupRestricted: boolean;
 }
 
+/**
+ * The email/password method's fixed state, read by both ../auth.config.ts
+ * (to build the actual `emailAndPassword` option) and
+ * ../routes/admin-settings.ts (to report it in the Providers view). One
+ * constant rather than the same two booleans typed twice, which is exactly
+ * the class of drift spec 003's own postmortem was written about.
+ *
+ * Not stored in `providerSetting` — there is nothing to configure yet, only
+ * to report, and `requireEmailVerification` cannot safely be turned on from
+ * here anyway (see the comment on `emailVerification` in auth.config.ts: no
+ * transactional email provider exists to deliver the message).
+ */
+export const EMAIL_PASSWORD_STATUS = {
+  enabled: true,
+  requireEmailVerification: false,
+} as const;
+
+/**
+ * Whether a transactional email provider is wired up. Always false today —
+ * auth.config.ts's `sendVerificationEmail` only `console.log`s the link (see
+ * docs/ai/STATE.md, "Known gaps"). A literal, not a setting: there is nothing
+ * in D1 or the environment that would make this true yet.
+ */
+export const TRANSACTIONAL_EMAIL_CONFIGURED = false;
+
 type Rows = Map<string, { value: string | null; encrypted: boolean }>;
 
 /**

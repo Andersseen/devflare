@@ -8,10 +8,27 @@
 > to the last ~5 entries, newest first. Update the date. Facts only; no plans
 > you didn't verify.
 
-_Last updated: 2026-08-25_
+_Last updated: 2026-09-03_
 
 ## Branch & repo status
 
+- **`feature/011-identity-control-plane` is uncommitted, code-complete and
+  verified locally against real local D1 (not yet pushed, no PR, nothing
+  deployed).** Spec 011 turns dev-auth's admin surface into the four-area
+  control plane the owner asked for: Applications (polish — status/scopes/
+  timestamps, plus a `disabled` toggle), Users (new — list/ban/unban), Sessions
+  (new — list/revoke/revoke-all), Providers (new — GitHub, email/password,
+  transactional-email status, separated from Applications). Adds migration
+  `0006_users_sessions_admin.sql` (additive: `user.bannedAt/bannedReason/
+bannedBy`, `oauthClientAudit.targetType`). See the spec's §9 for full
+  verification detail (214 dev-auth tests, up from 182; live Playwright pass
+  banning/unbanning a real local user and revoking a real local session,
+  both confirmed in D1 and the audit trail). **Not yet applied to any remote
+  D1** — `pnpm db:migrate` / the deploy workflow does that when this ships.
+  Investigated and deliberately did not install better-auth's `admin` plugin
+  (role/adminUserIds-based authorization conflicts with this provider's
+  ADMIN_EMAILS-only model; bundles impersonation/role-setting this task
+  doesn't want) — reasoning is in the spec's §3.
 - `main` is `9b113a6` and now contains the Ally client registration (PR #25,
   deployed 2026-08-21T21:27Z) and spec 010 (PR #24), on top of specs 007, 008
   and 009 (PRs #21, #22, #23). Spec 006 merged earlier as PR #20
@@ -392,16 +409,21 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
 
 ## Next steps (owner's apparent intent — confirm before large work)
 
-0. **Connect Cloudflare in production.** Everything else is in place: the OAuth
-   client exists (`5246101a…`, both redirect URIs registered), the client id is
-   in `[env.production.vars]`, and production runs the current code. Only the
-   Worker secrets are missing — `wrangler secret put` is the one step an agent
-   cannot take here (the permission classifier refuses it), so the owner runs,
-   from `apps/devflare`:
+0. **Ship spec 011** (Identity control plane — Users/Sessions/Providers,
+   above): review the branch, commit, push, PR, merge, then let the deploy
+   workflow apply migration `0006` and deploy both Workers. Needs no new
+   Worker secret — it reuses `ADMIN_EMAILS`/`ADMIN_API_TOKEN`/
+   `DEV_AUTH_ADMIN_TOKEN`, all already set per step 3 below.
+1. **Connect Cloudflare in production.** Everything else is in place: the
+   OAuth client exists (`5246101a…`, both redirect URIs registered), the
+   client id is in `[env.production.vars]`, and production runs the current
+   code. Only the Worker secrets are missing — `wrangler secret put` is the
+   one step an agent cannot take here (the permission classifier refuses it),
+   so the owner runs, from `apps/devflare`:
    - `openssl rand -base64 32 | npx wrangler secret put SECRET_ENCRYPTION_KEY --env production`
      — nothing is sealed in production yet, so a fresh key is fine and does not
      have to match the local one. Note this is a _second_ key, unrelated to the
-     dev-auth one in step 2.
+     dev-auth one in step 3.
    - Then either `npx wrangler secret put CLOUDFLARE_OAUTH_CLIENT_SECRET --env production`
      (the value is in `apps/devflare/.dev.vars`), or — once spec 010 is
      deployed — paste the same secret into Settings → Integrations, which stores
@@ -417,7 +439,7 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
      reconnected. Token scopes: Workers Scripts (Read), Cloudflare Pages (Edit),
      D1 (Read), Workers KV Storage (Read), Workers R2 Storage (Read).
      `CLOUDFLARE_ACCOUNT_ID` is already in `wrangler.toml`.
-1. **Record the production client secrets somewhere durable** (password
+2. **Record the production client secrets somewhere durable** (password
    manager). This bit twice now: `wrangler secret put` replaces the whole
    `OAUTH_CLIENT_SECRETS` object, and Cloudflare secrets are write-only, so
    adding a fourth client means reproducing `devflare`, `imageryx` and
@@ -426,7 +448,7 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
    generated into a shell variable and piped straight in, so it is once again
    unrecorded. The next client registration hits the same wall unless the three
    values are written down now.
-2. **Set two Worker secrets before the Identity UI can do anything in
+3. **Set two Worker secrets before the Identity UI can do anything in
    production**, neither of which the spec 001–004 branch could set:
    - `ADMIN_API_TOKEN` on dev-auth **and** the same value as
      `DEV_AUTH_ADMIN_TOKEN` on DevFlare. Without it the Identity tab stays
@@ -436,20 +458,73 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
    - `SECRET_ENCRYPTION_KEY` on dev-auth (`openssl rand -base64 32`). Without
      it GitHub credentials keep coming from the config vars and the settings
      API refuses to store a secret rather than storing it in the clear.
-3. Wire up a transactional email provider, then re-enable
+4. Wire up a transactional email provider, then re-enable
    `requireEmailVerification` / `sendOnSignUp`. Widening who may sign up no
    longer needs a deploy — it is the Access panel in Settings → Identity.
-4. Release `@andersseen/icon` with the `lock`/`user` fix, then bump `CDN.icon`
+5. Release `@andersseen/icon` with the `lock`/`user` fix, then bump `CDN.icon`
    in `apps/dev-auth/src/pages/layout.ts`.
-5. Two follow-ups this work surfaced but did not fix:
+6. Follow-ups this and earlier work surfaced but did not fix:
    - `VoltInput` has no `label` input, so every `label="…"` in
      `settings.page.ts` renders nothing. The Profile tab's fields are unlabelled
      as a result.
    - `/api/admin` (backup, stats) still uses `ADMIN_SECRET`, a machine token
      with no acting human, alongside the new user-attributed `/admin/*`. Two
      admin surfaces with different auth models is worth collapsing.
+   - Nested `<volt-tabs>` inside another tab's content don't work correctly in
+     the installed `ng-primitives` (0.110.2) — the inner panel's active state
+     resolves against the outer tabset instead of its own. Identity's four
+     sub-tabs work around it with a plain button row (see
+     `identity-section.ts`); worth revisiting if a dependency bump fixes it.
 
 ## Session log
+
+- **2026-09-03** — Built spec 011 on `feature/011-identity-control-plane`
+  (uncommitted): dev-auth's admin surface is now the four-area identity
+  control plane the owner asked for (Applications/Users/Sessions/Providers).
+  New: `routes/admin-users.ts` (list/get/ban/unban) and
+  `routes/admin-sessions.ts` (list/revoke/revoke-all), both hand-rolled rather
+  than better-auth's `admin` plugin — investigated first, rejected because its
+  own request authorization is role/adminUserIds-based, which conflicts with
+  this provider's deliberate ADMIN*EMAILS-only model (no DB write can promote
+  an attacker to admin), and it bundles impersonation/role-setting endpoints
+  this task explicitly excludes. Ban is a binary switch enforced by a new
+  `databaseHooks.session.create.before` hook in `auth.config.ts` — blocks new
+  sign-ins, leaves existing sessions alone by design (revoking those is the
+  separate Sessions action). `oauthClientAudit` (spec 002) became the general
+  admin audit table via one additive `targetType` column rather than a new
+  parallel table. Applications gained status/scopes/timestamp display and a
+  `disabled` toggle — the latter wasn't in the original design but turned out
+  necessary once `GET /admin/clients` was found to silently drop disabled
+  managed clients from the list entirely (`toRegisteredClient` correctly
+  returns `null` for them, which is right for authorization and wrong for an
+  admin list — fixed with a new `presentRow()` that reads the row directly
+  for display). Migration `0006_users_sessions_admin.sql`, additive.
+  Two real bugs surfaced by testing against the actual stack rather than
+  assumptions: (1) the ban hook originally read the user through
+  `ctx.context.internalAdapter.findUserById`, mirroring the `admin` plugin's
+  own code — but better-auth's internal adapter silently drops any `user`
+  column not registered as `additionalFields`, so `bannedAt` never came back;
+  caught by a new integration test built against the real D1/drizzle adapter
+  (not the `memoryAdapter` the rest of the OAuth test suite uses for speed),
+  fixed by querying `env.DB` directly, matching how every other admin-added
+  column in this service is already read. (2) nesting a second `<volt-tabs>`
+  inside DevFlare's own Settings tab content renders a correctly-active
+  trigger row but every inner panel stays `display: none` — the installed
+  `ng-primitives` (0.110.2) resolves the inner panel's active state against
+  the \_outer* tabset. Found by inspecting the live DOM after Playwright
+  showed an empty tab; worked around with a plain button row + `@switch`
+  instead of a second primitive-tabset, so Identity's four sub-tabs are their
+  own the thing rather than nested tabs.
+  Verified: `pnpm format:check`/`lint`/`typecheck`/`build` clean; `pnpm test`
+  — 214 dev-auth (up from 182), 118 devflare, 8 core, 6 auth, 65 deploy, all
+  passing; migration applied cleanly to local D1 with 2 existing users and
+  prior audit history intact. Live via `pnpm dev:all` + Playwright, signed in
+  as the local admin: all four Identity sub-tabs render real data (including
+  9 real sessions accumulated across this project's own development
+  history); banned and unbanned a real local user with a reason, confirmed in
+  D1 and the audit trail; revoked a real (already-expired) session, confirmed
+  gone from D1 with its own audit row and no effect on the live browser
+  session. Not yet committed, pushed, or deployed — see Next steps 0.
 
 - **2026-08-25** — Deployment was repositioned away from "Vercel clone /
   upload a folder" and into a personal Cloudflare projects dashboard. The main
@@ -575,201 +650,3 @@ production`: only the two dev-auth ones). The live "connect your account"
   media query can ignore it below `md`, where the sidebar is a fixed slide-over.
   Also fixed: the Deployment dashboard was listing the entire DevTools catalogue
   (`PLATFORM_CARDS` plus every tool), duplicating `/tools`.
-
-- **2026-08-17** — Built spec 007 on `feature/007-cloudflare-oauth-connect`: the
-  Cloud section can now be connected from Cloudflare's own consent screen
-  instead of a token pasted into a secret store. This only became possible on
-  2026-06-03, when Cloudflare shipped self-managed OAuth clients — the earlier
-  assumption that Cloudflare had no third-party OAuth was simply out of date.
-  Everything protocol-shaped was read from the live service rather than guessed:
-  the four endpoints, `S256` and `client_secret_post` from
-  `dash.cloudflare.com/.well-known/openid-configuration`, and all eight scope ids
-  from `GET /client/v4/oauth/scopes` (383 of them). Worth recording that the same
-  discovery document declares `claims_supported: ["sub"]` and no email — so
-  Cloudflare cannot be a login provider for dev-auth even if that were wanted,
-  which is the question this work started from.
-  Tokens live in D1 sealed with AES-GCM rather than in a Worker secret, because
-  a secret cannot be rewritten from inside a request and a rotated refresh token
-  that cannot be persisted works exactly once. Two failure modes got explicit
-  handling for the same reason: concurrent refreshes are serialised per isolate
-  (rotation would otherwise burn the token), and an `invalid_grant` clears the
-  refresh token so the UI asks for a reconnect instead of retrying forever.
-  Not verified: anything past the consent screen. No OAuth client exists yet, and
-  the account's current API token cannot create one — it lacks `OAuth Clients
-Write`, which is deliberate and should stay that way.
-  `pnpm format:check`, `lint`, `typecheck`, `test` (8 files / 100 tests in
-  devflare, 32 new) and `nx build devflare` all green; migration 0003 applied
-  locally. One real fix fell out of the build rather than the tests: TS 5.9 types
-  `TextEncoder.encode` as writing into an arbitrary `ArrayBufferLike`, which Web
-  Crypto's `BufferSource` rejects — `typecheck` misses it because
-  `tsconfig.app.json` excludes `src/server/routes`, so it only surfaced when a
-  spec imported the module.
-
-- **2026-08-15** — Built spec 006 on `feature/006-pages-direct-upload`: `/deploy`
-  now uploads a built folder straight to a Pages project through the direct
-  upload API, and the `deployments` table finally has a writer and a reader.
-  The load-bearing discovery came from reading `wrangler`'s bundled source in
-  `node_modules` rather than any documentation: the hash Pages identifies an
-  asset by is **BLAKE3 over the base64 text of the file concatenated with its
-  extension**, truncated to 32 hex chars. WebCrypto cannot do BLAKE3, and no
-  public API reference describes the construction. Getting it wrong fails
-  silently and expensively — `check-missing` would report every asset as absent,
-  so deploys keep succeeding while re-uploading the whole site forever. Pinned
-  with six vectors generated from `blake3-wasm@2.1.5`, the package wrangler
-  itself bundles, then checked again over all 37 files of a real `dist/`: zero
-  divergence across 9 extension types including `.wasm`, `.ico` and
-  extensionless files.
-  Hashing and base64 run in the browser because a Worker is billed on CPU time,
-  not wall time — waiting on `fetch` is free, but encoding 25 MiB would blow the
-  free plan's 10 ms budget. The Worker holds the credential and forwards bytes.
-  `libs/deploy` was an Nx library with no source files and `targets: {}`; both
-  its `project.json` and `tsconfig.json` reached three levels up for a repo root
-  two levels away, so they pointed outside the repository. Nothing had noticed
-  because there was no code to break.
-  The WebContainer mock is gone. It was dead twice over: it faked build and
-  upload with `setTimeout`, and no COOP/COEP headers exist anywhere in this
-  repo, so `crossOriginIsolated` is false in production and it could never have
-  booted at all.
-  Two corrections worth recording. dev-auth's 182 tests **are** running under
-  `pnpm test` — an earlier conclusion that they were silently skipped was wrong,
-  and was settled by making one fail on purpose; the `@nx/vitest` executor just
-  prints no summary for that project. And `apps/dev-auth/vitest.config.ts` does
-  exist; an `ls` that said otherwise had run from a stale working directory.
-
-- **2026-08-13** — Built the Cloud section (spec 005) on
-  `feature/005-cloudflare-account`, four commits, one PR. DevFlare had never
-  called the account API: `projects` was a hand-typed table, `deployments` was
-  written by nobody, and `deploy.page.ts` faked its upload with a `setTimeout`.
-  Now `/api/v1/cloud/*` reads Workers, Pages, D1, KV and R2 with a token that
-  stays server-side, gated on being an administrator because that token sees
-  the whole account.
-  Three things only running the app revealed, none of which the build catches:
-  routing is a manual table so the four new pages were compiled and unreachable
-  until registered (AGENTS.md claimed file-based routing and was corrected); a
-  `server/lib/projects.ts` breaks the Nitro dev server for every route while
-  building fine, hence `project-rows.ts`; and the projects API was already
-  broken by the `{ rows }` envelope, so phase 4 had to fix the list before it
-  could link anything to it.
-  `@org/core` also got a `test` target — CONVENTIONS.md had asked for colocated
-  specs in a project that had no runner to execute them.
-  Verified against the real account on 2026-08-14 once the owner created the
-  token: 15 Workers, 10 Pages projects, 9 D1, 2 KV, 7 R2, deployment history and
-  a working project link. Three mapping bugs only real data could show — D1's
-  list endpoint reports `num_tables: 0` for everything, every Pages project here
-  is a direct upload rather than git-connected (so Deploy correctly never
-  appears), and wrangler-uploaded Worker versions carry no message, so the list
-  was leading with raw uuids. Rollback renders but has not been fired.
-- **2026-08-12** — Registered imageryx, then made the whole registry editable
-  without a deploy (specs 001–004, all Done). Findings that mattered more than
-  the code: imageryx was **not registered at all** — both its URIs returned
-  `invalid_client`, so there was nothing to "add to"; and the verification
-  command in the request used `curl -I`, which 404s on this endpoint even for a
-  working client, so it could never have shown the truth.
-  The registry now resolves config first, D1 second: config clients cannot be
-  shadowed or edited, so the panel cannot rewrite the client it signs in with.
-  GitHub credentials and the signup allowlist moved to D1 too, the GitHub secret
-  sealed with AES-GCM. The allowlist needed care the clients did not — an empty
-  `SIGNUP_ALLOWLIST` means "unrestricted", which is wrong as the failure mode of
-  a database read, so it now fails closed. That was observed for real: before
-  migration 0005 was applied, sign-ups correctly refused.
-  Two bugs the tests caught before they shipped: the GitHub secret fell back to
-  the env var when it could not be decrypted (a botched key rotation would have
-  looked successful), and the settings memo was not keyed on the env values it
-  falls back to. Verified end to end in a browser: an app created from Settings
-  → Identity authorizes on both its redirect URIs immediately, with no redeploy.
-  182 dev-auth tests, 24 DevFlare tests.
-
-- **2026-08-09** — Migrated dev-auth off the deprecated
-  `better-auth/plugins/oidc-provider` onto `@better-auth/oauth-provider`, and
-  removed the last DevFlare-specific assumption from the provider. better-auth
-  1.6.11 → 1.6.26 (scoped: same minor, nothing else upgraded). The hard part was
-  that the new plugin has no in-memory `trustedClients` — it loads clients through
-  the database adapter — which would have meant seeding client rows (and hashed
-  secrets) into D1 and keeping them in sync with `OAUTH_CLIENTS`. Instead
-  `client-registry.ts` decorates the adapter and answers the `oauthClient` model
-  from configuration while refusing writes, so config stays the whole registry,
-  D1 holds no client secrets, and the plugin's CRUD endpoints have nowhere to
-  write even if the route blocks and `clientPrivileges` were both removed.
-  `APP_URL` deleted: `/` is now the provider's own signed-in page instead of a
-  redirect into DevFlare. Migration `0003` renames the three old provider tables
-  aside rather than dropping them and creates the new four; users, sessions,
-  accounts and JWKS are untouched. Verified: 103 dev-auth tests, full repo
-  `format:check` + `lint` + `typecheck` + `test`, a `wrangler deploy --dry-run`
-  Worker build, and 0000→0003 applied on a fresh local D1.
-
-- **2026-08-08** — Turned dev-auth from DevFlare's auth service into a reusable
-  OAuth 2.1 / OIDC identity provider, and made DevFlare one of its clients.
-  Added better-auth's `oidc-provider` + `jwt` plugins, a config-driven client
-  registry (`OAUTH_CLIENTS` in git, `OAUTH_CLIENT_SECRETS` as a secret), and the
-  four provider tables plus `jwks` (migration `0002`). DevFlare now runs the
-  authorization code flow server-side and keeps its own session in D1 (migration
-  `0001_app_session`), so the `/api/auth/*` cookie-forwarding proxy and
-  `auth-remote.ts` are gone and nothing depends on a shared cookie any more.
-  Two latent bugs fell out of typing the better-auth options:
-  `advanced.crossSubDomainCookie` was misspelled — the runtime reads
-  `crossSubDomainCookies`, so the cross-subdomain cookie production supposedly
-  depended on was **never actually enabled** (deleted rather than switched on,
-  since the OAuth flow removes the need); and `allowDynamicClientRegistration:
-false` only blocks _unauthenticated_ registration, so any signed-in user could
-  have registered a client with their own redirect URIs — `/api/auth/oauth2/register`
-  is now refused outright. Verified the whole flow twice: 78 unit/integration
-  tests (including authorize → code → token → userinfo against the real
-  better-auth instance), and by curl against a live `wrangler dev` Worker on D1.
-
-- **2026-08-07** — Repaired the dev-auth auth pages, which rendered completely
-  unstyled and could not log anyone in (branch `feature/dev-auth-fixes`).
-  Four independent breakages:
-  (1) **CSP**: `style-src` never listed unpkg, only `script-src` did, so the
-  custom elements upgraded while all three CDN stylesheets were blocked —
-  `and-layout`/`and-text` and the light-DOM component styles vanished.
-  (2) **`and-input`**: every page listened for `andInput`, but the component
-  emits `andInputChange`, so all form fields always read as empty and login,
-  signup, forgot and the setup wizard were dead. Now they read `input.value`
-  directly, which also picks up server-rendered defaults.
-  (3) **`verify.flow`** shipped its own HTML shell pointing at two 404 CDN
-  paths (`dist/and-web-components/…`); it is now a fragment rendered through
-  `renderLayout` like every other page.
-  (4) Toast type `'destructive'` is not in the component's union (`error` is),
-  and `and-button` has no `full` prop — full width needs `::part(button)`.
-  Also pinned the four `@andersseen/*` CDN versions (were `@latest`, so any
-  upstream release could break production auth without a commit here) and
-  dropped the no-op `data-color="devflare"`.
-  Verified in a real browser: 0 CSP violations, card renders correctly,
-  `and-input.value` reads back typed text.
-
-- **2026-07-28** — Fixed the red `CI` workflow (e2e was the only failing task;
-  lint/typecheck/test/build were green). Three causes: (1) the workflow
-  installed only chromium while `playwright.config.ts` declares chromium +
-  firefox + webkit, so 12 of 21 tests died with "Executable doesn't exist";
-  (2) `index.html` still said `<title>devflare</title>` against a `/DevFlare/`
-  assertion; (3) `/projects` was never protected — `authGuard` existed in
-  `libs/shared/auth` but no route used it. Wired `authGuard` into `/projects`,
-  `/deploy` and `/settings` in `app.routes.ts`, and made it correct: it now
-  awaits `Auth.ready()` (the old synchronous version would have bounced a
-  logged-in user on any hard reload, since the session loads async) and is a
-  no-op during SSR. `projects.page.ts` now loads via `afterNextRender`, killing
-  the `Failed to parse URL from /api/v1/projects` SSR error. 21/21 e2e green
-  locally across all three browsers. Deploy workflows still red — same
-  unrelated `code 7403` token problem (see Known gaps).
-- **2026-07-28** — Fixed the red CI. Every run since the flowmark migration
-  failed on `dev-auth:build`: the `.flow.js` outputs were gitignored, so CI had
-  none of them, while `compile-flow.mjs` assumed they were committed. Also its
-  staleness check compared mtimes, which git does not preserve, so it was
-  non-deterministic on a fresh checkout. Un-gitignored and committed the 6
-  outputs, replaced the mtime check with a SHA-256 manifest, and ignored
-  `*.flow.js` in ESLint. `devflare` itself was already green — `dev-auth` was
-  the only failed task. Deploy workflows remain red for an unrelated reason:
-  the Cloudflare API token is rejected with `code 7403` (see Known gaps).
-- **2026-07-28** — Moved hosting onto Cloudflare: Nitro `cloudflare-module`
-  preset, app DB on D1, provisioned 3 D1 + 2 KV and applied all migrations,
-  rewrote both deploy workflows (fixing a pre-existing bug where they passed a
-  database name that never resolved under `--env`). Not deployed yet; secrets
-  pending.
-- **2026-07-28** — Fixed the VoltUI visual regression: the missing
-  `@voltui/components/themes.css` import meant Tailwind purged every class used
-  inside Volt's templates. Added the import plus the missing theme tokens, then
-  restructured the shell (navbar with Deployment/DevTools sections,
-  section-scoped sidebar, shared tool grid, new `/tools` page).
-- **2026-07-06** — Added AI agent documentation set: root `AGENTS.md`/`CLAUDE.md`,
-  `docs/ai/` (context, architecture, conventions, state, workflows),
-  `docs/specs/` (SDD process + template). No app code touched.

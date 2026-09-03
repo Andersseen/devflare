@@ -41,8 +41,12 @@ const PUBLIC_CLIENT_TYPES: ReadonlySet<string> = new Set([
 /**
  * The list columns are text in SQLite but some adapters hand back an array
  * already. Accept both; anything else is not a list.
+ *
+ * Exported for ../routes/admin-clients.ts, which needs the same parsing to
+ * *display* a row's stored lists — including a disabled row's, which
+ * `toRegisteredClient` below deliberately never returns (see its docstring).
  */
-function parseList(value: unknown): string[] | null {
+export function parseList(value: unknown): string[] | null {
   if (Array.isArray(value)) {
     return value.every((entry) => typeof entry === 'string')
       ? (value as string[])
@@ -61,7 +65,7 @@ function parseList(value: unknown): string[] | null {
 }
 
 /** SQLite has no boolean; drizzle may hand back 0/1 or true/false. */
-function asBoolean(value: unknown): boolean {
+export function asBoolean(value: unknown): boolean {
   return value === true || value === 1;
 }
 

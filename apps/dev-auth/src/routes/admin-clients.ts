@@ -16,18 +16,18 @@
 import { Hono } from 'hono';
 import type { Env } from '../index';
 import { createDb } from '../db';
-import {
-  oauthAccessToken,
-  oauthClient,
-  oauthClientAudit,
-  oauthRefreshToken,
-} from '../db/schema';
+import { oauthAccessToken, oauthClient, oauthRefreshToken } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { authenticateAdmin, hasCsrfHeader, type Actor } from '../lib/admin';
+import { audit } from '../lib/audit';
 import { hashClientSecret } from '../lib/client-secret';
 import { validateUriList } from '../lib/redirect-uri';
 import { getClientRegistry } from '../auth.config';
-import { toRegisteredClient, type OAuthClientRow } from '../lib/client-row';
+import {
+  parseList,
+  toRegisteredClient,
+  type OAuthClientRow,
+} from '../lib/client-row';
 
 const adminClientRoutes = new Hono<{ Bindings: Env }>();
 
@@ -51,33 +51,14 @@ function generateSecret(): string {
 }
 
 /**
- * Every mutation records who did what. Failing to write the audit row must not
- * fail the request that already succeeded, so this logs and moves on — the
- * alternative is a client that exists but reports an error, which is worse.
+ * Public shape of a client. Never includes the stored secret, in any form.
+ *
+ * `disabled`/`scopes`/`createdAt`/`updatedAt` are display-only additions
+ * (spec 011) — config clients have no meaningful value for the last three
+ * (they are declared, not created; `disabled` is fixed `false`, see
+ * ../oauth-clients.ts's `RegisteredClient`), so those come through as
+ * `false`/`null`/`null`/`null` rather than guessed at.
  */
-async function audit(
-  db: ReturnType<typeof createDb>,
-  actor: Actor,
-  action: string,
-  clientId: string | null,
-  changes?: unknown,
-): Promise<void> {
-  try {
-    await db.insert(oauthClientAudit).values({
-      id: crypto.randomUUID(),
-      actorUserId: actor.userId ?? null,
-      actorEmail: actor.email,
-      action,
-      clientId,
-      changes: changes === undefined ? null : JSON.stringify(changes),
-      createdAt: new Date(),
-    });
-  } catch (error) {
-    console.error('[admin-clients] failed to write audit row', error);
-  }
-}
-
-/** Public shape of a client. Never includes the stored secret, in any form. */
 function present(
   client: {
     clientId: string;
@@ -88,6 +69,10 @@ function present(
     skipConsent: boolean;
     enableEndSession: boolean;
     public: boolean;
+    disabled: boolean;
+    scopes: string[] | null;
+    createdAt: Date | null;
+    updatedAt: Date | null;
   },
   source: 'config' | 'managed',
 ) {
@@ -100,10 +85,45 @@ function present(
     skipConsent: client.skipConsent,
     enableEndSession: client.enableEndSession,
     public: client.public,
+    disabled: client.disabled,
+    /** Null means "the full set this provider issues" — see ../auth.config.ts's SCOPES. */
+    scopes: client.scopes,
+    createdAt: client.createdAt,
+    updatedAt: client.updatedAt,
     source,
     /** Config clients cannot be edited here; the UI uses this, not a guess. */
     readOnly: source === 'config',
   };
+}
+
+/**
+ * A managed row's display shape, built directly from the D1 row rather than
+ * through `toRegisteredClient`. That normaliser deliberately returns `null`
+ * for a disabled row (see its docstring — right for deciding whether a client
+ * may authorize, wrong here: a disabled client should still be visible, with
+ * its status shown, not vanish from the admin list entirely.
+ */
+function presentRow(row: typeof oauthClient.$inferSelect) {
+  return present(
+    {
+      clientId: row.clientId,
+      name: row.name?.trim() ? row.name : row.clientId,
+      type:
+        row.type === 'native' || row.type === 'user-agent-based'
+          ? row.type
+          : 'web',
+      redirectUris: parseList(row.redirectUris) ?? [],
+      postLogoutRedirectUris: parseList(row.postLogoutRedirectUris) ?? [],
+      skipConsent: row.skipConsent === true,
+      enableEndSession: row.enableEndSession === true,
+      public: row.public === true,
+      disabled: row.disabled === true,
+      scopes: parseList(row.scopes),
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    },
+    'managed',
+  );
 }
 
 adminClientRoutes.use('*', async (c, next) => {
@@ -138,17 +158,25 @@ adminClientRoutes.get('/', async (c) => {
   const rows = await db.select().from(oauthClient);
 
   const configured = new Set(configClients.map((client) => client.clientId));
-  const managed = rows
-    .map((row) => toRegisteredClient(row as OAuthClientRow))
-    .filter(
-      (client): client is NonNullable<typeof client> =>
-        client !== null && !configured.has(client.clientId),
-    );
+  // Built straight from the row, not through toRegisteredClient — see
+  // presentRow's docstring for why a disabled row must still appear here.
+  const managed = rows.filter((row) => !configured.has(row.clientId));
 
   return c.json({
     clients: [
-      ...configClients.map((client) => present(client, 'config')),
-      ...managed.map((client) => present(client, 'managed')),
+      ...configClients.map((client) =>
+        present(
+          {
+            ...client,
+            disabled: false,
+            scopes: null,
+            createdAt: null,
+            updatedAt: null,
+          },
+          'config',
+        ),
+      ),
+      ...managed.map((row) => presentRow(row)),
     ],
   });
 });
@@ -161,6 +189,8 @@ interface ClientInput {
   postLogoutRedirectUris?: unknown;
   skipConsent?: unknown;
   enableEndSession?: unknown;
+  /** PATCH only (spec 011) — a new client is always created enabled. */
+  disabled?: unknown;
 }
 
 adminClientRoutes.post('/', async (c) => {
@@ -250,9 +280,11 @@ adminClientRoutes.post('/', async (c) => {
     updatedAt: new Date(),
   });
 
-  await audit(db, actorOf(c), 'create', clientId, {
-    redirectUris: redirects.uris,
-    type,
+  await audit(db, actorOf(c), {
+    action: 'create',
+    targetType: 'client',
+    targetId: clientId,
+    changes: { redirectUris: redirects.uris, type },
   });
 
   return c.json(
@@ -334,6 +366,13 @@ adminClientRoutes.patch('/:clientId', async (c) => {
     update['enableEndSession'] = body.enableEndSession;
     changes['enableEndSession'] = body.enableEndSession;
   }
+  if (typeof body.disabled === 'boolean') {
+    // Disabling does not revoke outstanding tokens — unlike delete (below),
+    // this is meant to be reversible, so a client re-enabled a minute later
+    // has not lost every session that was mid-flow.
+    update['disabled'] = body.disabled;
+    changes['disabled'] = body.disabled;
+  }
 
   // clientId is intentionally not updatable: changing it would orphan every
   // token already issued under the old one. Delete and create instead.
@@ -341,7 +380,12 @@ adminClientRoutes.patch('/:clientId', async (c) => {
     .update(oauthClient)
     .set(update)
     .where(eq(oauthClient.clientId, clientId));
-  await audit(db, actorOf(c), 'update', clientId, changes);
+  await audit(db, actorOf(c), {
+    action: 'update',
+    targetType: 'client',
+    targetId: clientId,
+    changes,
+  });
 
   return c.json({ clientId, updated: Object.keys(changes) });
 });
@@ -377,7 +421,11 @@ adminClientRoutes.post('/:clientId/rotate-secret', async (c) => {
     .where(eq(oauthClient.clientId, clientId));
 
   // Records that a rotation happened, never what the value became.
-  await audit(db, actorOf(c), 'rotate-secret', clientId);
+  await audit(db, actorOf(c), {
+    action: 'rotate-secret',
+    targetType: 'client',
+    targetId: clientId,
+  });
 
   return c.json({ clientId, clientSecret: secret, secretShownOnce: true });
 });
@@ -406,9 +454,11 @@ adminClientRoutes.delete('/:clientId', async (c) => {
   // refresh-token lifetime, which is not what "delete" reads as.
   const revoked = await revokeTokensFor(db, clientId);
 
-  await audit(db, actorOf(c), 'delete', clientId, {
-    redirectUris: row.redirectUris,
-    revoked,
+  await audit(db, actorOf(c), {
+    action: 'delete',
+    targetType: 'client',
+    targetId: clientId,
+    changes: { redirectUris: row.redirectUris, revoked },
   });
 
   return c.json({ clientId, deleted: true, revoked });

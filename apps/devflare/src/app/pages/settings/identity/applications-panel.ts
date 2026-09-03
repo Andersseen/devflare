@@ -1,4 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import {
@@ -14,17 +15,15 @@ import {
 import { DevAuthAdminService, type AdminClient } from '@org/core';
 
 /**
- * Administering dev-auth from DevFlare: which applications may use the SSO,
- * whether GitHub sign-in is on, and who may create an account.
- *
- * All of it goes through DevFlare's own server (see server/routes/api/admin),
- * which forwards to the provider with a service token. Nothing here holds a
- * credential for dev-auth, and this component never renders a credential form
- * for *end users* — sign-in stays hosted on the provider.
+ * OAuth consumer applications registered with dev-auth — DevFlare, Imageryx,
+ * Ally and anything created here. Distinct from Providers (the upstream
+ * sign-in methods dev-auth itself offers): this tab is about who may use the
+ * SSO, not how someone proves who they are.
  */
 @Component({
-  selector: 'app-identity-section',
+  selector: 'app-identity-applications-panel',
   imports: [
+    DatePipe,
     FormsModule,
     LucideAngularModule,
     VoltCard,
@@ -37,17 +36,6 @@ import { DevAuthAdminService, type AdminClient } from '@org/core';
     VoltError,
   ],
   template: `
-    @if (admin.loading()) {
-      <div class="flex items-center gap-2 text-muted-foreground py-8">
-        <lucide-icon name="loader" class="animate-spin w-4 h-4" />
-        Loading identity settings…
-      </div>
-    }
-
-    @if (admin.error()) {
-      <volt-error class="mb-4">{{ admin.error() }}</volt-error>
-    }
-
     @if (issuedSecret(); as issued) {
       <volt-card class="mb-4 border-amber-500/40">
         <volt-card-header>
@@ -83,8 +71,7 @@ import { DevAuthAdminService, type AdminClient } from '@org/core';
       </volt-card>
     }
 
-    <!-- Applications -->
-    <volt-card class="mb-4">
+    <volt-card>
       <volt-card-header>
         <volt-card-title>Applications</volt-card-title>
       </volt-card-header>
@@ -94,11 +81,15 @@ import { DevAuthAdminService, type AdminClient } from '@org/core';
           matched exactly — a trailing slash is a different URI.
         </p>
 
+        @if (admin.error()) {
+          <volt-error>{{ admin.error() }}</volt-error>
+        }
+
         @for (client of admin.clients(); track client.clientId) {
           <div class="rounded-md border border-border p-4 space-y-2">
             <div class="flex items-start justify-between gap-4">
               <div class="min-w-0">
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 flex-wrap">
                   <h4 class="font-medium truncate">{{ client.name }}</h4>
                   <span
                     class="text-xs px-2 py-0.5 rounded-full"
@@ -108,6 +99,15 @@ import { DevAuthAdminService, type AdminClient } from '@org/core';
                         : 'bg-primary/10 text-primary'
                     "
                     >{{ client.source }}</span
+                  >
+                  <span
+                    class="text-xs px-2 py-0.5 rounded-full"
+                    [class]="
+                      client.disabled
+                        ? 'bg-destructive/10 text-destructive'
+                        : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                    "
+                    >{{ client.disabled ? 'disabled' : 'active' }}</span
                   >
                 </div>
                 <p class="text-sm text-muted-foreground font-mono truncate">
@@ -122,10 +122,33 @@ import { DevAuthAdminService, type AdminClient } from '@org/core';
                     </li>
                   }
                 </ul>
+                <p class="mt-2 text-xs text-muted-foreground">
+                  Scopes:
+                  {{
+                    client.scopes?.join(', ') ||
+                      'openid profile email offline_access'
+                  }}
+                  @if (client.skipConsent) {
+                    · first-party (skips consent)
+                  }
+                  @if (client.enableEndSession) {
+                    · supports logout
+                  }
+                </p>
+                @if (client.createdAt) {
+                  <p class="text-xs text-muted-foreground">
+                    Created {{ client.createdAt | date: 'medium' }}
+                    @if (
+                      client.updatedAt && client.updatedAt !== client.createdAt
+                    ) {
+                      · updated {{ client.updatedAt | date: 'medium' }}
+                    }
+                  </p>
+                }
               </div>
 
               @if (!client.readOnly) {
-                <div class="flex shrink-0 gap-2">
+                <div class="flex shrink-0 gap-2 flex-wrap justify-end">
                   <volt-button
                     variant="outline"
                     size="sm"
@@ -139,6 +162,13 @@ import { DevAuthAdminService, type AdminClient } from '@org/core';
                     (click)="rotate(client)"
                   >
                     Rotate
+                  </volt-button>
+                  <volt-button
+                    variant="outline"
+                    size="sm"
+                    (click)="toggleDisabled(client)"
+                  >
+                    {{ client.disabled ? 'Enable' : 'Disable' }}
                   </volt-button>
                   <volt-button
                     variant="ghost"
@@ -234,103 +264,9 @@ import { DevAuthAdminService, type AdminClient } from '@org/core';
         </div>
       </volt-card-content>
     </volt-card>
-
-    <!-- GitHub sign-in -->
-    <volt-card class="mb-4">
-      <volt-card-header>
-        <volt-card-title>GitHub sign-in</volt-card-title>
-      </volt-card-header>
-      <volt-card-content class="space-y-3">
-        <p class="text-sm text-muted-foreground">
-          Credentials from the GitHub OAuth App. The secret is stored encrypted
-          and never shown again; leave it blank to keep the current one.
-        </p>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <label for="github-client-id" class="block space-y-1">
-            <span class="text-sm font-medium">Client ID</span>
-            <volt-input
-              id="github-client-id"
-              [(value)]="githubClientId"
-              placeholder="Ov23…"
-            />
-          </label>
-          <label for="github-client-secret" class="block space-y-1">
-            <span class="text-sm font-medium">Client secret</span>
-            <volt-input
-              type="password"
-              id="github-client-secret"
-              [(value)]="githubClientSecret"
-              [placeholder]="
-                admin.settings()?.github?.secretConfigured
-                  ? 'configured — leave blank to keep'
-                  : 'not configured'
-              "
-            />
-          </label>
-        </div>
-        <div class="flex items-center justify-between">
-          <span class="text-sm">
-            Status:
-            <strong>{{
-              admin.settings()?.github?.enabled ? 'enabled' : 'disabled'
-            }}</strong>
-          </span>
-          <div class="flex gap-2">
-            <volt-button
-              variant="outline"
-              size="sm"
-              (click)="toggleGithub()"
-              [disabled]="busy()"
-            >
-              {{ admin.settings()?.github?.enabled ? 'Disable' : 'Enable' }}
-            </volt-button>
-            <volt-button
-              variant="solid"
-              size="sm"
-              (click)="saveGithub()"
-              [disabled]="busy()"
-              >Save</volt-button
-            >
-          </div>
-        </div>
-      </volt-card-content>
-    </volt-card>
-
-    <!-- Access -->
-    <volt-card>
-      <volt-card-header>
-        <volt-card-title>Who can sign up</volt-card-title>
-      </volt-card-header>
-      <volt-card-content class="space-y-3">
-        <p class="text-sm text-muted-foreground">
-          One address per line. An empty list closes sign-ups entirely; existing
-          accounts keep working.
-        </p>
-        <label for="allowlist" class="block space-y-1">
-          <span class="text-sm font-medium"
-            >Allowed addresses — one per line</span
-          >
-          <volt-textarea
-            id="allowlist"
-            [(value)]="allowlist"
-            [rows]="4"
-            placeholder="you@example.com"
-          />
-        </label>
-        <div class="flex justify-end">
-          <volt-button
-            variant="solid"
-            size="sm"
-            (click)="saveAllowlist()"
-            [disabled]="busy()"
-            >Save access list</volt-button
-          >
-        </div>
-      </volt-card-content>
-    </volt-card>
   `,
 })
-export class IdentitySection {
+export class ApplicationsPanel {
   readonly admin = inject(DevAuthAdminService);
 
   readonly busy = signal(false);
@@ -347,21 +283,8 @@ export class IdentitySection {
   readonly newName = signal('');
   readonly newRedirectUris = signal('');
 
-  readonly githubClientId = signal('');
-  readonly githubClientSecret = signal('');
-  readonly allowlist = signal('');
-
   constructor() {
-    void this.refresh();
-  }
-
-  private async refresh(): Promise<void> {
-    await this.admin.loadAll();
-    const settings = this.admin.settings();
-    if (settings) {
-      this.githubClientId.set(settings.github.clientId);
-      this.allowlist.set(settings.signup.allowlist.join('\n'));
-    }
+    void this.admin.loadAll();
   }
 
   private lines(value: string): string[] {
@@ -398,7 +321,7 @@ export class IdentitySection {
         this.lines(this.editUris()),
       );
       this.editing.set(null);
-      await this.refresh();
+      await this.admin.loadAll();
     });
   }
 
@@ -414,13 +337,20 @@ export class IdentitySection {
       this.newClientId.set('');
       this.newName.set('');
       this.newRedirectUris.set('');
-      await this.refresh();
+      await this.admin.loadAll();
     });
   }
 
   rotate(client: AdminClient): Promise<void> {
     return this.run(async () => {
       this.issuedSecret.set(await this.admin.rotateSecret(client.clientId));
+    });
+  }
+
+  toggleDisabled(client: AdminClient): Promise<void> {
+    return this.run(async () => {
+      await this.admin.setClientDisabled(client.clientId, !client.disabled);
+      await this.admin.loadAll();
     });
   }
 
@@ -437,37 +367,7 @@ export class IdentitySection {
 
     return this.run(async () => {
       await this.admin.deleteClient(client.clientId);
-      await this.refresh();
-    });
-  }
-
-  saveGithub(): Promise<void> {
-    return this.run(async () => {
-      const secret = this.githubClientSecret().trim();
-      await this.admin.saveGithub({
-        clientId: this.githubClientId().trim(),
-        // Blank means "keep the current one" — sending an empty string would
-        // read as an attempt to set one.
-        ...(secret ? { clientSecret: secret } : {}),
-      });
-      this.githubClientSecret.set('');
-      await this.refresh();
-    });
-  }
-
-  toggleGithub(): Promise<void> {
-    return this.run(async () => {
-      await this.admin.saveGithub({
-        enabled: !this.admin.settings()?.github?.enabled,
-      });
-      await this.refresh();
-    });
-  }
-
-  saveAllowlist(): Promise<void> {
-    return this.run(async () => {
-      await this.admin.saveAllowlist(this.lines(this.allowlist()));
-      await this.refresh();
+      await this.admin.loadAll();
     });
   }
 

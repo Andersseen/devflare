@@ -13,6 +13,8 @@ import setupRoutes from './routes/setup';
 import adminRoutes from './routes/admin';
 import adminClientRoutes from './routes/admin-clients';
 import adminSettingsRoutes from './routes/admin-settings';
+import adminUserRoutes from './routes/admin-users';
+import adminSessionRoutes from './routes/admin-sessions';
 import analyticsRoutes from './routes/analytics';
 import { renderLoginPage } from './pages/login';
 import { renderSignupPage } from './pages/signup';
@@ -118,6 +120,12 @@ app.use('/api/auth/*', (c, next) =>
     : credentialLimit(c, next),
 );
 
+// The admin API had no rate limit at all before spec 011 — looser than the
+// credential limit (a human loading one page can fire several list calls at
+// once) but tighter than the OAuth-traffic one (this is one person, not a
+// fleet of consumer-app servers).
+app.use('/admin/*', createRateLimitMiddleware(30, 60 * 1000));
+
 /**
  * Every way the provider plugin can be asked to write a client. Registration is
  * configuration (`OAUTH_CLIENTS`), so none of these has a reason to exist here.
@@ -189,6 +197,11 @@ app.route('/admin/clients', adminClientRoutes);
 // The provider's own configuration: GitHub credentials, who may sign up. Same
 // authorization and the same audit trail as the client registry above.
 app.route('/admin/settings', adminSettingsRoutes);
+
+// Identities known to this provider, and their live sessions. Same
+// authorization and audit trail as the two routers above. See spec 011.
+app.route('/admin/users', adminUserRoutes);
+app.route('/admin/sessions', adminSessionRoutes);
 
 // Analytics API
 app.route('/api/analytics', analyticsRoutes);
