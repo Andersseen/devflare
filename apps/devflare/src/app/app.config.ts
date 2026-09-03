@@ -9,6 +9,7 @@ import { provideFileRouter } from '@analogjs/router';
 import { provideHttpClient } from '@angular/common/http';
 import { importProvidersFrom } from '@angular/core';
 import { provideMovement } from 'angular-movement';
+import { provideDevAuth } from '@org/auth';
 import * as Sentry from '@sentry/angular';
 import {
   LucideAngularModule,
@@ -82,6 +83,9 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideFileRouter(withComponentInputBinding()),
     provideHttpClient(),
+    // DevFlare's session lives at the default /api/auth base path, so this is
+    // only here to make the wiring explicit for anyone dogfooding the adapter.
+    provideDevAuth(),
     provideMovement({
       duration: 220,
       easing: 'cubic-bezier(0.2, 0, 0, 1)',

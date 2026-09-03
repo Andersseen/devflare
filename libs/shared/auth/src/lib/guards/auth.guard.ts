@@ -1,13 +1,20 @@
 import { inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { Router, type CanActivateFn } from '@angular/router';
-import { Auth } from '../services/auth.service';
+import { DevAuth } from '../services/auth.service';
 
-// Both guards resolve every `inject()` before the first `await` — the
-// injection context only lives for the synchronous part of the call.
+/**
+ * UX only, not a security boundary: this runs in the browser and only decides
+ * which route the SPA renders. Every server route this app protects must
+ * independently call `requireAuth(getAppSession(event))` — a guard here never
+ * substitutes for that check.
+ *
+ * Both guards resolve every `inject()` before the first `await` — the
+ * injection context only lives for the synchronous part of the call.
+ */
 
 export const authGuard: CanActivateFn = async () => {
-  const auth = inject(Auth);
+  const auth = inject(DevAuth);
   const router = inject(Router);
   const isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
@@ -22,7 +29,7 @@ export const authGuard: CanActivateFn = async () => {
 };
 
 export const guestGuard: CanActivateFn = async () => {
-  const auth = inject(Auth);
+  const auth = inject(DevAuth);
   const router = inject(Router);
   const isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 

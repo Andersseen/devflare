@@ -6,30 +6,29 @@ import {
   sendRedirect,
 } from 'h3';
 import {
-  exchangeCode,
-  fetchUserInfo,
-  OidcError,
-  resolveOidcConfig,
-  safeReturnTo,
-  type UserInfo,
-} from '../../../lib/oidc';
+  AuthorizationDeniedError,
+  InvalidStateError,
+  ProtocolError,
+  type AuthTransaction,
+} from '@org/dev-auth-core';
+import { getDevAuthClient, safeReturnTo } from '../../../lib/oidc';
 import { startSession } from '../../../lib/session';
 import { OAUTH_TRANSACTION_COOKIE } from './login';
 
-interface Transaction {
-  state?: string;
-  verifier?: string;
-  returnTo?: string;
-}
-
-function readTransaction(raw: string | undefined): Transaction | null {
+function readTransaction(raw: string | undefined): AuthTransaction | null {
   if (!raw) return null;
   try {
-    const parsed = JSON.parse(raw) as Transaction;
-    return parsed.state && parsed.verifier ? parsed : null;
+    const parsed = JSON.parse(raw) as Partial<AuthTransaction>;
+    return parsed.state && parsed.codeVerifier
+      ? (parsed as AuthTransaction)
+      : null;
   } catch {
     return null;
   }
+}
+
+function stringParam(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined;
 }
 
 /**
@@ -39,6 +38,10 @@ function readTransaction(raw: string | undefined): Transaction | null {
  * identity from the provider's userinfo endpoint, and starts DevFlare's *own*
  * session. From here on DevFlare answers authenticated requests by itself; it
  * never sees the provider's session cookie.
+ *
+ * Validation (state, nonce, the code exchange, userinfo) is @org/dev-auth-core's
+ * job via `handleCallback`; this route only maps its typed errors back to the
+ * same login-page redirects it always has.
  */
 export default defineEventHandler(async (event) => {
   const query = getQuery(event);
@@ -49,51 +52,48 @@ export default defineEventHandler(async (event) => {
   // One-shot: whatever happens next, this transaction is spent.
   deleteCookie(event, OAUTH_TRANSACTION_COOKIE, { path: '/' });
 
-  // The provider reports a refusal (unregistered redirect URI, cancelled GitHub
-  // consent) on the redirect itself. Surface it on the login page rather than
-  // failing with a bare 500.
-  const providerError = query['error'];
-  if (typeof providerError === 'string' && providerError) {
-    return sendRedirect(
-      event,
-      `/login?error=${encodeURIComponent(providerError)}`,
-    );
-  }
+  const client = getDevAuthClient(event.context);
 
-  const code = query['code'];
-  const state = query['state'];
-
-  if (!transaction || typeof code !== 'string' || state !== transaction.state) {
-    // Either the transaction cookie expired or the state does not match the one
-    // this browser started with — the code is not ours to redeem.
-    return sendRedirect(event, '/login?error=invalid_state');
-  }
-
-  const config = resolveOidcConfig(event.context);
-
-  let info: UserInfo;
   try {
-    const tokens = await exchangeCode(
-      config,
-      code,
-      transaction.verifier as string,
+    const { identity } = await client.handleCallback(
+      {
+        code: stringParam(query['code']),
+        state: stringParam(query['state']),
+        error: stringParam(query['error']),
+      },
+      transaction,
     );
-    info = await fetchUserInfo(config, tokens.access_token);
+
+    await startSession(event, {
+      id: identity.subject,
+      email: identity.email ?? '',
+      name: identity.name || identity.email || 'DevFlare user',
+      image: identity.picture ?? null,
+    });
+
+    return sendRedirect(event, safeReturnTo(transaction?.returnTo));
   } catch (error) {
-    // A mismatched client secret, an expired code, an unreachable provider. The
-    // cause is already logged; the user gets a login page to retry from rather
-    // than a stack trace, and never the provider's own message — those name
-    // clients and secrets.
-    if (!(error instanceof OidcError)) throw error;
-    return sendRedirect(event, '/login?error=provider_error');
+    // The provider reports a refusal (unregistered redirect URI, cancelled
+    // GitHub consent) on the redirect itself. Surface it on the login page
+    // rather than failing with a bare 500.
+    if (error instanceof AuthorizationDeniedError) {
+      return sendRedirect(
+        event,
+        `/login?error=${encodeURIComponent(error.code)}`,
+      );
+    }
+    // Either the transaction cookie expired or the state does not match the
+    // one this browser started with — the code is not ours to redeem.
+    if (error instanceof InvalidStateError) {
+      return sendRedirect(event, '/login?error=invalid_state');
+    }
+    // A mismatched client secret, an expired code, an unreachable provider.
+    // The cause is already logged by @org/dev-auth-core; the user gets a login
+    // page to retry from rather than a stack trace, and never the provider's
+    // own message — those name clients and secrets.
+    if (error instanceof ProtocolError) {
+      return sendRedirect(event, '/login?error=provider_error');
+    }
+    throw error;
   }
-
-  await startSession(event, {
-    id: info.sub,
-    email: info.email ?? '',
-    name: info.name || info.email || 'DevFlare user',
-    image: info.picture ?? info.image ?? null,
-  });
-
-  return sendRedirect(event, safeReturnTo(transaction.returnTo));
 });

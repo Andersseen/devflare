@@ -12,27 +12,24 @@ _Last updated: 2026-09-03_
 
 ## Branch & repo status
 
-- **`feature/011-identity-control-plane` is uncommitted, code-complete and
-  verified locally against real local D1 (not yet pushed, no PR, nothing
-  deployed).** Spec 011 turns dev-auth's admin surface into the four-area
-  control plane the owner asked for: Applications (polish — status/scopes/
-  timestamps, plus a `disabled` toggle), Users (new — list/ban/unban), Sessions
-  (new — list/revoke/revoke-all), Providers (new — GitHub, email/password,
-  transactional-email status, separated from Applications). Adds migration
-  `0006_users_sessions_admin.sql` (additive: `user.bannedAt/bannedReason/
-bannedBy`, `oauthClientAudit.targetType`). See the spec's §9 for full
-  verification detail (214 dev-auth tests, up from 182; live Playwright pass
-  banning/unbanning a real local user and revoking a real local session,
-  both confirmed in D1 and the audit trail). **Not yet applied to any remote
-  D1** — `pnpm db:migrate` / the deploy workflow does that when this ships.
-  Investigated and deliberately did not install better-auth's `admin` plugin
-  (role/adminUserIds-based authorization conflicts with this provider's
-  ADMIN_EMAILS-only model; bundles impersonation/role-setting this task
-  doesn't want) — reasoning is in the spec's §3.
-- `main` is `9b113a6` and now contains the Ally client registration (PR #25,
-  deployed 2026-08-21T21:27Z) and spec 010 (PR #24), on top of specs 007, 008
-  and 009 (PRs #21, #22, #23). Spec 006 merged earlier as PR #20
-  and still has no live verification; 001–005 merged before that (PRs #17–#19).
+- **Spec 011 (identity control plane) is merged** — PR #30, `912f2f6`, squashed
+  from `df0f045`. The 2026-09-03 entry below this table had recorded it as
+  "uncommitted" at the start of that day; by the time the SDK work in this same
+  session began, `feature/011-identity-control-plane` had already been merged
+  and deleted. **Lesson repeated from the 2026-08-10 entry further down: STATE
+  drifts from reality between sessions — verify against `git log`/`git branch`
+  before trusting this file's "uncommitted" claims, don't just act on them.**
+  Not yet confirmed applied to remote D1 — migration `0006` ships with the next
+  deploy.
+- `main` is `912f2f6` and now contains spec 011 on top of the Ally client
+  registration (PR #25) and specs 006–010 (PRs #20–#24, #29). 001–005 merged
+  before that (PRs #17–#19).
+- **Consumer SDK work (this session, uncommitted at time of writing)**: a new
+  `@org/dev-auth-core` package plus a generalized `@org/auth` Angular adapter,
+  with DevFlare's OIDC consumer routes migrated onto both. See "DevAuth
+  consumer SDK" below and the 2026-09-03 session-log entry for the full
+  account. Not yet committed — the owner has not been asked whether to branch/
+  commit/PR this yet.
 - Production is current: the deploy for PR #23 succeeded at 2026-08-18T05:48Z
   and `wrangler d1 migrations list DB --env production --remote` reports nothing
   pending. Spec 010 adds migration `0004_cloudflare_oauth_client.sql`, which the
@@ -240,6 +237,80 @@ plugin came in at the same version.
   read-only client store, 8 validation), all against the real better-auth
   instance via `createAuthOptions`.
 
+## DevAuth consumer SDK: `@org/dev-auth-core` + `@org/auth`
+
+The first stable headless DevAuth consumer SDK, built by auditing DevFlare's
+existing OIDC client code (`server/lib/oidc.ts` was already framework-agnostic
+— fetch + Web Crypto only, no h3 import) and extracting the genuinely reusable
+protocol pieces rather than inventing a new API. Kept inside the existing
+`@org/*` scope rather than a new `@dev-auth/*` npm scope (see the package
+README's "Naming" section) — no library in this monorepo has a `package.json`
+today, so publication readiness was documented, not built.
+
+- **`libs/shared/dev-auth-core`** (`@org/dev-auth-core`): framework-agnostic
+  OAuth 2.1/OIDC client — `createDevAuthClient({issuer, clientId, clientSecret?,
+redirectUri, scope?})` returning `.discover()`, `.createAuthorizationRequest()`,
+  `.handleCallback()`, `.getUserInfo()`, `.logoutUrl()`. Discovery
+  (`.well-known/openid-configuration`) is cached per issuer (10 min), falls back
+  to dev-auth's conventional `{issuer}/api/auth/oauth2/*` layout on an
+  unreachable/non-200 discovery endpoint (cached 30s, so an outage doesn't
+  become a per-request fetch storm), but **throws** on an issuer mismatch —
+  that's a spoofing signal, not an outage. Typed errors:
+  `AuthorizationDeniedError` (provider `error=`), `InvalidStateError` (missing/
+  mismatched state), `ProtocolError` (exchange/userinfo failure), `DiscoveryError`.
+  36 tests. Two callers now: DevFlare's dev-auth client (below) and
+  `apps/devflare/src/server/lib/cloudflare-oauth.ts` — a completely unrelated
+  OAuth client (Cloudflare's own self-managed-OAuth API access, not identity)
+  that was already reusing the same PKCE primitives by importing them from
+  `oidc.ts`; it now imports them from here instead, which is what surfaced this
+  as a real second consumer rather than a hypothetical one.
+- **`libs/shared/auth`** (`@org/auth`) **generalized, not duplicated**: this
+  library already _was_ the Angular consumer-session facade the task asked for
+  (`user()`/`loading()`/`isAuthenticated()`/`signIn()`/`logout()` plus a route
+  guard) — it just talked to a hardcoded `/api/auth` base path. Renamed
+  `Auth`→`DevAuth`, `loading`→`isLoading`, `signIn`→`login` to match the
+  requested signals-first API; added `provideDevAuth({basePath?})` (an
+  `InjectionToken`, default `/api/auth`) so a future second consumer app isn't
+  locked to that path. It does not and should not speak OAuth/OIDC — by the
+  time Angular code can `inject(DevAuth)`, the server-side flow has already run
+  and left behind only that app's own session cookie. Guards are documented as
+  UX only, not a security boundary. Deleted a dead `@org/core` re-export shim
+  (`export { Auth } from '@org/auth'`) that nothing imported. 17 tests (was 6).
+- **DevFlare dogfoods it**: `server/lib/oidc.ts` shrank to just
+  `resolveOidcConfig` (env/Cloudflare-binding reading — deliberately kept out
+  of the SDK, since discovery/PKCE/state/exchange/userinfo/`safeReturnTo` are
+  now `@org/dev-auth-core` re-exports) plus `getDevAuthClient(context)`.
+  `routes/api/auth/login.ts` and `callback.ts` rewritten against
+  `createAuthorizationRequest()`/`handleCallback()`, with the exact same
+  external behavior and `/login?error=...` redirects as before (verified live,
+  see below) — `oidc.spec.ts` keeps testing what's still actually local to this
+  app (`resolveOidcConfig`); the protocol-level assertions moved to
+  `dev-auth-core`'s own spec files rather than staying stale in two places.
+- **One real integration trap, fixed**: Nitro's server bundle (the h3 routes,
+  built separately from the client/SSR Vite build) does **not** inherit
+  `nxViteTsPaths()` — no server route had ever imported an `@org/*` lib before,
+  so this was invisible until now. Needed an explicit entry in
+  `apps/devflare/vite.config.ts`'s `nitro.alias`, the same mechanism already
+  used there for `colorthief`/`papaparse`. Anything else under `libs/shared/`
+  that a future server route wants to import will hit the same wall.
+- **Verified live** (`pnpm dev:all` + Playwright, 2026-09-03): logged out of
+  DevFlare → `/login` → "Continue with DevAuth" → dev-auth (already had its own
+  session + `devflare-dev` is `skipConsent`, so no credentials screen this
+  round) → `/api/auth/callback` → new DevFlare session → authenticated
+  dashboard showing "Test User" → logged out again, navbar back to "Sign In".
+  Also drove both callback error paths directly: `?error=access_denied` →
+  `/login?error=access_denied` renders "Sign-in was cancelled."; a bogus
+  `?code=&state=` with no transaction cookie → `/login?error=invalid_state`.
+  Did not additionally force dev-auth's own credentials screen (its session
+  cookie from earlier testing was still live) — the code path that renders it
+  is unchanged from before this migration.
+- **`pnpm check` (format/lint/typecheck/test/build) is green**, `dev-auth`
+  build unaffected (nothing there changed).
+- **Not done, by explicit task scope**: no visual auth components, no
+  Imageryx/Ally migration (DevFlare is the only dogfood consumer), no npm
+  publication, no ID-token verification (identity comes from one userinfo
+  call), no React/Vue/Astro or Analog-specific server adapters.
+
 ## Hosting: Cloudflare Workers (deployed 2026-08-07)
 
 The app and the auth service each run as a Cloudflare Worker, deployed from
@@ -345,6 +416,11 @@ dev-auth's auth pages were migrated from inline HTML-in-TypeScript strings
   Next steps. Needs a matching client secret on both sides (see
   apps/dev-auth/README.md). `pnpm seed:user` test account
   (`test@devflare.com` / `TestPass123`).
+- DevFlare's server-side half of that flow now runs through `@org/dev-auth-core`
+  (a new, reusable headless consumer SDK) instead of duplicated protocol code,
+  and its Angular auth facade (`@org/auth`) is the generalized adapter other
+  apps could reuse. Re-verified live end-to-end 2026-09-03 — see "DevAuth
+  consumer SDK" above.
 - DevFlare's dashboard (`/`) now requires a session (`authGuard`), same as
   `/deploy`, `/projects`, `/settings`. `/tools/*` stays public.
 - Projects API (`GET/POST /api/v1/projects`, `GET/PATCH/DELETE
@@ -409,11 +485,11 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
 
 ## Next steps (owner's apparent intent — confirm before large work)
 
-0. **Ship spec 011** (Identity control plane — Users/Sessions/Providers,
-   above): review the branch, commit, push, PR, merge, then let the deploy
-   workflow apply migration `0006` and deploy both Workers. Needs no new
-   Worker secret — it reuses `ADMIN_EMAILS`/`ADMIN_API_TOKEN`/
-   `DEV_AUTH_ADMIN_TOKEN`, all already set per step 3 below.
+0. **Decide whether to commit/branch/PR the consumer-SDK work** (this session,
+   see "DevAuth consumer SDK" above) — it was implemented and verified but not
+   committed, pending that decision. If shipped, confirm migration `0006` (spec
+   011, already merged to `main` — see "Branch & repo status") actually reached
+   remote D1, since that was still unconfirmed as of this write-up.
 1. **Connect Cloudflare in production.** Everything else is in place: the
    OAuth client exists (`5246101a…`, both redirect URIs registered), the
    client id is in `[env.production.vars]`, and production runs the current
@@ -475,8 +551,36 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
      resolves against the outer tabset instead of its own. Identity's four
      sub-tabs work around it with a plain button row (see
      `identity-section.ts`); worth revisiting if a dependency bump fixes it.
+7. **Recommended next SDK phase**: pick one real second consumer (Imageryx is
+   the natural candidate — it already exists as a registered client) and
+   migrate it onto `@org/dev-auth-core` to prove the abstraction actually
+   portable rather than DevFlare-shaped. That's also the point at which a
+   real Analog-specific server adapter or a genuine npm publication becomes
+   worth deciding on, rather than speculating about now.
 
 ## Session log
+
+- **2026-09-03 (later)** — Built the first headless DevAuth consumer SDK. Step
+  0 of this task was to close spec 011 first; it turned out already merged
+  (PR #30) — the earlier same-day log entry below still said "uncommitted"
+  because STATE hadn't been updated after the merge, which is itself the
+  lesson: verify `git log`/`git branch` against this file rather than trusting
+  it. Full account in "DevAuth consumer SDK" above; short version: extracted
+  `apps/devflare/src/server/lib/oidc.ts`'s already-portable protocol code into
+  a new `libs/shared/dev-auth-core` (`@org/dev-auth-core`) — discovery, PKCE,
+  state/nonce, code exchange, userinfo, typed errors, 36 tests — and
+  discovered `libs/shared/auth` (`@org/auth`) already _was_ the Angular
+  consumer-session adapter the task wanted, just hardcoded to `/api/auth`;
+  generalized it (`provideDevAuth({basePath?})`, `Auth`→`DevAuth`,
+  `loading`→`isLoading`, `signIn`→`login`) instead of building a second
+  package. DevFlare's login/callback routes now run on the new client with
+  identical external behavior (redirects, error codes) to before. One real
+  integration gap found and fixed: Nitro's server bundle doesn't inherit
+  `nxViteTsPaths()`, so the first server-side `@org/*` import needed an
+  explicit `nitro.alias` entry. `pnpm check` green; live Playwright pass of
+  logout → login → dev-auth → callback → session → dashboard → logout, plus
+  both callback error paths. Not committed — pending the owner's decision on
+  branch/commit/PR.
 
 - **2026-09-03** — Built spec 011 on `feature/011-identity-control-plane`
   (uncommitted): dev-auth's admin surface is now the four-area identity
@@ -630,23 +734,3 @@ production`: only the two dev-auth ones). The live "connect your account"
     `claims_supported: ["sub"]` and nothing else — no email, no profile
     (re-checked live 2026-08-18). It authorizes API access; identity stays
     dev-auth's.
-
-- **2026-08-18** — Two rounds of "check before building", both of which changed
-  the plan. The R2 bucket browser (spec 008) was going to need a tree component;
-  Cloudflare's object listing takes `prefix` + `delimiter` and answers one level
-  at a time, so a breadcrumb and a list is not just simpler, it is the shape the
-  API hands you. Then the tree was going to be written for `quartz-headless` —
-  except Quartz already ships `tree` _and_ `splitter`, along with dialog,
-  drag-drop, overlay, toast, tooltip, viewport and virtual-scroll. Its tree does
-  take the whole hierarchy up front (`nodes` is a required input of nested
-  `children`), which is the real gap if anyone wants it for object storage.
-  The resizable sidebar (spec 009) then became integration, not authoring. Two
-  things had to be worked around and are worth remembering: `VoltSidebar`
-  declares **no inputs at all** and hardcodes `w-72`, so the width is overridden
-  from `styles.css` with a two-element selector that outranks the utility class;
-  and the splitter's position is a percentage, which is the wrong unit for a
-  sidebar, so the percent drives the width while CSS clamps it in pixels. The
-  width travels as a custom property rather than an inline style precisely so a
-  media query can ignore it below `md`, where the sidebar is a fixed slide-over.
-  Also fixed: the Deployment dashboard was listing the entire DevTools catalogue
-  (`PLATFORM_CARDS` plus every tool), duplicating `/tools`.

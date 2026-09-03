@@ -7,20 +7,31 @@ import {
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { createClient } from '../client/auth-client';
+import { DEV_AUTH_BASE_PATH } from '../tokens';
 import type { AuthUser } from '../types/auth.types';
 
+/**
+ * DevAuth's Angular adapter: application auth state as signals, backed by
+ * this app's own session endpoints (see `../client/auth-client`).
+ *
+ * This is deliberately not an OAuth/OIDC client — it never sees a client
+ * secret, an access token, or an authorization code. Those belong to the
+ * server-side flow in @org/dev-auth-core; by the time the browser can inject
+ * `DevAuth`, that flow has already run and left behind only this app's own
+ * cookie session.
+ */
 @Injectable({
   providedIn: 'root',
 })
-export class Auth {
+export class DevAuth {
   #platformId = inject(PLATFORM_ID);
-  #client = createClient();
+  #client = createClient(inject(DEV_AUTH_BASE_PATH));
 
   #_user = signal<AuthUser | null>(null);
-  #_loading = signal(true);
+  #_isLoading = signal(true);
 
   readonly user = this.#_user.asReadonly();
-  readonly loading = this.#_loading.asReadonly();
+  readonly isLoading = this.#_isLoading.asReadonly();
   readonly isAuthenticated = computed(() => !!this.#_user());
 
   #sessionReady: Promise<void>;
@@ -29,7 +40,7 @@ export class Auth {
     if (isPlatformBrowser(this.#platformId)) {
       this.#sessionReady = this.#loadSession();
     } else {
-      this.#_loading.set(false);
+      this.#_isLoading.set(false);
       this.#sessionReady = Promise.resolve();
     }
   }
@@ -50,7 +61,7 @@ export class Auth {
     } catch {
       this.#_user.set(null);
     } finally {
-      this.#_loading.set(false);
+      this.#_isLoading.set(false);
     }
   }
 
@@ -60,11 +71,11 @@ export class Auth {
    * Not a promise: this navigates away. Credentials are never typed into this
    * app — the provider owns them, and it is the only place that knows about
    * GitHub, so email/password and social sign-in stay one flow. The browser
-   * comes back to /api/auth/callback, which establishes this app's session and
+   * comes back to this app's callback route, which establishes the session and
    * returns it to `returnTo`.
    */
-  signIn(returnTo = '/'): void {
-    this.#client.signIn(returnTo);
+  login(returnTo = '/'): void {
+    this.#client.login(returnTo);
   }
 
   async updateName(name: string): Promise<void> {
@@ -73,7 +84,7 @@ export class Auth {
   }
 
   async logout(): Promise<void> {
-    await this.#client.signOut();
+    await this.#client.logout();
     this.#_user.set(null);
   }
 }

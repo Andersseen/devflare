@@ -9,8 +9,8 @@ describe('auth-client', () => {
   it('exposes the session surface the app needs', () => {
     const client = createClient();
     expect(client.getSession).toBeDefined();
-    expect(client.signIn).toBeDefined();
-    expect(client.signOut).toBeDefined();
+    expect(client.login).toBeDefined();
+    expect(client.logout).toBeDefined();
     expect(client.updateUser).toBeDefined();
   });
 
