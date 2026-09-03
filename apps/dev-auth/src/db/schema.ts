@@ -14,6 +14,16 @@ export const user = sqliteTable('user', {
   updatedAt: integer('updatedAt', { mode: 'timestamp' }).$defaultFn(
     () => new Date(),
   ),
+  /**
+   * Null = active. Set together by ../routes/admin-users.ts; checked by the
+   * `session.create.before` hook in ../auth.config.ts to refuse new sign-ins
+   * without touching sessions that already exist — revoking those is the
+   * separate, explicit action in ../routes/admin-sessions.ts.
+   */
+  bannedAt: integer('bannedAt', { mode: 'timestamp' }),
+  bannedReason: text('bannedReason'),
+  /** Admin email, denormalised — same reasoning as oauthClientAudit.actorEmail. */
+  bannedBy: text('bannedBy'),
 });
 
 export const session = sqliteTable('session', {
@@ -232,26 +242,34 @@ export const providerSetting = sqliteTable('providerSetting', {
 });
 
 /**
- * Who changed which OAuth client, when, and to what.
+ * Who did what to which client, setting, user or session, and when.
  *
  * A table rather than log lines: Worker logs are not retained long enough to
  * answer "when did this redirect URI change, and who changed it", which is the
- * question that matters once clients can be edited from a UI instead of by a
- * reviewed commit.
+ * question that matters once anything here can be edited from a UI instead of
+ * by a reviewed commit. Despite the name (kept from spec 002, before there was
+ * anything but clients to audit), this is the general admin audit trail as of
+ * spec 011 — see ../lib/audit.ts, the one helper every admin router writes
+ * through.
  *
  * `actorEmail` is denormalised on purpose — it records who acted at the time,
  * and must survive that account being renamed or deleted. `clientId` is plain
  * text with no foreign key: the row it names may be gone (that is what a
- * `delete` entry means), and configured clients never had a row at all.
+ * `delete` entry means), a configured client never had a row at all, and since
+ * spec 011 it also holds a user id or session id, disambiguated by
+ * `targetType`.
  */
 export const oauthClientAudit = sqliteTable('oauthClientAudit', {
   id: text('id').primaryKey(),
   actorUserId: text('actorUserId'),
   actorEmail: text('actorEmail').notNull(),
-  /** create | update | delete | rotate-secret, plus settings actions later. */
+  /** create | update | delete | rotate-secret | settings.* | ban | unban | revoke | revoke-all */
   action: text('action').notNull(),
+  /** client | settings | user | session. Default kept for pre-011 rows: see migration 0006. */
+  targetType: text('targetType').notNull().default('client'),
+  /** The client id, or (since spec 011) the user or session id `targetType` names. */
   clientId: text('clientId'),
-  /** JSON: the changed fields, before and after. Never contains a secret. */
+  /** JSON: the changed fields, before and after. Never contains a secret or token. */
   changes: text('changes'),
   createdAt: integer('createdAt', { mode: 'timestamp' })
     .notNull()

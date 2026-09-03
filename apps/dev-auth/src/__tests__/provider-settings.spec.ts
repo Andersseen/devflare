@@ -203,6 +203,23 @@ describe('settings admin API', () => {
     expect(JSON.parse(raw).github.secretConfigured).toBe(true);
   });
 
+  it('reports email/password and transactional-email status with no secret involved', async () => {
+    const request = createApp(createEnv());
+    const body = (await (await request('', asAdmin())).json()) as {
+      emailPassword: { enabled: boolean; requireEmailVerification: boolean };
+      transactionalEmail: { configured: boolean };
+    };
+
+    // Literal facts about this deployment (spec 011), not settings rows —
+    // asserted against the same constants auth.config.ts builds the real
+    // provider from, so this fails the day the two disagree.
+    expect(body.emailPassword).toEqual({
+      enabled: true,
+      requireEmailVerification: false,
+    });
+    expect(body.transactionalEmail).toEqual({ configured: false });
+  });
+
   it('stores the GitHub secret encrypted, not in the clear', async () => {
     const request = createApp(createEnv());
 

@@ -402,4 +402,49 @@ describe('admin clients API — editing', () => {
     ).toEqual({ n: 0 });
     expect(await response.json()).toMatchObject({ deleted: true });
   });
+
+  it('disables a client without deleting it', async () => {
+    const request = await seed();
+
+    const response = await request(
+      '/runtime-app',
+      asAdmin({ method: 'PATCH', body: JSON.stringify({ disabled: true }) }),
+    );
+
+    expect(response.status).toBe(200);
+    const stored = d1.sqlite
+      .prepare('SELECT disabled FROM oauthClient WHERE clientId = ?')
+      .get('runtime-app') as { disabled: number };
+    expect(stored.disabled).toBe(1);
+  });
+});
+
+describe('admin clients API — a disabled managed client', () => {
+  it('still appears in the list, rather than vanishing', async () => {
+    const request = createApp(createEnv());
+    await request(
+      '',
+      asAdmin({
+        method: 'POST',
+        body: JSON.stringify({
+          clientId: 'runtime-app',
+          redirectUris: ['https://runtime.test/cb'],
+        }),
+      }),
+    );
+    await request(
+      '/runtime-app',
+      asAdmin({ method: 'PATCH', body: JSON.stringify({ disabled: true }) }),
+    );
+
+    const body = (await (await request('', asAdmin())).json()) as {
+      clients: { clientId: string; disabled: boolean }[];
+    };
+    const managed = body.clients.find((c) => c.clientId === 'runtime-app');
+
+    // toRegisteredClient (the authorization path) correctly treats a disabled
+    // row as "no such client" — but the admin list must still show it, with
+    // its status, rather than making it look deleted.
+    expect(managed).toMatchObject({ clientId: 'runtime-app', disabled: true });
+  });
 });

@@ -4,10 +4,15 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { jwt } from 'better-auth/plugins/jwt';
 import { oauthProvider } from '@better-auth/oauth-provider';
 import type { DBAdapterInstance } from 'better-auth/types';
+import { eq } from 'drizzle-orm';
 import { createDb } from './db';
 import * as schema from './db/schema';
 import { withHybridClients } from './client-registry';
-import { getProviderSettings, maySignUp } from './lib/provider-settings';
+import {
+  EMAIL_PASSWORD_STATUS,
+  getProviderSettings,
+  maySignUp,
+} from './lib/provider-settings';
 import { hashClientSecret, verifyClientSecret } from './lib/client-secret';
 import {
   clientOrigins,
@@ -102,6 +107,16 @@ export async function createAuthOptions(env: Env, database: DBAdapterInstance) {
   // ./oauth-clients.ts — registration is configuration, not an API.
   const { clients } = await getClientRegistry(env);
 
+  // Plain drizzle against `env.DB`, not `ctx.context.internalAdapter` —
+  // deliberately. better-auth's internal adapter only carries fields it knows
+  // about for the `user` model (id/name/email/emailVerified/image/timestamps)
+  // through `findUserById`; `bannedAt` is a column this schema adds but never
+  // registered with better-auth as a `user.additionalFields` entry, so that
+  // path silently drops it (confirmed against the real drizzle/D1 adapter,
+  // not just the memory one). A direct query bypasses that, same as every
+  // other admin-added column in this service (oauthClientAudit, providerSetting).
+  const db = createDb(env.DB);
+
   // `satisfies` rather than a `: BetterAuthOptions` return annotation. Both
   // reject a misspelled option — that is how a `crossSubDomainCookie` typo, which
   // TypeScript had been silently accepting, was finally caught — but only
@@ -124,13 +139,15 @@ export async function createAuthOptions(env: Env, database: DBAdapterInstance) {
     // covers this service's own pages now that there is no APP_URL.
     trustedOrigins: clientOrigins(clients),
     emailAndPassword: {
-      enabled: true,
+      enabled: EMAIL_PASSWORD_STATUS.enabled,
       minPasswordLength: 8,
       // Nothing can deliver the verification mail yet (see sendVerificationEmail
       // below), so requiring it would create accounts that can never sign in.
       // Re-enable this and sendOnSignUp together with a real email provider —
-      // access is gated by SIGNUP_ALLOWLIST in the meantime.
-      requireEmailVerification: false,
+      // access is gated by SIGNUP_ALLOWLIST in the meantime. Sourced from
+      // ./lib/provider-settings.ts so the Providers admin view can report the
+      // same value rather than a second, hand-copied `false`.
+      requireEmailVerification: EMAIL_PASSWORD_STATUS.requireEmailVerification,
     },
     emailVerification: {
       sendOnSignUp: false,
@@ -256,6 +273,33 @@ export async function createAuthOptions(env: Env, database: DBAdapterInstance) {
             throw new APIError('FORBIDDEN', {
               message: 'Sign-ups are currently limited to invited addresses.',
             });
+          },
+        },
+      },
+      session: {
+        create: {
+          // Fires for every new session — password sign-in, GitHub sign-in,
+          // and an OAuth authorization grant to a consumer app (that flow
+          // creates a session here too). Deliberately does NOT touch sessions
+          // that already exist: revoking those is the separate, explicit
+          // action in ./routes/admin-sessions.ts (spec 011), matching "ban"
+          // and "revoke sessions" being two different buttons in the UI.
+          //
+          // Same shape as better-auth's own `admin` plugin's ban hook — see
+          // spec 011 for why that plugin isn't installed here (its own
+          // authorization is role/adminUserIds-based, which conflicts with
+          // this provider's ADMIN_EMAILS-only model) even though this one
+          // check is worth keeping.
+          before: async (sessionData) => {
+            const [bannedUser] = await db
+              .select({ bannedAt: schema.user.bannedAt })
+              .from(schema.user)
+              .where(eq(schema.user.id, sessionData.userId));
+            if (bannedUser?.bannedAt) {
+              throw new APIError('FORBIDDEN', {
+                message: 'This account has been disabled.',
+              });
+            }
           },
         },
       },

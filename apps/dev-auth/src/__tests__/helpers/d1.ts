@@ -30,6 +30,7 @@ export const MIGRATIONS = [
   '0003_oauth_provider_v2.sql',
   '0004_client_admin.sql',
   '0005_provider_settings.sql',
+  '0006_users_sessions_admin.sql',
 ];
 
 type Row = Record<string, unknown>;

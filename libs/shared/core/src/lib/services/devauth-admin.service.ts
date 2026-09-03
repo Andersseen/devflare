@@ -18,6 +18,11 @@ export interface AdminClient {
   skipConsent: boolean;
   enableEndSession: boolean;
   public: boolean;
+  /** Null for a config client — see ../../../../../apps/dev-auth/src/routes/admin-clients.ts. */
+  disabled: boolean;
+  scopes: string[] | null;
+  createdAt: string | null;
+  updatedAt: string | null;
   source: 'config' | 'managed';
   /** Config clients cannot be edited; the API says so rather than the UI guessing. */
   readOnly: boolean;
@@ -31,6 +36,8 @@ export interface GithubSettings {
 
 export interface ProviderSettingsView {
   github: GithubSettings;
+  emailPassword: { enabled: boolean; requireEmailVerification: boolean };
+  transactionalEmail: { configured: boolean };
   signup: { allowlist: string[]; restricted: boolean };
 }
 
@@ -38,6 +45,34 @@ export interface ProviderSettingsView {
 export interface IssuedSecret {
   clientId: string;
   clientSecret: string;
+}
+
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  emailVerified: boolean;
+  image: string | null;
+  createdAt: string;
+  updatedAt: string;
+  banned: boolean;
+  bannedAt: string | null;
+  bannedReason: string | null;
+  bannedBy: string | null;
+  providers: string[];
+  sessionCount: number;
+}
+
+export interface AdminSession {
+  id: string;
+  userId: string;
+  userEmail: string | null;
+  userName: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+  expiresAt: string;
+  ipAddress: string | null;
+  userAgent: string | null;
 }
 
 const BASE = '/api/admin';
@@ -73,6 +108,8 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 export class DevAuthAdminService {
   private readonly clientsSignal = signal<AdminClient[]>([]);
   private readonly settingsSignal = signal<ProviderSettingsView | null>(null);
+  private readonly usersSignal = signal<AdminUser[]>([]);
+  private readonly sessionsSignal = signal<AdminSession[]>([]);
   private readonly isAdminSignal = signal<boolean | null>(null);
   private readonly unavailableSignal = signal(false);
   private readonly loadingSignal = signal(false);
@@ -80,6 +117,8 @@ export class DevAuthAdminService {
 
   readonly clients = this.clientsSignal.asReadonly();
   readonly settings = this.settingsSignal.asReadonly();
+  readonly users = this.usersSignal.asReadonly();
+  readonly sessions = this.sessionsSignal.asReadonly();
   /** Null until asked, so the section can stay hidden rather than flicker. */
   readonly isAdmin = this.isAdminSignal.asReadonly();
   /** True when this server has no service token configured — not a rights problem. */
@@ -155,6 +194,13 @@ export class DevAuthAdminService {
     });
   }
 
+  setClientDisabled(clientId: string, disabled: boolean): Promise<unknown> {
+    return request(`/clients/${encodeURIComponent(clientId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ disabled }),
+    });
+  }
+
   saveGithub(input: {
     clientId?: string;
     clientSecret?: string;
@@ -170,6 +216,65 @@ export class DevAuthAdminService {
     return request('/settings/allowlist', {
       method: 'PUT',
       body: JSON.stringify({ allowlist }),
+    });
+  }
+
+  async loadUsers(q?: string): Promise<void> {
+    this.loadingSignal.set(true);
+    this.errorSignal.set('');
+    try {
+      const suffix = q ? `?q=${encodeURIComponent(q)}` : '';
+      const result = await request<{ users: AdminUser[] }>(`/users${suffix}`);
+      this.usersSignal.set(result.users);
+    } catch (error) {
+      this.errorSignal.set(messageOf(error));
+    } finally {
+      this.loadingSignal.set(false);
+    }
+  }
+
+  loadUserDetail(id: string): Promise<AdminUser> {
+    return request<AdminUser>(`/users/${encodeURIComponent(id)}`);
+  }
+
+  banUser(id: string, reason?: string): Promise<unknown> {
+    return request(`/users/${encodeURIComponent(id)}/ban`, {
+      method: 'POST',
+      body: JSON.stringify(reason ? { reason } : {}),
+    });
+  }
+
+  unbanUser(id: string): Promise<unknown> {
+    return request(`/users/${encodeURIComponent(id)}/unban`, {
+      method: 'POST',
+    });
+  }
+
+  async loadSessions(userId?: string): Promise<void> {
+    this.loadingSignal.set(true);
+    this.errorSignal.set('');
+    try {
+      const suffix = userId ? `?userId=${encodeURIComponent(userId)}` : '';
+      const result = await request<{ sessions: AdminSession[] }>(
+        `/sessions${suffix}`,
+      );
+      this.sessionsSignal.set(result.sessions);
+    } catch (error) {
+      this.errorSignal.set(messageOf(error));
+    } finally {
+      this.loadingSignal.set(false);
+    }
+  }
+
+  revokeSession(id: string): Promise<unknown> {
+    return request(`/sessions/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  }
+
+  revokeUserSessions(userId: string): Promise<unknown> {
+    return request(`/sessions/user/${encodeURIComponent(userId)}`, {
+      method: 'DELETE',
     });
   }
 

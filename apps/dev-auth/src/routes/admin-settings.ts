@@ -17,14 +17,17 @@ import { Hono } from 'hono';
 
 import type { Env } from '../index';
 import { createDb } from '../db';
-import { oauthClientAudit, providerSetting } from '../db/schema';
+import { providerSetting } from '../db/schema';
 import { authenticateAdmin, hasCsrfHeader, type Actor } from '../lib/admin';
+import { audit } from '../lib/audit';
 import { seal } from '../lib/secret-box';
 import {
   SETTING_KEYS,
   getProviderSettings,
   parseAllowlist,
   resetProviderSettingsCache,
+  EMAIL_PASSWORD_STATUS,
+  TRANSACTIONAL_EMAIL_CONFIGURED,
 } from '../lib/provider-settings';
 
 const adminSettingsRoutes = new Hono<{ Bindings: Env }>();
@@ -70,28 +73,6 @@ async function writeSetting(
     .onConflictDoUpdate({ target: providerSetting.key, set: row });
 }
 
-async function audit(
-  db: ReturnType<typeof createDb>,
-  actor: Actor,
-  action: string,
-  changes: unknown,
-): Promise<void> {
-  try {
-    await db.insert(oauthClientAudit).values({
-      id: crypto.randomUUID(),
-      actorUserId: actor.userId ?? null,
-      actorEmail: actor.email,
-      action,
-      // Settings are not about one client; the column stays null.
-      clientId: null,
-      changes: JSON.stringify(changes),
-      createdAt: new Date(),
-    });
-  } catch (error) {
-    console.error('[admin-settings] failed to write audit row', error);
-  }
-}
-
 adminSettingsRoutes.get('/', async (c) => {
   const settings = await getProviderSettings(c.env);
 
@@ -102,6 +83,12 @@ adminSettingsRoutes.get('/', async (c) => {
       secretConfigured: Boolean(settings.github.clientSecret),
       enabled: settings.github.enabled,
     },
+    // Read-only: neither has a settings row today, so there's nothing to
+    // PATCH yet. Exported from provider-settings.ts and imported by
+    // auth.config.ts too, so this can't silently disagree with what the
+    // provider actually does.
+    emailPassword: EMAIL_PASSWORD_STATUS,
+    transactionalEmail: { configured: TRANSACTIONAL_EMAIL_CONFIGURED },
     signup: {
       allowlist: settings.signupAllowlist,
       restricted: settings.signupRestricted,
@@ -175,7 +162,11 @@ adminSettingsRoutes.patch('/github', async (c) => {
     return c.json({ error: 'nothing to update' }, 400);
   }
 
-  await audit(db, actor, 'settings.github', { changed });
+  await audit(db, actor, {
+    action: 'settings.github',
+    targetType: 'settings',
+    changes: { changed },
+  });
   // The next request must see this, not the memo from before the write.
   resetProviderSettingsCache();
 
@@ -229,9 +220,10 @@ adminSettingsRoutes.put('/allowlist', async (c) => {
     normalised.join(','),
     actor,
   );
-  await audit(db, actor, 'settings.allowlist', {
-    from: previous.signupAllowlist,
-    to: normalised,
+  await audit(db, actor, {
+    action: 'settings.allowlist',
+    targetType: 'settings',
+    changes: { from: previous.signupAllowlist, to: normalised },
   });
   resetProviderSettingsCache();
 
