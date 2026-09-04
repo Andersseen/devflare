@@ -19,6 +19,7 @@
       "@org/ui": ["libs/shared/ui/src/index.ts"],
       "@org/deploy": ["libs/deploy/src/index.ts"],
       "@org/auth": ["libs/shared/auth/src/index.ts"],
+      "@org/auth-ui": ["libs/shared/auth-ui/src/index.ts"],
       "@org/dev-auth-core": ["libs/shared/dev-auth-core/src/index.ts"]
     }
   },

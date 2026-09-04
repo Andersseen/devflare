@@ -1,0 +1,9 @@
+{
+  "name": "auth-ui",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/shared/auth-ui/src",
+  "prefix": "dev-auth",
+  "projectType": "library",
+  "tags": ["scope:shared", "type:ui"],
+  "targets": { "lint": { "executor": "@nx/eslint:lint" } }
+}

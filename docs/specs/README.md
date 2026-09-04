@@ -47,5 +47,6 @@ the code is the implementation of it.
 | 009 | [Resizable sidebar](009-resizable-sidebar.md)                                       | In progress (code complete; needs a browser check)      |
 | 010 | [Cloudflare account in Settings](010-cloudflare-settings.md)                        | In progress (verified locally; needs a deploy)          |
 | 011 | [Identity control plane: Users, Sessions, Providers](011-identity-control-plane.md) | In progress (verified locally; needs a deploy)          |
+| 012 | [DevAuth Angular UI: SignIn + UserButton](012-dev-auth-angular-ui.md)               | Done                                                    |
 
 (Keep this table updated — it's how agents discover active work.)

@@ -9,6 +9,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Auth Pages', () => {
   test('login page offers the provider hand-off', async ({ page }) => {
     await page.goto('/login');
+    await expect(page.locator('dev-auth-sign-in')).toBeVisible();
     await expect(page.locator('text=Welcome back')).toBeVisible();
     await expect(
       page.getByRole('button', { name: /Continue with DevAuth/i }),
@@ -68,7 +69,7 @@ test.describe('Auth Pages', () => {
     page,
   }) => {
     await page.goto('/login?error=invalid_state');
-    await expect(page.locator('text=/expired/i')).toBeVisible();
+    await expect(page.getByRole('alert')).toContainText(/expired/i);
   });
 
   test('unauthenticated users accessing protected routes see login', async ({

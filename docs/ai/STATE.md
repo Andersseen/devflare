@@ -8,28 +8,20 @@
 > to the last ~5 entries, newest first. Update the date. Facts only; no plans
 > you didn't verify.
 
-_Last updated: 2026-09-03_
+_Last updated: 2026-09-04_
 
 ## Branch & repo status
 
-- **Spec 011 (identity control plane) is merged** — PR #30, `912f2f6`, squashed
-  from `df0f045`. The 2026-09-03 entry below this table had recorded it as
-  "uncommitted" at the start of that day; by the time the SDK work in this same
-  session began, `feature/011-identity-control-plane` had already been merged
-  and deleted. **Lesson repeated from the 2026-08-10 entry further down: STATE
-  drifts from reality between sessions — verify against `git log`/`git branch`
-  before trusting this file's "uncommitted" claims, don't just act on them.**
-  Not yet confirmed applied to remote D1 — migration `0006` ships with the next
-  deploy.
-- `main` is `912f2f6` and now contains spec 011 on top of the Ally client
-  registration (PR #25) and specs 006–010 (PRs #20–#24, #29). 001–005 merged
-  before that (PRs #17–#19).
-- **Consumer SDK work (this session, uncommitted at time of writing)**: a new
-  `@org/dev-auth-core` package plus a generalized `@org/auth` Angular adapter,
-  with DevFlare's OIDC consumer routes migrated onto both. See "DevAuth
-  consumer SDK" below and the 2026-09-03 session-log entry for the full
-  account. Not yet committed — the owner has not been asked whether to branch/
-  commit/PR this yet.
+- `main` is `5bfebef`, the merge commit for PR #31. It includes the headless
+  `@org/dev-auth-core` SDK, generalized `@org/auth` Angular adapter, and the
+  DevFlare dogfood migration from `3ad64dc`. Spec 011 was merged earlier in PR
+  #30 (`912f2f6`). Migration `0006` has not been confirmed on remote D1.
+- **Spec 012 is complete locally on `feature/012-dev-auth-angular-ui` and is
+  uncommitted.** It adds optional `@org/auth-ui` SignIn/UserButton components
+  and dogfoods both in DevFlare. `pnpm check`, 17 component tests, 18 auth E2E
+  tests across Chromium/Firefox/WebKit, production SSR build, and the full local
+  login/callback/menu/logout flow passed. No PR, deployment, provider, server,
+  schema, migration, or dependency change was made.
 - Production is current: the deploy for PR #23 succeeded at 2026-08-18T05:48Z
   and `wrangler d1 migrations list DB --env production --remote` reports nothing
   pending. Spec 010 adds migration `0004_cloudflare_oauth_client.sql`, which the
@@ -421,6 +413,12 @@ dev-auth's auth pages were migrated from inline HTML-in-TypeScript strings
   and its Angular auth facade (`@org/auth`) is the generalized adapter other
   apps could reuse. Re-verified live end-to-end 2026-09-03 — see "DevAuth
   consumer SDK" above.
+- Optional Angular consumer UI now lives in `@org/auth-ui`: standalone
+  `<dev-auth-sign-in>` and `<dev-auth-user-button>` components consume only the
+  `@org/auth` signals/actions. DevFlare dogfoods both, including a projected
+  Settings menu action. Loading, identity fallbacks, errors, keyboard navigation,
+  Escape/focus restoration, reduced motion and SSR are covered. Verified locally
+  end-to-end and at desktop/mobile sizes on 2026-09-04 (Spec 012).
 - DevFlare's dashboard (`/`) now requires a session (`authGuard`), same as
   `/deploy`, `/projects`, `/settings`. `/tools/*` stays public.
 - Projects API (`GET/POST /api/v1/projects`, `GET/PATCH/DELETE
@@ -485,11 +483,10 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
 
 ## Next steps (owner's apparent intent — confirm before large work)
 
-0. **Decide whether to commit/branch/PR the consumer-SDK work** (this session,
-   see "DevAuth consumer SDK" above) — it was implemented and verified but not
-   committed, pending that decision. If shipped, confirm migration `0006` (spec
-   011, already merged to `main` — see "Branch & repo status") actually reached
-   remote D1, since that was still unconfirmed as of this write-up.
+0. **Commit and open a PR for Spec 012** from
+   `feature/012-dev-auth-angular-ui`. The implementation and verification are
+   complete locally but no commit, PR, deployment, or production verification
+   exists yet. Separately confirm migration `0006` (Spec 011) reached remote D1.
 1. **Connect Cloudflare in production.** Everything else is in place: the
    OAuth client exists (`5246101a…`, both redirect URIs registered), the
    client id is in `[env.production.vars]`, and production runs the current
@@ -559,6 +556,20 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
    worth deciding on, rather than speculating about now.
 
 ## Session log
+
+- **2026-09-04** — Completed Spec 012 on
+  `feature/012-dev-auth-angular-ui`: created the optional `@org/auth-ui` Nx
+  boundary with standalone SignIn and UserButton components over `@org/auth`.
+  SignIn owns only the hosted-flow hand-off and renders loading/anonymous/
+  authenticated/error states. UserButton uses Quartz overlay positioning,
+  resilient image/initial/generic identity fallbacks, projected app actions,
+  keyboard menu navigation, Escape, focus restoration, and delegated logout.
+  Both use encapsulated CSS custom properties rather than DevFlare's theme and
+  render a hydration-stable loading branch under SSR. DevFlare now dogfoods the
+  components on `/login` and in its navbar, projecting Settings into the menu.
+  Added 17 component tests; 18 auth E2E tests pass across Chromium, Firefox and
+  WebKit. `pnpm check` and the real local hosted-login/callback/menu/logout flow
+  pass; desktop/mobile screenshots were inspected. Uncommitted; no PR/deploy.
 
 - **2026-09-03 (later)** — Built the first headless DevAuth consumer SDK. Step
   0 of this task was to close spec 011 first; it turned out already merged
