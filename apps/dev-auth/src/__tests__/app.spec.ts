@@ -123,6 +123,16 @@ describe('dev-auth Hono app', () => {
       expect(response.status).toBe(200);
       expect(await response.text()).toContain('/api/auth/oauth2/consent');
     });
+
+    // The consent endpoint answers `{ redirect, url }` while its OpenAPI metadata documents
+    // `redirect_uri`. Reading only the documented name left every consent-showing client
+    // stranded on "Could not complete authorization" *after* the grant had succeeded, so the
+    // page has to follow the field the endpoint actually sends.
+    it('navigates using the field the consent endpoint actually returns', async () => {
+      const html = await (await request('/consent')).text();
+
+      expect(html).toContain('data.url');
+    });
   });
 
   it('renders a 404 page for anything else', async () => {

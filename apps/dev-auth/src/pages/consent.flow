@@ -78,11 +78,18 @@
 
         const data = await res.json();
 
-        if (!res.ok || !data.redirect_uri) {
+        // The endpoint answers `{ redirect, url }`; its OpenAPI metadata documents
+        // `redirect_uri`. Reading only the documented name made every consent-showing
+        // client unusable: the grant succeeded, the code was issued, and this page then
+        // reported the generic failure below because the field it looked for was absent.
+        // Accept both, so neither shape can strand a completed authorization.
+        const target = data.url || data.redirect_uri;
+
+        if (!res.ok || !target) {
           throw new Error(data.message || data.error_description || data.error || 'Could not complete authorization');
         }
 
-        window.location.href = data.redirect_uri;
+        window.location.href = target;
       } catch (err) {
         button.loading = false;
         toaster.present(err.message || 'Could not complete authorization', 'error');
