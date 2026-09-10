@@ -14,6 +14,19 @@ import { filter, map } from 'rxjs';
 /** Keep in sync with the `version` field in the root package.json. */
 export const APP_VERSION = '0.1.0';
 
+/**
+ * A `Tool`/`ShellNavItem.link` is almost always an internal route, meant for
+ * `routerLink` — except the small number that point at another product
+ * entirely (e.g. Imageryx). `routerLink` treats any string as a set of
+ * internal path segments, so an absolute URL passed to it silently becomes a
+ * broken nested route (`/tools/https://...`) instead of an external
+ * navigation. Every renderer of `Tool`/`ShellNavItem` links must branch on
+ * this before choosing `routerLink` vs a plain `href`.
+ */
+export function isExternalLink(link: string): boolean {
+  return /^https?:\/\//.test(link);
+}
+
 export interface Tool {
   title: string;
   description: string;
@@ -26,16 +39,6 @@ export interface Tool {
 }
 
 export const TOOLS: Tool[] = [
-  {
-    title: 'Imageryx',
-    navLabel: 'Imageryx',
-    description:
-      'Advanced image tooling — compression, format conversion, and SVG optimization moved to their dedicated platform.',
-    link: 'https://imageryx-dashboard.pages.dev',
-    icon: 'image',
-    colorClass: 'text-blue-500',
-    bgClass: 'bg-blue-500/10',
-  },
   {
     title: 'QR Code Studio',
     navLabel: 'QR Generator',
