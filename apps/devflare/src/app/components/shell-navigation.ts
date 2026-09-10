@@ -27,10 +27,11 @@ export interface Tool {
 
 export const TOOLS: Tool[] = [
   {
-    title: 'Image Compressor',
-    navLabel: 'Image Compressor',
-    description: 'Optimize PNG, JPEG, and WEBP images locally with WebWorkers.',
-    link: '/tools/image-compressor',
+    title: 'Imageryx',
+    navLabel: 'Imageryx',
+    description:
+      'Advanced image tooling — compression, format conversion, and SVG optimization moved to their dedicated platform.',
+    link: 'https://imageryx-dashboard.pages.dev',
     icon: 'image',
     colorClass: 'text-blue-500',
     bgClass: 'bg-blue-500/10',
@@ -44,14 +45,6 @@ export const TOOLS: Tool[] = [
     icon: 'qr-code',
     colorClass: 'text-pink-500',
     bgClass: 'bg-pink-500/10',
-  },
-  {
-    title: 'SVG Optimizer',
-    description: 'Minify and clean up SVG code directly in your browser.',
-    link: '/tools/svg-optimizer',
-    icon: 'scissors',
-    colorClass: 'text-orange-500',
-    bgClass: 'bg-orange-500/10',
   },
   {
     title: 'SEO Simulator',

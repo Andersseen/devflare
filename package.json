@@ -71,7 +71,6 @@
     "@voltui/components": "^1.0.1",
     "angular-movement": "0.8.0",
     "better-auth": "^1.6.26",
-    "browser-image-compression": "^2.0.2",
     "colorthief": "^2.6.0",
     "db0": "^0.3.4",
     "drizzle-orm": "^0.45.2",
