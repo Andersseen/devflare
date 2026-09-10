@@ -11,6 +11,7 @@ import {
 import {
   APP_VERSION,
   injectActiveSection,
+  isExternalLink,
   SETTINGS_ITEM,
 } from './shell-navigation';
 
@@ -82,21 +83,45 @@ import {
 
               <div class="space-y-1">
                 @for (item of group.items; track item.link) {
-                  <a
-                    [routerLink]="item.link"
-                    routerLinkActive="bg-primary/15 text-foreground ring-1 ring-primary/30"
-                    [routerLinkActiveOptions]="{ exact: item.exact ?? false }"
-                    class="group flex h-11 items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    [class.justify-center]="sidebarService.isCollapsed()"
-                    [attr.aria-label]="
-                      sidebarService.isCollapsed() ? item.label : null
-                    "
-                  >
-                    <lucide-icon [name]="item.icon" class="h-5 w-5 shrink-0" />
-                    @if (!sidebarService.isCollapsed()) {
-                      <span class="truncate">{{ item.label }}</span>
-                    }
-                  </a>
+                  @if (isExternal(item.link)) {
+                    <a
+                      [href]="item.link"
+                      target="_blank"
+                      rel="noreferrer"
+                      class="group flex h-11 items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      [class.justify-center]="sidebarService.isCollapsed()"
+                      [attr.aria-label]="
+                        sidebarService.isCollapsed() ? item.label : null
+                      "
+                    >
+                      <lucide-icon
+                        [name]="item.icon"
+                        class="h-5 w-5 shrink-0"
+                      />
+                      @if (!sidebarService.isCollapsed()) {
+                        <span class="truncate">{{ item.label }}</span>
+                      }
+                    </a>
+                  } @else {
+                    <a
+                      [routerLink]="item.link"
+                      routerLinkActive="bg-primary/15 text-foreground ring-1 ring-primary/30"
+                      [routerLinkActiveOptions]="{ exact: item.exact ?? false }"
+                      class="group flex h-11 items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      [class.justify-center]="sidebarService.isCollapsed()"
+                      [attr.aria-label]="
+                        sidebarService.isCollapsed() ? item.label : null
+                      "
+                    >
+                      <lucide-icon
+                        [name]="item.icon"
+                        class="h-5 w-5 shrink-0"
+                      />
+                      @if (!sidebarService.isCollapsed()) {
+                        <span class="truncate">{{ item.label }}</span>
+                      }
+                    </a>
+                  }
                 }
               </div>
             </section>
@@ -136,4 +161,5 @@ export class SidebarComponent {
   protected readonly activeSection = injectActiveSection();
   protected readonly settingsItem = SETTINGS_ITEM;
   protected readonly version = APP_VERSION;
+  protected readonly isExternal = isExternalLink;
 }
