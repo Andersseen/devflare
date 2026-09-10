@@ -22,7 +22,13 @@ import type { Tool } from './shell-navigation';
   template: `
     <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
       @for (tool of tools(); track tool.link) {
-        <a [routerLink]="tool.link" class="group block">
+        <a
+          [routerLink]="isExternal(tool.link) ? null : tool.link"
+          [href]="isExternal(tool.link) ? tool.link : null"
+          [attr.target]="isExternal(tool.link) ? '_blank' : null"
+          [attr.rel]="isExternal(tool.link) ? 'noreferrer' : null"
+          class="group block"
+        >
           <volt-card
             class="h-full transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-lg"
           >
@@ -56,4 +62,8 @@ import type { Tool } from './shell-navigation';
 })
 export class ToolGridComponent {
   readonly tools = input.required<Tool[]>();
+
+  protected isExternal(link: string): boolean {
+    return /^https?:\/\//.test(link);
+  }
 }

@@ -8,7 +8,7 @@
 > to the last ~5 entries, newest first. Update the date. Facts only; no plans
 > you didn't verify.
 
-_Last updated: 2026-09-03_
+_Last updated: 2026-09-10_
 
 ## Branch & repo status
 
@@ -48,6 +48,13 @@ production` now reports `CLOUDFLARE_API_TOKEN`, `DEV_AUTH_ADMIN_TOKEN` and
 - **`quartz-headless` is a new dependency** (spec 009). The app had only
   `@voltui/components`; the splitter behind the resizable sidebar comes from
   Quartz because Volt's own `volt-resizable` keeps no state to persist.
+- **Image-domain tooling moved to Imageryx (2026-09-10, uncommitted, this
+  repo on `feature/remove-duplicate-image-tools`)**: `image-compressor` and
+  `svg-optimizer` are removed — pages, `@org/core` services, barrel
+  exports, `TOOLS` registry entries, and the `browser-image-compression`
+  dependency. `bg-remover` deliberately stays. See the 2026-09-10
+  session-log entry for the full account, including the matching work on
+  Imageryx (a separate repo, its own uncommitted branch).
 
 ## 2026-08-10 — first real browser walkthrough of prod auth, and what it found
 
@@ -560,6 +567,57 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
 
 ## Session log
 
+- **2026-09-10** — Image-domain tooling (compression, format conversion, SVG
+  optimization) moved to Imageryx; the DevFlare duplicates were removed.
+  This was the first consolidation slice of an explicit product-boundary
+  decision: Imageryx owns image/media tooling, DevFlare stays generic
+  developer/control-plane tools. Cross-repo session — both repos are local
+  siblings under `Web/Projects/`, so this covers both, unlike this
+  session's usual single-repo scope.
+  **On Imageryx** (`feat/image-optimization-consolidation`, off `main`, not
+  yet committed): compression/format now flow through the existing
+  preset/provider architecture rather than a new tool — `CloudflareImagesProvider`
+  was rewired from a scaffolded-but-wrong API (`cf.image`/`/cdn-cgi/image/`,
+  zone-based) onto the real Workers Images Binding (`env.IMAGES`), now a
+  genuinely working provider instead of one whose `transform()` always
+  threw; SVG optimization is a new fourth `BuiltinTransformationProvider`
+  (real, local, deterministic, via `svgo/browser` — verified running
+  inside actual workerd, not just Node) that `selectTransformationProvider()`
+  always routes `outputFormat: "svg"` presets to, regardless of the
+  deployment's configured provider. Two new system presets ("Web
+  Optimized", "SVG Optimized"), a D1 migration widening two `CHECK`
+  constraints (empirically verified against seeded data — no cascade
+  delete, still rejects invalid values — and independently reviewed), and
+  a real bug an integration test caught before it shipped: the deployment's
+  configured provider was silently overriding the new svg-routing rule on
+  every non-mock deployment until `requestVariant()` was fixed to stop
+  treating it as an implicit preference for svg presets. `pnpm check`
+  green across all 41 tasks; a live Cloudinary integration test happened
+  to run for real (credentials were present locally) alongside the new
+  SVG one. Full account in that repo's `context.md`, new "Image
+  optimization consolidation" section.
+  **On DevFlare** (this repo, `feature/remove-duplicate-image-tools`, not
+  yet committed): removed `image-compressor`/`svg-optimizer` — both page
+  components, both `@org/core` services, their barrel exports, and their
+  `TOOLS` registry entries — and the now-orphaned `browser-image-compression`
+  dependency. `bg-remover` deliberately stays (separate architecture
+  decision, out of scope here); no other generic tool touched. The
+  DevFlare SVG optimizer turned out to be a naive regex minifier that
+  also stripped `<title>`/`<desc>` (real accessibility content, not just
+  cruft) and rendered pasted SVG through `[innerHTML]` with zero
+  sanitization — both defects are moot now that the page is gone, not
+  fixed in place. Replaced the two removed cards with one "Imageryx" card
+  linking to `https://imageryx-dashboard.pages.dev`; `ToolGridComponent`
+  needed a small addition to support an external (non-`routerLink`) card,
+  since nothing there did before. `pnpm format:check`/`lint`/`typecheck`/
+  `test`/`build:prod` all green; did not visually walk `/tools` in a
+  browser — the `ui-check` skill that would normally do that is reserved
+  for explicit user invocation and its workflow may not be replicated by
+  other means, so this is unverified in a live browser. Neither repo's
+  branch has been committed, pushed, or PR'd — pending the owner's
+  decision, per this session's standing git-safety rule (never commit
+  without being asked).
+
 - **2026-09-03 (later)** — Built the first headless DevAuth consumer SDK. Step
   0 of this task was to close spec 011 first; it turned out already merged
   (PR #30) — the earlier same-day log entry below still said "uncommitted"
@@ -664,73 +722,3 @@ apps/devflare/tsconfig.app.json --noEmit`, direct ESLint over touched files,
   to `/login` signed out; `/tools` renders with shell; `/login` renders without
   shell). Full `pnpm lint` / `pnpm typecheck` through Nx still fail before
   targets run with `Failed to start plugin worker`.
-
-- **2026-08-21 (later)** — Ally is **live in production**. PR #25 merged
-  (`9b113a6`), deploy green at 21:27Z. Verified against the deployed issuer:
-  `ally-dev` returns a signed handoff on both registered callbacks, `devflare`
-  and `imageryx` still do too, and an unregistered URI is refused with
-  `invalid_redirect`. Because `parseOAuthClients` drops a confidential client
-  that has no secret, those four passes are also proof that all three entries
-  landed in `OAUTH_CLIENT_SECRETS` correctly.
-  What the secret step cost, and the trap to avoid next time:
-  - **`devflare`'s production secret had to be rotated**, not reused. It was
-    not in `apps/dev-auth/.dev.vars` (that file holds `devflare-dev`, the local
-    client — a different id), and Cloudflare secrets cannot be read back. The
-    new value went to `OAUTH_CLIENT_SECRETS` on dev-auth and to
-    `DEV_AUTH_CLIENT_SECRET` on the DevFlare Worker in one shell session, from
-    the same variable. It was never printed, so **it is unrecorded again** —
-    see Next steps 1.
-  - **`imageryx` was preserved** from the local `.dev.vars` copy on the
-    reasoning that its dev server runs against this production issuer (its
-    `localhost:5173` callback is registered here). **Confirmed correct** — the
-    owner signed in to both DevFlare and Imageryx after the rotation, which is
-    the only thing that proves a secret matches, since authorization alone never
-    checks it.
-  - Three actions were refused by the permission classifier and are the owner's
-    by design: `gh pr merge`, `wrangler secret put`, and reading secrets out of
-    `.dev.vars` to assemble them.
-
-- **2026-08-21** — Registered **Ally** (`ally-dev`) as a confidential
-  OAuth 2.1 / OIDC consumer, in `[env.production.vars] OAUTH_CLIENTS` only —
-  Ally points `DEV_AUTH_URL` at the deployed issuer even in local development,
-  which is the Imageryx precedent, so it needs no entry in the local `[vars]`
-  block (and would be dropped there anyway without a matching local secret).
-  Its two callbacks are `https://ally.andersseen.dev/api/auth/callback` and the
-  loopback `http://127.0.0.1:8787/api/auth/callback`. Verified by running the
-  edited production `OAUTH_CLIENTS` through the real `parseOAuthClients`: three
-  clients register, no errors, no warnings, the secret is stored hashed, and
-  both Ally origins land in `clientOrigins`.
-  Three things worth carrying forward:
-  - **The production domain is unverified.** Nothing in this repo references
-    Ally, so `ally.andersseen.dev` is the value supplied in the request, not one
-    that was checked against a live deployment. Redirect URIs are matched byte
-    for byte, so if the deployed host differs, authorization fails with
-    `invalid_request` until this entry is corrected.
-  - **`:8787` in Ally's loopback callback is Ally's own port**, and it collides
-    with local dev-auth (`pnpm dev:auth` binds the same one). They cannot both
-    run locally; using the deployed provider is the way around it.
-  - **`SIGNUP_ALLOWLIST` still gates who can reach Ally at all** — it is
-    `andriipap01@gmail.com` in production, and it applies to GitHub sign-in too.
-    Any other Ally user gets refused at sign-up, not at the client registration.
-
-- **2026-08-18 (later)** — Spec 010: the Cloudflare account moved into
-  Settings → Integrations, replacing a placeholder card that had a dead
-  "Configure" button. Two cards: the connection (account, scopes, connect /
-  disconnect) and the OAuth client itself, whose id and secret are now stored
-  sealed in D1 with the environment variables as fallback — the resolution order
-  dev-auth already uses for GitHub. `resolveCloudflareOAuthConfig` became async
-  as a result and moved to `lib/cloudflare-oauth-client.ts`; the environment-only
-  reader stayed behind as `envCloudflareOAuthConfig`.
-  Three findings worth keeping:
-  - **Production has no Cloudflare secrets at all** (`wrangler secret list --env
-production`: only the two dev-auth ones). The live "connect your account"
-    prompt was never about the code — see Next steps 0.
-  - **Local sign-in was broken on `main`**: the development `DEV_AUTH_CLIENT_ID`
-    held the Cloudflare OAuth client id instead of `devflare-dev`, so every
-    authorization bounced back to the dev-auth login page with no error. Fixed
-    here. A paste from spec 007.
-  - **Cloudflare cannot be a sign-in provider**, so "add it next to GitHub on
-    the login page" is not implementable: its discovery document advertises
-    `claims_supported: ["sub"]` and nothing else — no email, no profile
-    (re-checked live 2026-08-18). It authorizes API access; identity stays
-    dev-auth's.
