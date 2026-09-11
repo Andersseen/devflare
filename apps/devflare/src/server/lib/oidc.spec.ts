@@ -5,7 +5,7 @@ import { resolveOidcConfig, type RequestContext } from './oidc';
 /**
  * `resolveOidcConfig` is the one piece of this module that is genuinely
  * DevFlare/Cloudflare-specific — everything else (PKCE, discovery, the code
- * exchange, userinfo, `safeReturnTo`) moved to @org/dev-auth-core and is
+ * exchange, userinfo, `safeReturnTo`) moved to @dev-auth/core and is
  * tested there (see libs/shared/dev-auth-core/src/lib/*.spec.ts).
  */
 

@@ -6,12 +6,12 @@ import {
   PLATFORM_ID,
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import type { AuthControllerState, AuthUser } from '@org/dev-auth-elements';
+import type { AuthControllerState, AuthUser } from '@dev-auth/elements';
 import { DEV_AUTH_CONTROLLER } from '../tokens';
 
 /**
  * DevAuth's Angular adapter: application auth state as signals, layered over
- * the framework-agnostic `AuthController` from `@org/dev-auth-elements` (see
+ * the framework-agnostic `AuthController` from `@dev-auth/elements` (see
  * `DEV_AUTH_CONTROLLER` in `../tokens`) rather than fetching the session
  * itself — the same controller instance can be shared with
  * `<dev-auth-sign-in>`/`<dev-auth-user-button>` via `provideDevAuth({ controller })`
@@ -19,7 +19,7 @@ import { DEV_AUTH_CONTROLLER } from '../tokens';
  *
  * This is deliberately not an OAuth/OIDC client — it never sees a client
  * secret, an access token, or an authorization code. Those belong to the
- * server-side flow in @org/dev-auth-core; by the time the browser can inject
+ * server-side flow in @dev-auth/core; by the time the browser can inject
  * `DevAuth`, that flow has already run and left behind only this app's own
  * cookie session.
  */

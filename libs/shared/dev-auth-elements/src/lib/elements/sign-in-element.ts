@@ -19,7 +19,7 @@ const OBSERVED_ATTRIBUTES = [
  * `returnTo` is a path on *this app*; an absolute URL or a protocol-relative
  * one here would be an open redirect, so anything that doesn't look like a
  * same-origin path collapses to '/'. Deliberately not imported from
- * `@org/dev-auth-core` (which has an equivalent `safeReturnTo`) — this
+ * `@dev-auth/core` (which has an equivalent `safeReturnTo`) — this
  * package must not depend on the OAuth/token-exchange package at all.
  */
 function sanitizeReturnTo(value: string | null): string {

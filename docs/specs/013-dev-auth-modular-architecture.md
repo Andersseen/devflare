@@ -11,7 +11,7 @@
 
 DevAuth is now documented and enforced as **three related but independently
 usable layers** — Identity (`apps/dev-auth`), a Consumer SDK
-(`libs/shared/dev-auth-core`, `libs/shared/auth`, and a future optional UI),
+(`libs/shared/dev-auth-core`, `libs/shared/dev-auth-angular`, and a future optional UI),
 and Cloudflare Connect (a new, deliberately empty `apps/cloudflare-connect`
 boundary) — with Nx `domain:*` tags and `depConstraints` that make the wrong
 dependency direction a lint error instead of a convention someone has to
@@ -22,7 +22,7 @@ boundary-drawing pass only.
 
 DevAuth started as "DevFlare's auth service" and grew into an identity
 provider other apps register against (Ally, and previously Imageryx),
-plus a headless consumer SDK (`@org/dev-auth-core` + `@org/auth`, shipped in
+plus a headless consumer SDK (`@dev-auth/core` + `@dev-auth/angular`, shipped in
 PR #31), plus — sitting inside DevFlare's own server code —
 a second, unrelated OAuth client for Cloudflare's _own_ self-managed-OAuth
 API access (`apps/devflare/src/server/lib/cloudflare-oauth*.ts`,
@@ -48,7 +48,7 @@ before Cloudflare Connect has any real implementation to migrate.
   (`SignIn`/`UserButton`/`UserProfile` — already in flight, unmerged, as PR
   #32/`feature/012-dev-auth-angular-ui`, out of scope here — see §9); moving
   or rewriting `apps/devflare/src/server/lib/cloudflare-*.ts`; renaming
-  `@org/auth` or `@org/dev-auth-core`; any new authentication provider, MFA,
+  `@dev-auth/angular` or `@dev-auth/core`; any new authentication provider, MFA,
   organizations, or billing.
 
 ## 4. Bounded contexts and dependency direction
@@ -68,10 +68,10 @@ before Cloudflare Connect has any real implementation to migrate.
                ▲ OIDC (HTTP, not an import)
                │
   ┌───────────────────────────┐
-  │   domain:dev-auth-sdk      │   libs/shared/dev-auth-core (@org/dev-auth-core)
+  │   domain:dev-auth-sdk      │   libs/shared/dev-auth-core (@dev-auth/core)
   │                            │     framework-agnostic OAuth 2.1/OIDC client
   │                            │     (discovery, PKCE, code exchange, userinfo).
-  │                            │   libs/shared/auth (@org/auth)
+  │                            │   libs/shared/dev-auth-angular (@dev-auth/angular)
   │                            │     Angular signals adapter for a CONSUMER
   │                            │     APP'S OWN session cookie — never speaks
   │                            │     OAuth itself (see §5, "a subtlety").
@@ -128,7 +128,7 @@ Worker from importing frontend/Angular code. Added
 `scope:frontend` rule.
 
 Verified the rule actually fires: temporarily added
-`import '@org/dev-auth-core'` to `apps/dev-auth/src/index.ts` and confirmed
+`import '@dev-auth/core'` to `apps/dev-auth/src/index.ts` and confirmed
 `nx run dev-auth:lint` fails with
 `A project tagged with "domain:dev-auth" can only depend on libs tagged with "domain:dev-auth"`,
 then reverted it. Not left behind as a committed test — Nx module-boundary
@@ -144,7 +144,7 @@ Traced with `grep`/`git show`, not assumed:
   already. Test fixtures use the string `"devflare"` as a generic example
   `clientId` — that's test data, not a code dependency, and was confirmed by
   reading the fixture, not just grepping the string.
-- **`libs/shared/dev-auth-core`** (`@org/dev-auth-core`) is genuinely
+- **`libs/shared/dev-auth-core`** (`@dev-auth/core`) is genuinely
   framework-agnostic: `createDevAuthClient({ issuer, clientId, ... })` takes
   an arbitrary issuer URL — it is a standards-based OIDC relying-party
   client, not hardcoded to dev-auth's own issuer despite the package name.
@@ -155,17 +155,17 @@ Traced with `grep`/`git show`, not assumed:
   `createCodeVerifier`, `createState`). That second import is legitimate
   today (a consumer reusing generic protocol helpers is the allowed
   direction) but is worth a name asterisk — see §8.
-- **`libs/shared/auth`** (`@org/auth`) — **a subtlety worth recording
-  explicitly**: it does **not** import `@org/dev-auth-core` and is not an
+- **`libs/shared/dev-auth-angular`** (`@dev-auth/angular`) — **a subtlety worth recording
+  explicitly**: it does **not** import `@dev-auth/core` and is not an
   OAuth client at all. It is an Angular-side facade over a _consumer app's
   own_ same-origin session endpoints (`/api/auth/session|login|logout`,
   cookie-based). The actual OAuth/OIDC exchange happens server-side, in the
-  consuming app, via `@org/dev-auth-core`; by the time Angular code can
+  consuming app, via `@dev-auth/core`; by the time Angular code can
   `inject(DevAuth)`, that has already happened and left only a cookie. So
   the two packages are complementary halves of one consumer story (server
   gets the identity, browser reads the resulting session), not a
-  client-imports-client chain — which is why `@org/auth`'s own imports never
-  need to touch `@org/dev-auth-core`, and the `domain:dev-auth-sdk` rule
+  client-imports-client chain — which is why `@dev-auth/angular`'s own imports never
+  need to touch `@dev-auth/core`, and the `domain:dev-auth-sdk` rule
   correctly allows both without requiring one to import the other.
 - **`libs/shared/ui`** (`@org/ui`) and **`libs/deploy`** (`@org/deploy`) —
   no DevAuth involvement at all. `@org/ui` (badge/button/card/input) is
@@ -188,7 +188,7 @@ says nothing about _whose_ auth or which layer. Evaluated renaming it (e.g.
 to something like `dev-auth-angular`) to match the "Core → Angular → UI"
 framing this task describes.
 
-**Decision: keep the current names.** Reasons, in order of weight:
+**Decision at the time: keep the current names.** Reasons, in order of weight:
 
 1. **A real, unrelated, unmerged branch already depends on the current
    name.** `feature/012-dev-auth-angular-ui` (open PR #32, "add optional
@@ -209,13 +209,18 @@ pages/(app).page.ts, pages/(app)/settings.page.ts, components/navbar.component.t
    file), which is what the task brief explicitly allows ("if current names
    are retained, document exactly what each owns").
 
-`libs/shared/dev-auth-core` (`@org/dev-auth-core`) has an unambiguous name
+`libs/shared/dev-auth-core` (`@org/dev-auth-core`) had an unambiguous name
 already and was not a candidate for renaming.
 
-**Follow-up, not done here**: when PR #32 merges, add `domain:dev-auth-sdk`
-to `libs/shared/auth-ui/project.json`'s tags. No other change is needed —
-the `depConstraints` rule already governs any project carrying that tag, so
-this is a one-line addition, not a new decision.
+**Superseded 2026-09-11** (see
+[docs/specs/014-dev-auth-elements.md](014-dev-auth-elements.md)): the DevAuth
+Elements session reversed this decision. `libs/shared/auth` was renamed to
+`libs/shared/dev-auth-angular` (alias `@org/auth` → `@dev-auth/angular`), and
+`@org/dev-auth-core`/`@org/dev-auth-elements` moved to `@dev-auth/core`/
+`@dev-auth/elements`, once a real `@dev-auth` npm org existed to alias
+toward. Reason 1 above no longer applies: PR #32 is recommended for closure
+as superseded by `dev-auth-elements`, not merged, so there is no longer an
+in-flight branch to conflict with.
 
 ## 7. Cloudflare Connect boundary (Step 7)
 
@@ -238,7 +243,7 @@ commit rather than retrofitted.
 
 | File                                     | Classification                                                               | Notes                                                                                                                                                                                                                                                                                                                                                                              |
 | ---------------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `cloudflare-oauth.ts` (393 lines)        | **Cloudflare Connect candidate — protocol layer.**                           | Talks to Cloudflare's _own_ OAuth server (`dash.cloudflare.com/oauth2/{auth,token,revoke}`), scope catalog, PKCE. No `h3` import, no DB import — the cleanest extraction candidate as-is. Currently imports generic PKCE primitives from `@org/dev-auth-core` (see the asterisk below) and `cloudflare.ts` (next row) for request plumbing/error types.                            |
+| `cloudflare-oauth.ts` (393 lines)        | **Cloudflare Connect candidate — protocol layer.**                           | Talks to Cloudflare's _own_ OAuth server (`dash.cloudflare.com/oauth2/{auth,token,revoke}`), scope catalog, PKCE. No `h3` import, no DB import — the cleanest extraction candidate as-is. Currently imports generic PKCE primitives from `@dev-auth/core` (see the asterisk below) and `cloudflare.ts` (next row) for request plumbing/error types.                                |
 | `cloudflare.ts` (generic API client)     | **Mixed — API plumbing is generic; config resolution is DevFlare-specific.** | `cfRequest`/`API_BASE`/`CloudflareApiError` are generic Cloudflare REST helpers. `resolveCloudflareConfig`/`isCloudflareConfigured` assume **one account per install** (a single resolved config, not a per-user grant) — that single-tenant assumption is DevFlare's own current product shape and would need redesign for Cloudflare Connect's multi-tenant grant model.         |
 | `cloudflare-oauth-client.ts` (225 lines) | **DevFlare persistence/integration — needs redesign before extraction.**     | Resolves _which_ Cloudflare OAuth client (id/secret) to use: DB row (`../db`, DevFlare's own D1) first, environment fallback. One global row (`ROW_ID = 'default'`) per install, sealed via DevFlare's own `secret-box.ts`. Cloudflare Connect's eventual model is per-grant, not one row per install.                                                                             |
 | `cloudflare-connection.ts` (373 lines)   | **DevFlare persistence/integration — needs redesign before extraction.**     | The actual stored grant (access/refresh token, one row per install, same `ROW_ID = 'default'` pattern). This _is_ the future Cloudflare Connect grant store in spirit, but today it is DevFlare's own D1 table, admin-managed, singular — exactly the "one shared install-wide credential" model Cloudflare Connect's product framing (per-user delegated grants) moves away from. |
@@ -247,7 +252,7 @@ commit rather than retrofitted.
 migration, not the migration itself.
 
 **Asterisk worth flagging**: `cloudflare-oauth.ts` importing
-`@org/dev-auth-core` for `codeChallenge`/`createCodeVerifier`/`createState`
+`@dev-auth/core` for `codeChallenge`/`createCodeVerifier`/`createState`
 does **not** violate the "DevAuth Identity must not know about Cloudflare"
 rule — the dependency direction is Cloudflare code depending on a generic
 shared helper, not the reverse, and `dev-auth-core`'s low-level primitives
@@ -277,7 +282,7 @@ exactly the "DevAuth UI" layer this task's brief says not to build —
 `DevAuthSignIn`/`DevAuthUserButton` in a new `libs/shared/auth-ui`
 (`@org/auth-ui`). Discovered via `git log origin/main..origin/feature/012-...`
 and `gh pr list`, not assumed. This directly shaped two decisions above: the
-`@org/auth` rename was rejected specifically because that branch depends on
+`@dev-auth/angular` rename was rejected specifically because that branch depends on
 the current name (§6), and no `libs/shared/auth-ui` scaffold was created
 here since a real, more complete implementation already exists on that
 branch (§7 documents where it will plug into the `domain:dev-auth-sdk`
@@ -326,9 +331,9 @@ Documented, not implemented — all five remain possible with today's code:
 
 - **Raw OIDC** — an app talks to `dev-auth`'s discovery document directly, no
   SDK. Already true; nothing here changes it.
-- **DevAuth Core only** — `@org/dev-auth-core`, framework-agnostic. True
+- **DevAuth Core only** — `@dev-auth/core`, framework-agnostic. True
   today (this is exactly what `oidc.ts` does).
-- **DevAuth Angular** — `@org/auth` on top. True today.
+- **DevAuth Angular** — `@dev-auth/angular` on top. True today.
 - **DevAuth UI** — `@org/auth-ui` on top of that. Not merged yet (PR #32);
   architecturally slots into `domain:dev-auth-sdk` once it lands (§6, §9).
 - **Cloudflare Connect alone, no DevAuth** — architecturally possible by

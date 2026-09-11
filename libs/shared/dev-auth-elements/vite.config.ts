@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 
 /**
- * Vitest for @org/dev-auth-elements.
+ * Vitest for @dev-auth/elements.
  *
  * `jsdom`, not `node`: unlike dev-auth-core, this library defines real Custom
  * Elements and manipulates the DOM. `src/lib/register.spec.ts` additionally

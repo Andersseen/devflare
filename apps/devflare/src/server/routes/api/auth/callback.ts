@@ -10,7 +10,7 @@ import {
   InvalidStateError,
   ProtocolError,
   type AuthTransaction,
-} from '@org/dev-auth-core';
+} from '@dev-auth/core';
 import { getDevAuthClient, safeReturnTo } from '../../../lib/oidc';
 import { startSession } from '../../../lib/session';
 import { OAUTH_TRANSACTION_COOKIE } from './login';
@@ -39,7 +39,7 @@ function stringParam(value: unknown): string | undefined {
  * session. From here on DevFlare answers authenticated requests by itself; it
  * never sees the provider's session cookie.
  *
- * Validation (state, nonce, the code exchange, userinfo) is @org/dev-auth-core's
+ * Validation (state, nonce, the code exchange, userinfo) is @dev-auth/core's
  * job via `handleCallback`; this route only maps its typed errors back to the
  * same login-page redirects it always has.
  */
@@ -88,7 +88,7 @@ export default defineEventHandler(async (event) => {
       return sendRedirect(event, '/login?error=invalid_state');
     }
     // A mismatched client secret, an expired code, an unreachable provider.
-    // The cause is already logged by @org/dev-auth-core; the user gets a login
+    // The cause is already logged by @dev-auth/core; the user gets a login
     // page to retry from rather than a stack trace, and never the provider's
     // own message — those name clients and secrets.
     if (error instanceof ProtocolError) {

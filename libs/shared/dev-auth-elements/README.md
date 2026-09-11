@@ -1,4 +1,4 @@
-# @org/dev-auth-elements
+# @dev-auth/elements
 
 Framework-agnostic visual layer for the DevAuth SDK: native Custom Elements —
 `<dev-auth-sign-in>` and `<dev-auth-user-button>` — usable from plain HTML,
@@ -7,7 +7,7 @@ OAuth/token-exchange logic is required (or exposed) to consume them.
 
 ```text
 DevAuth Core        framework-independent OAuth/OIDC protocol client (server-side)
-DevAuth Angular      Angular DI/signals adapter over this package's controller (@org/auth)
+DevAuth Angular      Angular DI/signals adapter over this package's controller (@dev-auth/angular)
 DevAuth Elements     this package — optional, framework-independent visual Custom Elements
 ```
 
@@ -15,7 +15,7 @@ DevAuth Elements     this package — optional, framework-independent visual Cus
 
 There is no build step or `package.json` for this library — like every other
 `libs/shared/*` package here, it's consumed straight from TypeScript source
-via the `@org/dev-auth-elements` path alias (`tsconfig.base.json`).
+via the `@dev-auth/elements` path alias (`tsconfig.base.json`).
 
 ## Vanilla usage
 
@@ -24,7 +24,7 @@ via the `@org/dev-auth-elements` path alias (`tsconfig.base.json`).
 <dev-auth-user-button></dev-auth-user-button>
 
 <script type="module">
-  import { createAuthController, provideDevAuthElements, defineDevAuthElements } from '@org/dev-auth-elements';
+  import { createAuthController, provideDevAuthElements, defineDevAuthElements } from '@dev-auth/elements';
 
   const auth = createAuthController({ basePath: '/api/auth' });
   provideDevAuthElements(auth); // do this before defineDevAuthElements()
@@ -36,12 +36,12 @@ via the `@org/dev-auth-elements` path alias (`tsconfig.base.json`).
 `{basePath}/session`, `/login`, `/logout`, `/user` routes — same-origin,
 cookie-based. It never sees an OAuth client secret, an authorization code, or
 an access token; that exchange happens entirely on your server (see
-`@org/dev-auth-core`), which is a deliberately separate package this one does
+`@dev-auth/core`), which is a deliberately separate package this one does
 not depend on.
 
 ## Angular usage
 
-`@org/auth`'s `DevAuth` service already wraps an `AuthController` from this
+`@dev-auth/angular`'s `DevAuth` service already wraps an `AuthController` from this
 package. To share one session-fetch instance between Angular's signals and
 these elements in the same app (rather than each polling `/session`
 independently), build the controller once and hand it to both:

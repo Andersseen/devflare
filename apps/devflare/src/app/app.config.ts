@@ -9,12 +9,12 @@ import { provideFileRouter } from '@analogjs/router';
 import { provideHttpClient } from '@angular/common/http';
 import { importProvidersFrom } from '@angular/core';
 import { provideMovement } from 'angular-movement';
-import { provideDevAuth } from '@org/auth';
+import { provideDevAuth } from '@dev-auth/angular';
 import {
   createAuthController,
   defineDevAuthElements,
   provideDevAuthElements,
-} from '@org/dev-auth-elements';
+} from '@dev-auth/elements';
 import * as Sentry from '@sentry/angular';
 import {
   LucideAngularModule,
@@ -83,7 +83,7 @@ if (typeof window !== 'undefined') {
 }
 
 // One AuthController shared between `<dev-auth-sign-in>`/`<dev-auth-user-button>`
-// and @org/auth's Angular signals (via provideDevAuth({ controller }) below),
+// and @dev-auth/angular's Angular signals (via provideDevAuth({ controller }) below),
 // so the app runs a single /api/auth/session fetch loop, not two independent
 // ones. Built (and the elements registered) here, at module scope, so it
 // exists before Angular's router runs the initial navigation's guards —

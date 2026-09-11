@@ -43,7 +43,7 @@ domain:dev-auth-sdk    libs/shared/dev-auth-core     framework-agnostic OIDC cli
                         libs/shared/dev-auth-elements  framework-agnostic AuthController +
                                                         <dev-auth-sign-in>/<dev-auth-user-button>
                                                         Custom Elements (browser-side)
-                        libs/shared/auth               Angular signals adapter over the same
+                        libs/shared/dev-auth-angular               Angular signals adapter over the same
                                                         AuthController — no separate fetch loop
                         (libs/shared/auth-ui — unmerged, PR #32; superseded by dev-auth-elements,
                          see docs/specs/014-dev-auth-elements.md)
@@ -93,18 +93,18 @@ makes the arrangement work for a consumer on a different domain.
 
 ## Monorepo layout (Nx 22, pnpm)
 
-| Path                            | Alias                    | What it is                                                                                                                                                                                  |
-| ------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/devflare`                 | —                        | Main AnalogJS app (Angular 21 + Vite 7 + Nitro SSR)                                                                                                                                         |
-| `apps/dev-auth`                 | —                        | Identity provider — OAuth 2.1/OIDC (Hono + better-auth + D1, Workers)                                                                                                                       |
-| `apps/cloudflare-connect`       | —                        | **Boundary placeholder** for a future Cloudflare OAuth broker (Hono/Workers); health endpoint only, see its README                                                                          |
-| `apps/devflare-e2e`             | —                        | Playwright E2E tests                                                                                                                                                                        |
-| `libs/shared/core`              | `@org/core`              | DevFlare's tool services (one per tool) + auth/projects/webcontainer services                                                                                                               |
-| `libs/shared/ui`                | `@org/ui`                | Small shared components (badge, button, card, input)                                                                                                                                        |
-| `libs/shared/auth`              | `@org/auth`              | DevAuth consumer SDK — Angular session adapter for a consumer app's OWN cookie session, guard, types (does not speak OAuth itself)                                                          |
-| `libs/shared/dev-auth-core`     | `@org/dev-auth-core`     | DevAuth consumer SDK — framework-agnostic OAuth 2.1/OIDC client (discovery, PKCE, code exchange, userinfo)                                                                                  |
-| `libs/shared/dev-auth-elements` | `@org/dev-auth-elements` | DevAuth consumer SDK — framework-agnostic `AuthController` + `<dev-auth-sign-in>`/`<dev-auth-user-button>` Custom Elements (Flowview + `@andersseen/web-components` internally, no Angular) |
-| `libs/deploy`                   | `@org/deploy`            | DevFlare's deployment feature library (early stage)                                                                                                                                         |
+| Path                            | Alias                | What it is                                                                                                                                                                                  |
+| ------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/devflare`                 | —                    | Main AnalogJS app (Angular 21 + Vite 7 + Nitro SSR)                                                                                                                                         |
+| `apps/dev-auth`                 | —                    | Identity provider — OAuth 2.1/OIDC (Hono + better-auth + D1, Workers)                                                                                                                       |
+| `apps/cloudflare-connect`       | —                    | **Boundary placeholder** for a future Cloudflare OAuth broker (Hono/Workers); health endpoint only, see its README                                                                          |
+| `apps/devflare-e2e`             | —                    | Playwright E2E tests                                                                                                                                                                        |
+| `libs/shared/core`              | `@org/core`          | DevFlare's tool services (one per tool) + auth/projects/webcontainer services                                                                                                               |
+| `libs/shared/ui`                | `@org/ui`            | Small shared components (badge, button, card, input)                                                                                                                                        |
+| `libs/shared/dev-auth-angular`  | `@dev-auth/angular`  | DevAuth consumer SDK — Angular session adapter for a consumer app's OWN cookie session, guard, types (does not speak OAuth itself)                                                          |
+| `libs/shared/dev-auth-core`     | `@dev-auth/core`     | DevAuth consumer SDK — framework-agnostic OAuth 2.1/OIDC client (discovery, PKCE, code exchange, userinfo)                                                                                  |
+| `libs/shared/dev-auth-elements` | `@dev-auth/elements` | DevAuth consumer SDK — framework-agnostic `AuthController` + `<dev-auth-sign-in>`/`<dev-auth-user-button>` Custom Elements (Flowview + `@andersseen/web-components` internally, no Angular) |
+| `libs/deploy`                   | `@org/deploy`        | DevFlare's deployment feature library (early stage)                                                                                                                                         |
 
 `libs/shared/auth-ui` (`@org/auth-ui`, optional Angular `DevAuthSignIn`/
 `DevAuthUserButton` components) exists on an **open, unmerged** PR (#32,

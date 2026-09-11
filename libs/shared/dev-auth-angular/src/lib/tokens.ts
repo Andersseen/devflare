@@ -3,7 +3,7 @@ import {
   createAuthController,
   DEFAULT_BASE_PATH,
   type AuthController,
-} from '@org/dev-auth-elements';
+} from '@dev-auth/elements';
 
 /**
  * Base path of this application's own auth routes (session/login/logout/user)
@@ -18,7 +18,7 @@ export const DEV_AUTH_BASE_PATH = new InjectionToken<string>(
 
 /**
  * The framework-agnostic session controller `DevAuth` wraps in signals —
- * owned by `@org/dev-auth-elements` so an app can share one instance between
+ * owned by `@dev-auth/elements` so an app can share one instance between
  * Angular's state and `<dev-auth-sign-in>`/`<dev-auth-user-button>` instead
  * of each independently polling `/session`. Defaults to a fresh controller
  * built from `DEV_AUTH_BASE_PATH`; pass `controller` to `provideDevAuth()`

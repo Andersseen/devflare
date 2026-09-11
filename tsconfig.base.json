@@ -18,9 +18,9 @@
       "@org/core": ["libs/shared/core/src/index.ts"],
       "@org/ui": ["libs/shared/ui/src/index.ts"],
       "@org/deploy": ["libs/deploy/src/index.ts"],
-      "@org/auth": ["libs/shared/auth/src/index.ts"],
-      "@org/dev-auth-core": ["libs/shared/dev-auth-core/src/index.ts"],
-      "@org/dev-auth-elements": ["libs/shared/dev-auth-elements/src/index.ts"]
+      "@dev-auth/angular": ["libs/shared/dev-auth-angular/src/index.ts"],
+      "@dev-auth/core": ["libs/shared/dev-auth-core/src/index.ts"],
+      "@dev-auth/elements": ["libs/shared/dev-auth-elements/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

@@ -3,10 +3,10 @@
  * routes — never the identity provider.
  *
  * This is the shared foundation `<dev-auth-sign-in>`/`<dev-auth-user-button>`
- * and `@org/auth`'s Angular `DevAuth` service both build on, so a page that
+ * and `@dev-auth/angular`'s Angular `DevAuth` service both build on, so a page that
  * uses both never runs two independent session-fetch loops. It never speaks
  * OAuth/OIDC itself: dev-auth is the provider, the host application's server
- * completes the authorization code flow (see `@org/dev-auth-core`, a
+ * completes the authorization code flow (see `@dev-auth/core`, a
  * deliberately separate package this one does not depend on) and keeps its
  * own session; this controller only ever talks to that application's own
  * `basePath` — same-origin, cookie-based, no provider credentials in reach of

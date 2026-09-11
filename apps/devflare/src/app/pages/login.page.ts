@@ -12,7 +12,7 @@ import { ActivatedRoute } from '@angular/router';
  * only job is to hand the browser over and let it come back with an
  * authorization code (see the server's /api/auth/login and /api/auth/callback).
  *
- * The sign-in card itself is `<dev-auth-sign-in>` (@org/dev-auth-elements) —
+ * The sign-in card itself is `<dev-auth-sign-in>` (@dev-auth/elements) —
  * it does no URL parsing of its own, so this page still owns mapping a
  * callback `?error=` to human copy.
  */

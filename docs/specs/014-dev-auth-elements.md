@@ -9,12 +9,12 @@
 
 ## 1. Summary
 
-`libs/shared/dev-auth-elements` (`@org/dev-auth-elements`) adds the first
+`libs/shared/dev-auth-elements` (`@dev-auth/elements`) adds the first
 framework-agnostic visual layer to the DevAuth SDK: native Custom Elements
 `<dev-auth-sign-in>` and `<dev-auth-user-button>`, built with Flowview for
 template authoring (internal-only) and `@andersseen/web-components` for UI
 primitives. DevFlare now dogfoods both, replacing hand-rolled Volt markup in
-`login.page.ts` and `navbar.component.ts`. `@org/auth`'s Angular `DevAuth`
+`login.page.ts` and `navbar.component.ts`. `@dev-auth/angular`'s Angular `DevAuth`
 service is refactored to sit on top of the same framework-agnostic
 `AuthController` this package owns, so an app using both never runs two
 independent `/api/auth/session` fetch loops.
@@ -60,8 +60,8 @@ direct equivalent and were replaced with native code and
 `libs/shared/dev-auth-elements/src/lib/controller/auth-controller.ts` owns
 `createAuthController()` — the framework-agnostic session client (`fetch`
 against this app's own `/api/auth/{session,login,logout,user}`, never OAuth/
-token-exchange) that used to live, Angular-entangled, inside `@org/auth`.
-`@org/auth`'s `DevAuth` service now wraps one `AuthController` (via a new
+token-exchange) that used to live, Angular-entangled, inside `@dev-auth/angular`.
+`@dev-auth/angular`'s `DevAuth` service now wraps one `AuthController` (via a new
 `DEV_AUTH_CONTROLLER` injection token) instead of fetching itself.
 `provideDevAuth({ controller })` accepts a pre-built controller so an app can
 hand the same instance to both Angular and the elements — see
@@ -69,7 +69,7 @@ hand the same instance to both Angular and the elements — see
 scope (browser-guarded, alongside the existing Sentry init) and passes it to
 both `provideDevAuthElements()` and `provideDevAuth()`.
 
-`dev-auth-elements` does **not** depend on `@org/dev-auth-core` (the OAuth/
+`dev-auth-elements` does **not** depend on `@dev-auth/core` (the OAuth/
 OIDC protocol client) even though the `domain:dev-auth-sdk` Nx boundary would
 allow it — that package performs the server-side code exchange and is
 deliberately kept out of anything that could end up in a browser bundle.
@@ -114,7 +114,7 @@ Flowview purely as a server-side string templater. `dev-auth-elements`
 reuses that exact pattern client-side: `.flow` → committed `.flow.js`
 exporting `render(context): string` (`scripts/compile-flow.mjs`, a direct
 port of `apps/dev-auth`'s script, now also emitting a sibling `.flow.d.ts`
-since `@org/auth`'s `declaration: true` typecheck resolves the import
+since `@dev-auth/angular`'s `declaration: true` typecheck resolves the import
 transitively and needs a type for it). Each element assigns the string to
 `this.innerHTML` on real state transitions and re-binds native listeners —
 never on interactive changes (menu open/close), which stay owned by plain
@@ -136,17 +136,17 @@ server error.
 
 ### Files created/modified
 
-| File                                                                        | Change                                                                                                                                    |
-| --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `libs/shared/dev-auth-elements/**`                                          | new library (controller, identity helpers, registry, both elements + `.flow` templates, registration, styles, README)                     |
-| `libs/shared/auth/src/lib/client/auth-client.ts`, `lib/types/auth.types.ts` | deleted — logic relocated into `dev-auth-elements`'s controller                                                                           |
-| `libs/shared/auth/src/lib/services/auth.service.ts`, `lib/tokens.ts`        | rebuilt on `DEV_AUTH_CONTROLLER` / `AuthController`                                                                                       |
-| `apps/devflare/src/app/app.config.ts`                                       | builds the shared controller, registers the elements, passes the controller to `provideDevAuth()`                                         |
-| `apps/devflare/src/app/pages/login.page.ts`                                 | Volt sign-in card → `<dev-auth-sign-in>`                                                                                                  |
-| `apps/devflare/src/app/components/navbar.component.ts`                      | Volt avatar/menu → `<dev-auth-user-button>` with a slotted Settings link                                                                  |
-| `apps/devflare-e2e/src/auth.spec.ts`                                        | selectors updated for the new elements; tightened to `role=alert`; added a focus-ring check                                               |
-| root `package.json`                                                         | added `@andersseen/web-components`, `@andersseen/icon` as real dependencies (previously CDN-only, nowhere in this repo's dependency tree) |
-| `AGENTS.md`, `tsconfig.base.json`                                           | Hard Rule #1 + path-alias list extended for the new lib                                                                                   |
+| File                                                                                    | Change                                                                                                                                    |
+| --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `libs/shared/dev-auth-elements/**`                                                      | new library (controller, identity helpers, registry, both elements + `.flow` templates, registration, styles, README)                     |
+| `libs/shared/dev-auth-angular/src/lib/client/auth-client.ts`, `lib/types/auth.types.ts` | deleted — logic relocated into `dev-auth-elements`'s controller                                                                           |
+| `libs/shared/dev-auth-angular/src/lib/services/auth.service.ts`, `lib/tokens.ts`        | rebuilt on `DEV_AUTH_CONTROLLER` / `AuthController`                                                                                       |
+| `apps/devflare/src/app/app.config.ts`                                                   | builds the shared controller, registers the elements, passes the controller to `provideDevAuth()`                                         |
+| `apps/devflare/src/app/pages/login.page.ts`                                             | Volt sign-in card → `<dev-auth-sign-in>`                                                                                                  |
+| `apps/devflare/src/app/components/navbar.component.ts`                                  | Volt avatar/menu → `<dev-auth-user-button>` with a slotted Settings link                                                                  |
+| `apps/devflare-e2e/src/auth.spec.ts`                                                    | selectors updated for the new elements; tightened to `role=alert`; added a focus-ring check                                               |
+| root `package.json`                                                                     | added `@andersseen/web-components`, `@andersseen/icon` as real dependencies (previously CDN-only, nowhere in this repo's dependency tree) |
+| `AGENTS.md`, `tsconfig.base.json`                                                       | Hard Rule #1 + path-alias list extended for the new lib                                                                                   |
 
 ### Decisions & trade-offs
 
@@ -170,7 +170,7 @@ Nx boundaries: `dev-auth-elements` tagged `["scope:shared","type:ui","domain:dev
 per spec 013) — verified via `nx run devflare:lint` after wiring the app,
 which runs `@nx/enforce-module-boundaries`. No `package.json`/build step for
 the new lib, consistent with every other `libs/shared/*` package — consumed
-via the `@org/dev-auth-elements` TS path alias.
+via the `@dev-auth/elements` TS path alias.
 
 ## 6. Test plan
 
@@ -178,7 +178,7 @@ via the `@org/dev-auth-elements` TS path alias.
   transitions/subscribe/login/logout/updateProfile, identity-fallback
   algorithms, registration idempotency + SSR-safety, both elements' state/
   attribute/slot/event/keyboard/focus/cleanup behavior. 64 tests.
-- `@org/auth`: `auth.service.spec.ts` rewritten against a fake
+- `@dev-auth/angular`: `auth.service.spec.ts` rewritten against a fake
   `AuthController` injected via `DEV_AUTH_CONTROLLER`. 11 tests.
 - `devflare` app: existing 108 unit tests unaffected.
 - E2E (`devflare-e2e`, Chromium/Firefox/WebKit): updated `auth.spec.ts`, 21
@@ -196,10 +196,10 @@ via the `@org/dev-auth-elements` TS path alias.
 ## 7. Tasks
 
 - [x] 1. New `libs/shared/dev-auth-elements` library scaffold
-- [x] 2. Auth controller + identity helpers, relocated/adapted from `@org/auth`/PR #32
+- [x] 2. Auth controller + identity helpers, relocated/adapted from `@dev-auth/angular`/PR #32
 - [x] 3. `.flow` templates + compiled output for both elements
 - [x] 4. `DevAuthSignInElement` / `DevAuthUserButtonElement` + registration
-- [x] 5. Refactor `@org/auth` onto the shared controller
+- [x] 5. Refactor `@dev-auth/angular` onto the shared controller
 - [x] 6. Dogfood in DevFlare (`app.config.ts`, `login.page.ts`, `navbar.component.ts`)
 - [x] 7. Update `devflare-e2e`'s `auth.spec.ts`
 - [x] 8. Run quality gates (`pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`, plus `pnpm build`)

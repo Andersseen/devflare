@@ -2,7 +2,7 @@ import { Component, CUSTOM_ELEMENTS_SCHEMA, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { VoltSidebarService } from '@voltui/components';
-import { DevAuth } from '@org/auth';
+import { DevAuth } from '@dev-auth/angular';
 import { injectActiveSection, SHELL_SECTIONS } from './shell-navigation';
 
 @Component({

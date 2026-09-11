@@ -4,7 +4,7 @@ import type {
   AuthController,
   AuthControllerState,
   AuthUser,
-} from '@org/dev-auth-elements';
+} from '@dev-auth/elements';
 import { DEV_AUTH_CONTROLLER } from '../tokens';
 import { DevAuth } from './auth.service';
 

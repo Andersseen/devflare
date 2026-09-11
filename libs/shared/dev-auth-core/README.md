@@ -1,10 +1,9 @@
-# @org/dev-auth-core
+# @dev-auth/core
 
 Framework-agnostic OAuth 2.1 / OIDC consumer SDK for **dev-auth**, this repo's
-standalone identity provider. This is the first stable release of what the
-workspace's docs refer to conceptually as `@dev-auth/core` — it keeps the
-existing `@org/*` scope rather than inventing a new one (see
-[Naming](#naming) below).
+standalone identity provider. Path-aliased as `@dev-auth/core` — the `@dev-auth`
+npm scope is reserved for this SDK's eventual publication, though this
+package itself isn't published yet (see [Naming](#naming) below).
 
 ## Architecture
 
@@ -14,7 +13,7 @@ existing `@org/*` scope rather than inventing a new one (see
                    OAuth/OIDC
                        │
                        ▼
-               @org/dev-auth-core        ← this package (framework-agnostic)
+               @dev-auth/core        ← this package (framework-agnostic)
                        │
               ┌────────┴────────┐
               ▼                 ▼
@@ -22,22 +21,22 @@ existing `@org/*` scope rather than inventing a new one (see
        (server routes)
               │
               ▼
-         @org/auth               ← Angular adapter (app-session facade)
+         @dev-auth/angular               ← Angular adapter (app-session facade)
 ```
 
-`@org/dev-auth-core` owns the OAuth/OIDC protocol: discovery, PKCE, state and
+`@dev-auth/core` owns the OAuth/OIDC protocol: discovery, PKCE, state and
 nonce, the authorization code exchange, userinfo, and normalized errors. It
 never touches cookies, an HTTP framework, or a consumer app's own session —
 see [Session boundary](#session-boundary).
 
-`@org/auth` is a separate, smaller package: a signals-based Angular facade
+`@dev-auth/angular` is a separate, smaller package: a signals-based Angular facade
 over a _consumer application's own_ session endpoints (`/api/auth/session`,
 `/login`, `/logout`, `/user`). It does not speak OAuth/OIDC at all — by the
 time Angular code can inject it, the server-side flow above has already run.
 
 ## Installation
 
-Internal workspace package, resolved through the existing `@org/*` TS path
+Internal workspace package, resolved through the `@dev-auth/*` TS path
 aliases (see `tsconfig.base.json`) — nothing to install. A consumer app using
 Nitro/Vite needs an explicit alias if it imports this package from a server
 route (see `apps/devflare/vite.config.ts`'s `nitro.alias`): Nitro's server
@@ -46,7 +45,7 @@ bundle does not inherit the client build's `nxViteTsPaths()` resolution.
 ## Configuration
 
 ```ts
-import { createDevAuthClient } from '@org/dev-auth-core';
+import { createDevAuthClient } from '@dev-auth/core';
 
 const client = createDevAuthClient({
   issuer: 'https://auth.example.com',
@@ -91,8 +90,8 @@ full, real integration this is drawn from.
 
 ## Angular consumption
 
-`@org/dev-auth-core` has no Angular dependency and is not used from browser
-code — Angular consumes `@org/auth` instead, which talks to the _application's_
+`@dev-auth/core` has no Angular dependency and is not used from browser
+code — Angular consumes `@dev-auth/angular` instead, which talks to the _application's_
 own session API:
 
 ```ts
@@ -146,7 +145,7 @@ This SDK does **not**:
   needs it without an extra round trip; `handleCallback` already returns the
   raw token response.)
 - Enforce authorization/route protection. A guard built on top of this (see
-  `@org/auth`'s `authGuard`) is UX, not a security boundary.
+  `@dev-auth/angular`'s `authGuard`) is UX, not a security boundary.
 - Know anything about a specific consumer application, Cloudflare, or any
   other runtime beyond `fetch` and Web Crypto.
 
@@ -186,16 +185,17 @@ retries discovery instead of assuming the outage continues forever.
 - Manage refresh tokens, token storage, or silent renewal — a caller decides
   what to do with the token response `handleCallback` returns.
 - Support any framework adapter beyond the one server-side pattern documented
-  here and the Angular consumer-session facade in `@org/auth`. React/Vue/Astro
+  here and the Angular consumer-session facade in `@dev-auth/angular`. React/Vue/Astro
   adapters, an Analog-specific server package, and npm publication are
   explicitly out of scope for this phase.
 
 ## Naming
 
-This package is internal to the `devflare` Nx workspace and published nowhere.
-Before any external/npm publication it would need: a real `package.json` with
-`name`/`exports`/`types` (no library in this monorepo has one today — they are
-all consumed through TS path aliases only), a decision on a public npm scope
-(`@dev-auth/core` is the name used in conversation about this SDK, but no
-scope has been reserved), and a semver/release process. None of that is done
-here by design — see the task's explicit non-goals.
+This package is internal to the `devflare` Nx workspace and published nowhere
+yet. The `@dev-auth` npm scope is reserved for this SDK's eventual
+publication (`@dev-auth/core`, `@dev-auth/angular`, `@dev-auth/elements`), and
+the TS path aliases already use it — but actually publishing still needs: a
+real `package.json` per package with `name`/`exports`/`types` (no library in
+this monorepo has one today — they are all consumed through TS path aliases
+only) and a semver/release process. None of that is done here by design —
+see the task's explicit non-goals.

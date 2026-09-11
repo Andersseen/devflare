@@ -23,16 +23,16 @@ pnpm exec nx show projects --with-target test
 
 If `core` is absent, create the config before writing any spec. The target is
 _inferred_ by the `@nx/vite` plugin from the presence of a vite config — note
-that `libs/shared/auth/project.json` declares only a `lint` target yet still has
-a working `test` target. Mirror `libs/shared/auth`:
+that `libs/shared/dev-auth-angular/project.json` declares only a `lint` target yet still has
+a working `test` target. Mirror `libs/shared/dev-auth-angular`:
 
 1. `libs/shared/core/vite.config.mts` — copy
-   `libs/shared/auth/vite.config.mts`, then change `cacheDir`, `test.name` and
+   `libs/shared/dev-auth-angular/vite.config.mts`, then change `cacheDir`, `test.name` and
    `coverage.reportsDirectory` from `auth` to `core`.
 2. `libs/shared/core/src/test-setup.ts` — copy from
-   `libs/shared/auth/src/test-setup.ts`.
+   `libs/shared/dev-auth-angular/src/test-setup.ts`.
 3. `libs/shared/core/tsconfig.spec.json` — copy from
-   `libs/shared/auth/tsconfig.spec.json`, adjusting relative paths.
+   `libs/shared/dev-auth-angular/tsconfig.spec.json`, adjusting relative paths.
 
 Then confirm it worked before continuing:
 
@@ -61,7 +61,7 @@ beats ten shallow ones.
 ## House style
 
 Follow `.claude/skills/new-tool/templates/service.spec.ts.template` and the
-existing `libs/shared/auth/src/lib/client/auth-client.spec.ts`.
+existing `libs/shared/dev-auth-angular/src/lib/client/auth-client.spec.ts`.
 
 - Vitest with explicit imports: `import { describe, it, expect, beforeEach } from 'vitest';`
 - Services are `@Injectable({ providedIn: 'root' })` but usually have no

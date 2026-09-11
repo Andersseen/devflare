@@ -8,7 +8,7 @@ import { isSecureRequest } from '../../../lib/session';
  * The state and the PKCE verifier stay in a cookie on DevFlare's own domain: the
  * verifier proves at the token endpoint that the code came back to the browser
  * that requested it, and the state is compared on return so a code cannot be
- * injected from elsewhere. @org/dev-auth-core generates and packages all of
+ * injected from elsewhere. @dev-auth/core generates and packages all of
  * this into `transaction`; this route only has to persist it.
  */
 export const OAUTH_TRANSACTION_COOKIE = 'df_oauth_tx';
