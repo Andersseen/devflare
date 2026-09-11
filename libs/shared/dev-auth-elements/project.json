@@ -1,0 +1,25 @@
+{
+  "name": "dev-auth-elements",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/shared/dev-auth-elements/src",
+  "projectType": "library",
+  "tags": ["scope:shared", "type:ui", "domain:dev-auth-sdk"],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "options": {
+        "configFile": "libs/shared/dev-auth-elements/vite.config.ts"
+      }
+    },
+    "build:flow": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node scripts/compile-flow.mjs",
+        "cwd": "libs/shared/dev-auth-elements"
+      }
+    }
+  }
+}

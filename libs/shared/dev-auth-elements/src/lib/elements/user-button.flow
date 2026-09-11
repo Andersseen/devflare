@@ -1,0 +1,46 @@
+@if (context.status === 'loading') {
+  <span class="dev-auth-avatar" role="status" aria-label="Loading account">
+    <and-skeleton width="100%" height="100%"></and-skeleton>
+  </span>
+} @else if (context.status === 'authenticated') {
+  <div class="dev-auth-menu-shell">
+    <button
+      type="button"
+      id="dev-auth-trigger"
+      class="dev-auth-trigger"
+      aria-haspopup="menu"
+      aria-expanded="false"
+      aria-label="{{ context.ariaLabel }}">
+      <span class="dev-auth-avatar" aria-hidden="true">
+        @if (context.image) {
+          <img src="{{ context.image }}" alt="" />
+        } @else if (context.initial) {
+          <span>{{ context.initial }}</span>
+        } @else {
+          <and-icon name="user" size="16"></and-icon>
+        }
+      </span>
+    </button>
+    <and-menu-list
+      id="dev-auth-panel"
+      class="dev-auth-panel"
+      aria-menu-label="Account"
+      style="display:none">
+      <div class="dev-auth-menu-identity" role="presentation">
+        <p class="dev-auth-name">{{ context.identity }}</p>
+        @if (context.email) {
+          <p class="dev-auth-email">{{ context.email }}</p>
+        }
+      </div>
+      <hr class="dev-auth-separator" role="separator" />
+      <div data-dev-auth-outlet="menu-actions"></div>
+      <button type="button" id="dev-auth-signout" class="dev-auth-menu-item" role="menuitem">
+        Sign out
+      </button>
+      <p class="dev-auth-alert" role="alert" id="dev-auth-logout-error" hidden>
+        Unable to sign out. Please try again.
+      </p>
+    </and-menu-list>
+  </div>
+} @else {
+}

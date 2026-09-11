@@ -1,22 +1,20 @@
-import { Component, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
-import { LucideAngularModule } from 'lucide-angular';
 import {
-  VoltCard,
-  VoltCardHeader,
-  VoltCardTitle,
-  VoltCardDescription,
-  VoltCardContent,
-  VoltButton,
-  VoltError,
-} from '@voltui/components';
-import { DevAuth } from '@org/auth';
+  Component,
+  CUSTOM_ELEMENTS_SCHEMA,
+  computed,
+  inject,
+} from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 
 /**
  * DevFlare no longer collects credentials. dev-auth is an OAuth 2.1 / OIDC
  * provider and owns email/password, GitHub and account linking, so this page's
  * only job is to hand the browser over and let it come back with an
  * authorization code (see the server's /api/auth/login and /api/auth/callback).
+ *
+ * The sign-in card itself is `<dev-auth-sign-in>` (@org/dev-auth-elements) —
+ * it does no URL parsing of its own, so this page still owns mapping a
+ * callback `?error=` to human copy.
  */
 const ERRORS: Record<string, string> = {
   invalid_state:
@@ -26,16 +24,7 @@ const ERRORS: Record<string, string> = {
 
 @Component({
   selector: 'app-login-page',
-  imports: [
-    LucideAngularModule,
-    VoltCard,
-    VoltCardHeader,
-    VoltCardTitle,
-    VoltCardDescription,
-    VoltCardContent,
-    VoltButton,
-    VoltError,
-  ],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   template: `
     <div class="min-h-screen flex items-center justify-center bg-muted/50 p-4">
       <div class="w-full max-w-md">
@@ -49,55 +38,27 @@ const ERRORS: Record<string, string> = {
           <span class="text-2xl font-bold">DevFlare</span>
         </div>
 
-        <volt-card>
-          <volt-card-header>
-            <volt-card-title>Welcome back</volt-card-title>
-            <volt-card-description>
-              Sign in with your DevAuth account
-            </volt-card-description>
-          </volt-card-header>
-          <volt-card-content>
-            @if (error(); as message) {
-              <volt-error class="mb-4">{{ message }}</volt-error>
-            }
+        <dev-auth-sign-in
+          heading="Welcome back"
+          description="Sign in with your DevAuth account"
+          [attr.return-to]="returnTo()"
+          [attr.error-message]="error()"
+        ></dev-auth-sign-in>
 
-            <volt-button
-              variant="solid"
-              class="w-full"
-              [disabled]="isRedirecting()"
-              (click)="signIn()"
-            >
-              @if (isRedirecting()) {
-                <span class="flex items-center justify-center gap-2">
-                  <lucide-icon name="loader" class="animate-spin w-4 h-4" />
-                  Redirecting...
-                </span>
-              } @else {
-                <span class="flex items-center justify-center gap-2">
-                  Continue with DevAuth
-                  <!-- external-link, not an arrow: this leaves the app for the
-                       identity provider's own origin. Also the arrow is not in
-                       app.config.ts's curated LucideAngularModule.pick() set. -->
-                  <lucide-icon name="external-link" class="w-4 h-4" />
-                </span>
-              }
-            </volt-button>
-
-            <p class="mt-4 text-center text-sm text-muted-foreground">
-              Email, password and GitHub sign-in all live in DevAuth — including
-              creating an account.
-            </p>
-          </volt-card-content>
-        </volt-card>
+        <p class="mt-4 text-center text-sm text-muted-foreground">
+          Email, password and GitHub sign-in all live in DevAuth — including
+          creating an account.
+        </p>
       </div>
     </div>
   `,
 })
 export default class LoginPage {
-  #auth = inject(DevAuth);
   #route = inject(ActivatedRoute);
 
-  isRedirecting = signal(false);
+  returnTo = computed(
+    () => this.#route.snapshot.queryParamMap.get('returnTo') ?? '/',
+  );
 
   /** Set when the provider or the callback refused the flow. */
   error = computed(() => {
@@ -105,9 +66,4 @@ export default class LoginPage {
     if (!reason) return '';
     return ERRORS[reason] ?? `Sign-in failed: ${reason}`;
   });
-
-  signIn(): void {
-    this.isRedirecting.set(true);
-    this.#auth.login(this.#route.snapshot.queryParamMap.get('returnTo') ?? '/');
-  }
 }

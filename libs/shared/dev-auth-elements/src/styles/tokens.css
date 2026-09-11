@@ -1,0 +1,199 @@
+/**
+ * The --dev-auth-* theming contract, ported from PR #32's tested CSS
+ * custom-property model. A consumer overrides these on dev-auth-sign-in /
+ * dev-auth-user-button (or an ancestor, since these elements render in light
+ * DOM) to theme the bespoke chrome this package hand-rolls: the avatar, the
+ * account-menu trigger, and the menu panel's identity block/separator/items.
+ *
+ * and-card/and-button/and-skeleton/and-menu-list are real
+ * @andersseen/web-components primitives and already theme themselves through
+ * that library's own token system (--primary, --border, --popover, ...),
+ * which flows down by ordinary CSS custom-property inheritance — this file
+ * does not duplicate or override that.
+ *
+ * Defaults use CSS system colors (Canvas/CanvasText) so an un-themed consumer
+ * still gets a readable, theme-aware result. Imported once (as a side
+ * effect, alongside @andersseen/web-components/tokens.css for a baseline
+ * palette) by @org/dev-auth-elements — never re-injected per element
+ * instance or per render, since these elements share one page-level
+ * stylesheet rather than each owning a Shadow DOM.
+ */
+
+dev-auth-sign-in,
+dev-auth-user-button {
+  display: block;
+  --dev-auth-surface: Canvas;
+  --dev-auth-foreground: CanvasText;
+  --dev-auth-muted: color-mix(in srgb, CanvasText 60%, transparent);
+  --dev-auth-border: color-mix(in srgb, CanvasText 20%, transparent);
+  --dev-auth-primary: #2563eb;
+  --dev-auth-primary-foreground: #ffffff;
+  --dev-auth-focus: #2563eb;
+  --dev-auth-radius: 0.5rem;
+  --dev-auth-shadow: 0 4px 16px color-mix(in srgb, CanvasText 12%, transparent);
+  --dev-auth-error: #dc2626;
+  --dev-auth-error-surface: color-mix(in srgb, #dc2626 10%, transparent);
+  font-family: inherit;
+  color: var(--dev-auth-foreground);
+}
+
+@media (prefers-color-scheme: dark) {
+  dev-auth-sign-in,
+  dev-auth-user-button {
+    --dev-auth-primary: #60a5fa;
+    --dev-auth-primary-foreground: #0b1220;
+    --dev-auth-focus: #60a5fa;
+  }
+}
+
+.dev-auth-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.dev-auth-card {
+  max-width: 24rem;
+  box-sizing: border-box;
+}
+
+.dev-auth-card h1,
+.dev-auth-card p {
+  overflow-wrap: anywhere;
+  margin: 0;
+}
+
+.dev-auth-description {
+  color: var(--dev-auth-muted);
+  font-size: 0.875rem;
+}
+
+.dev-auth-alert {
+  font-size: 0.875rem;
+  color: var(--dev-auth-error);
+  background: var(--dev-auth-error-surface);
+  border-radius: var(--dev-auth-radius);
+  padding: 0.5rem 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.dev-auth-identity-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.dev-auth-avatar {
+  --dev-auth-avatar-size: 2.25rem;
+  width: var(--dev-auth-avatar-size);
+  height: var(--dev-auth-avatar-size);
+  border-radius: 999px;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--dev-auth-primary);
+  color: var(--dev-auth-primary-foreground);
+  font-size: 0.875rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.dev-auth-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.dev-auth-trigger {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-sizing: border-box;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--dev-auth-radius);
+  cursor: pointer;
+}
+
+.dev-auth-trigger:focus-visible,
+.dev-auth-menu-item:focus-visible {
+  outline: 3px solid var(--dev-auth-focus);
+  outline-offset: 2px;
+}
+
+/* Matches the hosted DevAuth pages' own [data-full] convention: and-button
+   has no first-class full-width prop, so width goes through ::part(button). */
+.dev-auth-card and-button[data-full]::part(button) {
+  width: 100%;
+}
+
+.dev-auth-menu-shell {
+  position: relative;
+  display: inline-block;
+}
+
+.dev-auth-panel {
+  position: absolute;
+  right: 0;
+  z-index: 50;
+  margin-top: 0.5rem;
+  min-width: 14rem;
+  max-width: min(20rem, calc(100vw - 1rem));
+  box-sizing: border-box;
+}
+
+.dev-auth-menu-identity {
+  padding: 0.5rem 0.75rem;
+}
+
+.dev-auth-menu-identity .dev-auth-name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.dev-auth-menu-identity .dev-auth-email {
+  color: var(--dev-auth-muted);
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}
+
+.dev-auth-separator {
+  border: none;
+  border-top: 1px solid var(--dev-auth-border);
+  margin: 0.375rem 0;
+}
+
+.dev-auth-menu-item {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: calc(var(--dev-auth-radius) - 0.125rem);
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.dev-auth-menu-item:hover {
+  background: color-mix(in srgb, var(--dev-auth-foreground) 6%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  dev-auth-sign-in *,
+  dev-auth-user-button * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

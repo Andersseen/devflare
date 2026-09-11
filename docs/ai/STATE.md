@@ -13,37 +13,43 @@ _Last updated: 2026-09-11_
 ## Branch & repo status
 
 Verified directly against `git log --oneline -15`, `git branch -a`, and
-`gh pr list --state merged` on 2026-09-11 — see
-[docs/specs/013-dev-auth-modular-architecture.md](../specs/013-dev-auth-modular-architecture.md)
-§10 for the full correction. **This section had drifted before this update**
-(it called PR #31 "uncommitted" after it had already merged, and called PR
-#34 "uncommitted" the same way) — that is now the third time this exact
-mistake has happened (see the 2026-08-10 and 2026-09-03 lessons below).
-**Standing rule for next time: before writing anything here, run `git log`/
-`git branch`/`gh pr list --state merged` yourself — do not carry forward a
-previous write-up's "uncommitted" claim.**
+`gh pr list --state merged` on 2026-09-11 (start of the DevAuth Elements
+session — see the 2026-09-11 session-log entry below). **This section has
+drifted before** (three separate times, see the 2026-08-10 / 2026-09-03 /
+earlier-2026-09-11 lessons) from carrying forward a previous write-up's
+"uncommitted" claim instead of re-checking. **Standing rule: before writing
+anything here, run `git log`/`git branch`/`gh pr list --state merged`
+yourself.**
 
-- `main` is `3a54432`. Merged, newest first: PR #35 (favicons,
-  2026-09-10T18:02Z), **PR #34** (`feat: remove image api` — image-domain
+- `main` is `99e70c1`. Merged, newest first: **PR #36** (`feat: update
+auth` — the DevAuth modular-architecture foundation described below,
+  2026-09-11), PR #35 (favicons, 2026-09-10T18:02Z), PR #34 (image-domain
   tooling moved to Imageryx, 2026-09-10T17:28Z), PR #33 (consent redirect
-  field fix, 2026-09-09T20:37Z), **PR #31** (headless DevAuth consumer SDK —
+  field fix, 2026-09-09T20:37Z), PR #31 (headless DevAuth consumer SDK —
   `@org/dev-auth-core` + generalized `@org/auth`, 2026-09-03T18:42Z), PR #30
   (spec 011, identity control plane, 2026-09-03T12:46Z), then specs 001–010
   (PRs #17–#29) and the Ally client registration (PR #25) before that.
 - **PR #32 (`feature/012-dev-auth-angular-ui`, "add optional DevAuth Angular
-  UI") is OPEN, not merged.** Adds `libs/shared/auth-ui` (`@org/auth-ui`,
-  `DevAuthSignIn`/`DevAuthUserButton`). Not in this checkout. Anyone touching
-  `libs/shared/auth` or planning a DevAuth UI layer should read that PR
-  first rather than duplicating it.
-- **DevAuth modular architecture (this session, `feature/dev-auth-modular-architecture`,
-  uncommitted)**: bounded DevAuth into three Nx-enforced domains
-  (`domain:dev-auth`, `domain:dev-auth-sdk`, `domain:cloudflare-connect`,
-  plus `domain:devflare`/`domain:shared`), added a minimal non-functional
-  `apps/cloudflare-connect` scaffold, and produced a migration map for
-  DevFlare's existing Cloudflare OAuth code. No feature code moved. Full
-  account: [docs/specs/013-dev-auth-modular-architecture.md](../specs/013-dev-auth-modular-architecture.md).
-  Not committed — pending the owner's decision on branch/commit/PR, per this
-  repo's standing git-safety rule.
+  UI") is OPEN, not merged, and now superseded.** It adds an Angular-only
+  `libs/shared/auth-ui` (`@org/auth-ui`); the framework-agnostic
+  `libs/shared/dev-auth-elements` built this session (see below) replaces
+  what it was for — DevFlare now dogfoods the Elements version, not this
+  PR. Recommended disposition: close #32, crediting its identity-fallback
+  algorithms/accessibility contract/test scenarios as prior art (all reused
+  — see [docs/specs/014-dev-auth-elements.md](../specs/014-dev-auth-elements.md)
+  §4). Not auto-closed — that's a GitHub-visible action for the owner.
+- **DevAuth modular architecture (PR #36, merged)**: bounded DevAuth into
+  three Nx-enforced domains (`domain:dev-auth`, `domain:dev-auth-sdk`,
+  `domain:cloudflare-connect`, plus `domain:devflare`/`domain:shared`),
+  added a minimal non-functional `apps/cloudflare-connect` scaffold, and
+  produced a migration map for DevFlare's existing Cloudflare OAuth code.
+  No feature code moved. Full account:
+  [docs/specs/013-dev-auth-modular-architecture.md](../specs/013-dev-auth-modular-architecture.md).
+- **DevAuth Elements (this session, `feature/dev-auth-elements`, off `main`,
+  uncommitted)**: new `libs/shared/dev-auth-elements` — see the "DevAuth
+  Elements" section below and
+  [docs/specs/014-dev-auth-elements.md](../specs/014-dev-auth-elements.md).
+  Not committed — pending the owner's decision on branch/commit/PR.
 - Production is current: the deploy for PR #23 succeeded at 2026-08-18T05:48Z
   and `wrangler d1 migrations list DB --env production --remote` reports nothing
   pending. Spec 010 adds migration `0004_cloudflare_oauth_client.sql`; spec 011
@@ -334,6 +340,84 @@ redirectUri, scope?})` returning `.discover()`, `.createAuthorizationRequest()`,
   publication, no ID-token verification (identity comes from one userinfo
   call), no React/Vue/Astro or Analog-specific server adapters.
 
+## DevAuth Elements: framework-agnostic visual SDK (`@org/dev-auth-elements`)
+
+The first visual layer of the DevAuth SDK that isn't Angular-only: native
+Custom Elements `<dev-auth-sign-in>`/`<dev-auth-user-button>`, built with
+Flowview (internal-only template authoring) and `@andersseen/web-components`
+(`and-card`/`and-button`/`and-icon`/`and-skeleton`/`and-menu-list`). Full
+design rationale, verified technical decisions, and the accessibility/test
+inventory: [docs/specs/014-dev-auth-elements.md](../specs/014-dev-auth-elements.md).
+
+- **`libs/shared/dev-auth-elements`** owns a framework-agnostic
+  `createAuthController()` — the session client (`fetch` against this app's
+  own `/api/auth/{session,login,logout,user}`, never OAuth/token exchange)
+  relocated out of `@org/auth`, where it used to be Angular-entangled.
+  `@org/auth`'s `DevAuth` service now wraps one `AuthController` via a new
+  `DEV_AUTH_CONTROLLER` injection token instead of fetching itself;
+  `provideDevAuth({ controller })` lets an app share one instance between
+  Angular's signals and the elements. `dev-auth-elements` deliberately does
+  **not** depend on `@org/dev-auth-core` (the OAuth/token-exchange package)
+  even though the `domain:dev-auth-sdk` Nx boundary would allow it.
+- **Light DOM, not Shadow DOM** (composition components, not design-system
+  primitives — `@andersseen/web-components` already owns Shadow DOM for its
+  own pieces regardless). Since there's no shadow root, native `<slot>`
+  would be inert, so `<dev-auth-user-button>`'s `menu-actions` extension
+  point is hand-rolled: light-DOM children captured once at first connect,
+  re-appended into a plain outlet `<div>` after each re-render.
+- **Menu primitive verified against actual source, not assumed**:
+  `and-dropdown`'s panel is entirely `items`-array-driven with no slot for
+  custom content, so it couldn't host an identity header + separator +
+  extensibility slot. Uses `and-menu-list` in its slotted mode instead
+  (`role="menu"` only — its own doc comment says slotted mode doesn't manage
+  focus), with open/close/positioning/outside-click/Escape/roving-tabindex/
+  Arrow-Home-End keyboard nav hand-rolled (ported from PR #32's already-
+  framework-agnostic logic).
+- **Flowview is genuinely internal-only**: `.flow` → committed `.flow.js`
+  (`render(context): string`, same pattern `apps/dev-auth` already uses,
+  `scripts/compile-flow.mjs` ported as-is) + a generated sibling `.flow.d.ts`
+  (needed once `@org/auth`'s `declaration: true` typecheck pulls the import
+  in transitively). Each element does `this.innerHTML = render(state)` on
+  real state transitions only — interactive state (menu open/close) stays
+  owned by plain DOM/CSS so focus and `and-menu-list`'s own state are never
+  torn down mid-interaction. `@flowview/dom`/`reactive`/`vite*` are not
+  installed anywhere in this repo and are not used here either — confirmed
+  before designing around them, not assumed from the task brief's framing.
+- **SSR-safe by construction**: every element's class body lives inside its
+  `defineDevAuth*()` registration function, not at module scope. Verified
+  both by a dedicated spec importing the package under Vitest's `node`
+  environment (no DOM globals) and by a real check: `curl
+http://localhost:4200/` renders the literal `<dev-auth-user-button>` tag
+  with no server error.
+- **DevFlare dogfoods both elements**: `login.page.ts`'s Volt sign-in card →
+  `<dev-auth-sign-in>`; `navbar.component.ts`'s Volt avatar/menu →
+  `<dev-auth-user-button>` with a slotted Settings link, themed via
+  `--dev-auth-*` CSS custom-property overrides mapped from DevFlare's own
+  tokens. `app.config.ts` builds one `AuthController` at module scope
+  (browser-guarded, same pattern as the existing Sentry init) and hands it
+  to both `provideDevAuthElements()` and `provideDevAuth()`.
+- **`@andersseen/web-components`/`@andersseen/icon` added as real root
+  dependencies** — previously CDN-only (`apps/dev-auth`'s hosted pages),
+  nowhere in this repo's actual dependency tree before this.
+- **Verified live** (`pnpm dev:all`-equivalent + Playwright, 2026-09-11):
+  full round trip — `/login` → "Continue with DevAuth" → dev-auth hosted
+  form → `test@devflare.com` credentials → `/api/auth/callback` →
+  dashboard, navbar shows "Account menu for Test User" with "TU" initials →
+  menu opens with focus on the first item (Settings) → Escape closes and
+  restores focus to the trigger → Sign out clears the session,
+  `<dev-auth-user-button>` renders empty → navigating to `/projects`
+  afterward correctly redirects to `/login` via `authGuard`. Zero console
+  errors other than a pre-existing, unrelated `apps/dev-auth` favicon 404.
+- **Tests**: 64 in `dev-auth-elements` (controller, identity fallbacks,
+  registration/SSR-safety, both elements' state/attribute/slot/event/
+  keyboard/focus/cleanup behavior), 11 in `auth` (rewritten against a fake
+  `AuthController`), 108 pre-existing `devflare` unit tests unaffected, 21
+  `devflare-e2e` `auth.spec.ts` tests across Chromium/Firefox/WebKit.
+- **Not done, by explicit task scope**: UserProfile/SignUp/account-
+  settings/org-switcher/MFA components, React/Vue/Astro wrappers, npm
+  publication, Imageryx integration, new `@andersseen/web-components`
+  primitives (confirmed no `and-avatar` exists — not invented here either).
+
 ## Hosting: Cloudflare Workers (deployed 2026-08-07)
 
 The app and the auth service each run as a Cloudflare Worker, deployed from
@@ -508,12 +592,9 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
 
 ## Next steps (owner's apparent intent — confirm before large work)
 
-0. **Decide whether to commit/branch/PR this session's DevAuth modular-
-   architecture work** (`feature/dev-auth-modular-architecture` — see
-   "Branch & repo status" and spec 013). The consumer-SDK work this item
-   used to be about is merged (PR #31); confirm migration `0006` (spec 011)
-   actually reached remote D1, since that was still unconfirmed as of the
-   last write-up that checked.
+0. **DevAuth modular architecture is merged** (PR #36) — this item is done.
+   Confirm migration `0006` (spec 011) actually reached remote D1, since
+   that was still unconfirmed as of the last write-up that checked.
 1. **Connect Cloudflare in production.** Everything else is in place: the
    OAuth client exists (`5246101a…`, both redirect URIs registered), the
    client id is in `[env.production.vars]`, and production runs the current
@@ -577,12 +658,52 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
      `identity-section.ts`); worth revisiting if a dependency bump fixes it.
 7. **Recommended next SDK phase**: pick one real second consumer (Imageryx is
    the natural candidate — it already exists as a registered client) and
-   migrate it onto `@org/dev-auth-core` to prove the abstraction actually
-   portable rather than DevFlare-shaped. That's also the point at which a
-   real Analog-specific server adapter or a genuine npm publication becomes
-   worth deciding on, rather than speculating about now.
+   migrate it onto `@org/dev-auth-core` **and** `@org/dev-auth-elements` to
+   prove both abstractions actually portable rather than DevFlare-shaped.
+   That's also the point at which a real Analog-specific server adapter or a
+   genuine npm publication becomes worth deciding on, rather than
+   speculating about now.
+8. **Decide PR #32's disposition and commit/PR this session's DevAuth
+   Elements work** (`feature/dev-auth-elements` — see "Branch & repo status"
+   and spec 014). PR #32 is superseded, not merged into; recommended to
+   close it once this work is reviewed, crediting the concepts this session
+   reused from it.
 
 ## Session log
+
+- **2026-09-11 (later)** — DevAuth Elements: the first framework-agnostic
+  visual SDK layer (`feature/dev-auth-elements`, off `main`, uncommitted).
+  Full account: [docs/specs/014-dev-auth-elements.md](../specs/014-dev-auth-elements.md)
+  and the "DevAuth Elements" section above. Read PR #32 (open, unmerged
+  Angular UI) as prior art rather than merging it — mined its identity-
+  fallback algorithms and accessibility contract, replaced its two Angular-
+  only dependencies (`quartz-headless`, `lucide-angular`) with native code
+  and `@andersseen/web-components`. Verified real facts before designing
+  around them rather than trusting the task brief's framing: read
+  `and-dropdown`'s and `and-menu-list`'s actual compiled source (changed the
+  menu-primitive plan once `and-dropdown` turned out to have no body slot);
+  confirmed `@flowview/dom`/`reactive`/`vite*` aren't installed anywhere in
+  this repo, so Flowview's role here is the same server-string-render
+  pattern `apps/dev-auth` already uses, not the DOM-runtime the brief
+  assumed; confirmed `@andersseen/web-components` wasn't an npm dependency
+  anywhere (CDN-only) and added it for real. Relocated the framework-
+  agnostic half of `@org/auth`'s session client into the new package and put
+  `@org/auth`'s `DevAuth` service on top of it via a new `DEV_AUTH_CONTROLLER`
+  injection token, so DevFlare's Angular signals and the new elements share
+  one `/api/auth/session` fetch instance instead of running two. Dogfooded
+  in DevFlare (`login.page.ts`, `navbar.component.ts`, `app.config.ts`) and
+  verified the complete real flow live: hosted-login → callback →
+  authenticated navbar → accessible menu (focus-in-on-open, Escape-closes-
+  and-restores-focus) → logout → guard redirect back to `/login`. 64 new
+  tests in the library, `auth`'s 11 tests rewritten against the new
+  controller boundary, `devflare-e2e`'s `auth.spec.ts` updated (21 tests,
+  Chromium/Firefox/WebKit). `pnpm format:check && pnpm lint && pnpm
+typecheck && pnpm test` green; `pnpm build` not yet run this session — do
+  that before considering this mergeable. Not committed — pending the
+  owner's decision on branch/commit/PR. Recommended follow-up: close PR #32
+  (superseded), crediting its reused concepts, and pick a second real
+  consumer (Imageryx) to prove `dev-auth-elements` actually portable outside
+  DevFlare.
 
 - **2026-09-11** — DevAuth modular architecture foundation
   (`feature/dev-auth-modular-architecture`, off `main`, uncommitted). Task

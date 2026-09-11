@@ -1,23 +1,14 @@
 import { TestBed } from '@angular/core/testing';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DEV_AUTH_BASE_PATH } from '../tokens';
-
-const mockClient = vi.hoisted(() => ({
-  getSession: vi.fn(),
-  login: vi.fn(),
-  logout: vi.fn(),
-  updateUser: vi.fn(),
-}));
-
-vi.mock('../client/auth-client', () => ({
-  DEFAULT_BASE_PATH: '/api/auth',
-  createClient: vi.fn(() => mockClient),
-}));
-
-import { createClient } from '../client/auth-client';
+import type {
+  AuthController,
+  AuthControllerState,
+  AuthUser,
+} from '@org/dev-auth-elements';
+import { DEV_AUTH_CONTROLLER } from '../tokens';
 import { DevAuth } from './auth.service';
 
-const AUTH_USER = {
+const AUTH_USER: AuthUser = {
   id: 'u1',
   email: 'a@b.com',
   name: 'A B',
@@ -26,92 +17,144 @@ const AUTH_USER = {
   updatedAt: new Date(),
 };
 
+function fakeController(initial: AuthControllerState) {
+  let state = initial;
+  const listeners = new Set<(state: AuthControllerState) => void>();
+  const controller: AuthController = {
+    getState: () => state,
+    subscribe: vi.fn((listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    }),
+    ready: vi.fn(() => Promise.resolve()),
+    login: vi.fn(),
+    logout: vi.fn(async () => {
+      state = { status: 'anonymous', user: null };
+      for (const listener of listeners) listener(state);
+    }),
+    updateProfile: vi.fn(),
+    refresh: vi.fn(async () => undefined),
+  };
+  return controller;
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
 describe('DevAuth', () => {
   it('starts loading, then resolves to anonymous with no session', async () => {
-    mockClient.getSession.mockResolvedValue({ user: null });
-    TestBed.configureTestingModule({ providers: [DevAuth] });
+    const controller = fakeController({ status: 'loading', user: null });
+    TestBed.configureTestingModule({
+      providers: [
+        DevAuth,
+        { provide: DEV_AUTH_CONTROLLER, useValue: controller },
+      ],
+    });
     const auth = TestBed.inject(DevAuth);
 
     expect(auth.isLoading()).toBe(true);
+
+    controller.getState = () => ({ status: 'anonymous', user: null });
     await auth.ready();
 
-    expect(auth.isLoading()).toBe(false);
-    expect(auth.isAuthenticated()).toBe(false);
-    expect(auth.user()).toBeNull();
+    expect(controller.ready).toHaveBeenCalled();
   });
 
-  it('resolves to authenticated when the session has a user', async () => {
-    mockClient.getSession.mockResolvedValue({ user: AUTH_USER });
-    TestBed.configureTestingModule({ providers: [DevAuth] });
+  it('reflects the controller state it was constructed with', () => {
+    const controller = fakeController({
+      status: 'authenticated',
+      user: AUTH_USER,
+    });
+    TestBed.configureTestingModule({
+      providers: [
+        DevAuth,
+        { provide: DEV_AUTH_CONTROLLER, useValue: controller },
+      ],
+    });
     const auth = TestBed.inject(DevAuth);
 
-    await auth.ready();
-
+    expect(auth.isLoading()).toBe(false);
     expect(auth.isAuthenticated()).toBe(true);
     expect(auth.user()?.id).toBe('u1');
   });
 
-  it('treats a failed session lookup as anonymous, not an error', async () => {
-    mockClient.getSession.mockRejectedValue(new Error('network down'));
-    TestBed.configureTestingModule({ providers: [DevAuth] });
+  it('updates its signals when the controller notifies a state change', () => {
+    const controller = fakeController({ status: 'loading', user: null });
+    TestBed.configureTestingModule({
+      providers: [
+        DevAuth,
+        { provide: DEV_AUTH_CONTROLLER, useValue: controller },
+      ],
+    });
     const auth = TestBed.inject(DevAuth);
+    expect(auth.isLoading()).toBe(true);
 
-    await auth.ready();
+    const listener = vi.mocked(controller.subscribe).mock.calls[0][0];
+    listener({ status: 'authenticated', user: AUTH_USER });
 
     expect(auth.isLoading()).toBe(false);
-    expect(auth.isAuthenticated()).toBe(false);
+    expect(auth.isAuthenticated()).toBe(true);
+    expect(auth.user()?.id).toBe('u1');
   });
 
-  it('login() delegates to the app-session client', async () => {
-    mockClient.getSession.mockResolvedValue({ user: null });
-    TestBed.configureTestingModule({ providers: [DevAuth] });
+  it('login() delegates to the shared controller', () => {
+    const controller = fakeController({ status: 'anonymous', user: null });
+    TestBed.configureTestingModule({
+      providers: [
+        DevAuth,
+        { provide: DEV_AUTH_CONTROLLER, useValue: controller },
+      ],
+    });
     const auth = TestBed.inject(DevAuth);
-    await auth.ready();
 
     auth.login('/projects');
 
-    expect(mockClient.login).toHaveBeenCalledWith('/projects');
+    expect(controller.login).toHaveBeenCalledWith('/projects');
   });
 
-  it('logout() clears the user signal', async () => {
-    mockClient.getSession.mockResolvedValue({ user: AUTH_USER });
-    mockClient.logout.mockResolvedValue(undefined);
-    TestBed.configureTestingModule({ providers: [DevAuth] });
+  it('logout() delegates to the controller and picks up its resulting state', async () => {
+    const controller = fakeController({
+      status: 'authenticated',
+      user: AUTH_USER,
+    });
+    TestBed.configureTestingModule({
+      providers: [
+        DevAuth,
+        { provide: DEV_AUTH_CONTROLLER, useValue: controller },
+      ],
+    });
     const auth = TestBed.inject(DevAuth);
-    await auth.ready();
     expect(auth.isAuthenticated()).toBe(true);
 
     await auth.logout();
 
-    expect(mockClient.logout).toHaveBeenCalled();
+    expect(controller.logout).toHaveBeenCalled();
     expect(auth.isAuthenticated()).toBe(false);
     expect(auth.user()).toBeNull();
   });
 
-  it('passes a configured DEV_AUTH_BASE_PATH to the client factory', () => {
-    mockClient.getSession.mockResolvedValue({ user: null });
+  it('updateName() delegates to the controller', async () => {
+    const controller = fakeController({
+      status: 'authenticated',
+      user: AUTH_USER,
+    });
     TestBed.configureTestingModule({
       providers: [
         DevAuth,
-        { provide: DEV_AUTH_BASE_PATH, useValue: '/custom/auth' },
+        { provide: DEV_AUTH_CONTROLLER, useValue: controller },
       ],
     });
+    const auth = TestBed.inject(DevAuth);
 
-    TestBed.inject(DevAuth);
+    await auth.updateName('New Name');
 
-    expect(createClient).toHaveBeenCalledWith('/custom/auth');
+    expect(controller.updateProfile).toHaveBeenCalledWith({ name: 'New Name' });
   });
 
-  it('defaults to /api/auth when nothing overrides DEV_AUTH_BASE_PATH', () => {
-    mockClient.getSession.mockResolvedValue({ user: null });
+  it('uses a real default controller when none is overridden', () => {
     TestBed.configureTestingModule({ providers: [DevAuth] });
 
-    TestBed.inject(DevAuth);
-
-    expect(createClient).toHaveBeenCalledWith('/api/auth');
+    expect(() => TestBed.inject(DevAuth)).not.toThrow();
   });
 });

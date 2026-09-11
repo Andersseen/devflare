@@ -1,0 +1,35 @@
+@if (context.status === 'loading') {
+  <and-card variant="elevated" padded class="dev-auth-card" role="status" aria-live="polite">
+    <and-skeleton height="1.25rem" width="60%"></and-skeleton>
+    <and-skeleton height="0.875rem" width="90%"></and-skeleton>
+    <and-skeleton height="2.5rem" width="100%"></and-skeleton>
+    <span class="dev-auth-visually-hidden">Checking your session…</span>
+  </and-card>
+} @else if (context.status === 'authenticated') {
+  <and-card variant="elevated" padded class="dev-auth-card" role="status">
+    <div class="dev-auth-identity-row">
+      <span class="dev-auth-avatar" aria-hidden="true">{{ context.initial }}</span>
+      <div>
+        <p class="dev-auth-description">Already signed in</p>
+        <p>{{ context.identity }}</p>
+      </div>
+    </div>
+  </and-card>
+} @else {
+  <and-card variant="elevated" padded class="dev-auth-card">
+    <and-card-header>
+      <and-card-title>{{ context.heading }}</and-card-title>
+      <and-card-description>{{ context.description }}</and-card-description>
+    </and-card-header>
+    <and-card-content>
+      @if (context.errorMessage) {
+        <p class="dev-auth-alert" role="alert">{{ context.errorMessage }}</p>
+      }
+      <p class="dev-auth-alert" role="alert" id="dev-auth-action-error" hidden></p>
+      <and-button id="dev-auth-action" variant="default" data-full>
+        <and-icon slot="start" name="external-link" size="16"></and-icon>
+        {{ context.actionLabel }}
+      </and-button>
+    </and-card-content>
+  </and-card>
+}

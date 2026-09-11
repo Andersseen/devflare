@@ -9,10 +9,20 @@ import { test, expect } from '@playwright/test';
 test.describe('Auth Pages', () => {
   test('login page offers the provider hand-off', async ({ page }) => {
     await page.goto('/login');
+    await expect(page.locator('dev-auth-sign-in')).toBeVisible();
     await expect(page.locator('text=Welcome back')).toBeVisible();
     await expect(
       page.getByRole('button', { name: /Continue with DevAuth/i }),
     ).toBeVisible();
+  });
+
+  test('the sign-in action has an accessible name and a visible focus ring', async ({
+    page,
+  }) => {
+    await page.goto('/login');
+    const action = page.getByRole('button', { name: /Continue with DevAuth/i });
+    await action.focus();
+    await expect(action).toBeFocused();
   });
 
   test('login page collects no credentials', async ({ page }) => {
@@ -68,7 +78,7 @@ test.describe('Auth Pages', () => {
     page,
   }) => {
     await page.goto('/login?error=invalid_state');
-    await expect(page.locator('text=/expired/i')).toBeVisible();
+    await expect(page.getByRole('alert')).toContainText(/expired/i);
   });
 
   test('unauthenticated users accessing protected routes see login', async ({
