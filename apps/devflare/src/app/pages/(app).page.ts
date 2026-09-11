@@ -1,5 +1,5 @@
 import type { RouteMeta } from '@analogjs/router';
-import { authGuard } from '@org/auth';
+import { authGuard } from '@dev-auth/angular';
 import { LayoutComponent } from '../components/layout.component';
 
 export const routeMeta: RouteMeta = {

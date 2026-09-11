@@ -2,11 +2,11 @@ import {
   createDevAuthClient,
   safeReturnTo,
   type DevAuthClientConfig,
-} from '@org/dev-auth-core';
+} from '@dev-auth/core';
 
 /**
  * DevFlare as an OAuth 2.1 / OIDC *client* of dev-auth, wired through
- * @org/dev-auth-core.
+ * @dev-auth/core.
  *
  * dev-auth is the identity provider and owns credentials, GitHub linking and its
  * own session. DevFlare only ever sees the result of an authorization code flow,
@@ -16,7 +16,7 @@ import {
  * DevFlare is registered there as a confidential client, so the code exchange is
  * authenticated with both PKCE and a client secret. Everything protocol-shaped
  * (PKCE, state/nonce, discovery, the code exchange, userinfo, normalized errors)
- * lives in @org/dev-auth-core; this file only resolves *this app's* config from
+ * lives in @dev-auth/core; this file only resolves *this app's* config from
  * its environment, which is Cloudflare-specific and has no business in a
  * portable SDK.
  */
@@ -57,7 +57,7 @@ export function resolveOidcConfig(context: RequestContext): OidcConfig {
   };
 }
 
-/** One @org/dev-auth-core client, configured for this app's environment. */
+/** One @dev-auth/core client, configured for this app's environment. */
 export function getDevAuthClient(context: RequestContext) {
   return createDevAuthClient(resolveOidcConfig(context));
 }

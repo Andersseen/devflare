@@ -18,7 +18,7 @@ Read `docs/ai/CONVENTIONS.md` (sections "Server code" and "dev-auth") and
 `docs/ai/ARCHITECTURE.md`. Then review only the changed files:
 
 ```
-git diff HEAD -- apps/devflare/src/server apps/dev-auth libs/shared/auth
+git diff HEAD -- apps/devflare/src/server apps/dev-auth libs/shared/dev-auth-angular
 ```
 
 ## Invariants to verify

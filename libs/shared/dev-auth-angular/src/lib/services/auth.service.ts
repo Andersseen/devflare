@@ -6,17 +6,20 @@ import {
   PLATFORM_ID,
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { createClient } from '../client/auth-client';
-import { DEV_AUTH_BASE_PATH } from '../tokens';
-import type { AuthUser } from '../types/auth.types';
+import type { AuthControllerState, AuthUser } from '@dev-auth/elements';
+import { DEV_AUTH_CONTROLLER } from '../tokens';
 
 /**
- * DevAuth's Angular adapter: application auth state as signals, backed by
- * this app's own session endpoints (see `../client/auth-client`).
+ * DevAuth's Angular adapter: application auth state as signals, layered over
+ * the framework-agnostic `AuthController` from `@dev-auth/elements` (see
+ * `DEV_AUTH_CONTROLLER` in `../tokens`) rather than fetching the session
+ * itself — the same controller instance can be shared with
+ * `<dev-auth-sign-in>`/`<dev-auth-user-button>` via `provideDevAuth({ controller })`
+ * so an app never runs two independent session-fetch loops.
  *
  * This is deliberately not an OAuth/OIDC client — it never sees a client
  * secret, an access token, or an authorization code. Those belong to the
- * server-side flow in @org/dev-auth-core; by the time the browser can inject
+ * server-side flow in @dev-auth/core; by the time the browser can inject
  * `DevAuth`, that flow has already run and left behind only this app's own
  * cookie session.
  */
@@ -25,7 +28,7 @@ import type { AuthUser } from '../types/auth.types';
 })
 export class DevAuth {
   #platformId = inject(PLATFORM_ID);
-  #client = createClient(inject(DEV_AUTH_BASE_PATH));
+  #controller = inject(DEV_AUTH_CONTROLLER);
 
   #_user = signal<AuthUser | null>(null);
   #_isLoading = signal(true);
@@ -38,11 +41,18 @@ export class DevAuth {
 
   constructor() {
     if (isPlatformBrowser(this.#platformId)) {
-      this.#sessionReady = this.#loadSession();
+      this.#applyState(this.#controller.getState());
+      this.#controller.subscribe((state) => this.#applyState(state));
+      this.#sessionReady = this.#controller.ready();
     } else {
       this.#_isLoading.set(false);
       this.#sessionReady = Promise.resolve();
     }
+  }
+
+  #applyState(state: AuthControllerState): void {
+    this.#_user.set(state.user);
+    this.#_isLoading.set(state.status === 'loading');
   }
 
   /**
@@ -52,17 +62,6 @@ export class DevAuth {
    */
   ready(): Promise<void> {
     return this.#sessionReady;
-  }
-
-  async #loadSession(): Promise<void> {
-    try {
-      const { user } = await this.#client.getSession();
-      this.#_user.set(user);
-    } catch {
-      this.#_user.set(null);
-    } finally {
-      this.#_isLoading.set(false);
-    }
   }
 
   /**
@@ -75,16 +74,14 @@ export class DevAuth {
    * returns it to `returnTo`.
    */
   login(returnTo = '/'): void {
-    this.#client.login(returnTo);
+    this.#controller.login(returnTo);
   }
 
   async updateName(name: string): Promise<void> {
-    const { user } = await this.#client.updateUser({ name });
-    this.#_user.set(user);
+    await this.#controller.updateProfile({ name });
   }
 
   async logout(): Promise<void> {
-    await this.#client.logout();
-    this.#_user.set(null);
+    await this.#controller.logout();
   }
 }

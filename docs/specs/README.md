@@ -49,5 +49,6 @@ the code is the implementation of it.
 | 011 | [Identity control plane: Users, Sessions, Providers](011-identity-control-plane.md)                     | In progress (verified locally; needs a deploy)          |
 | 012 | DevAuth Angular UI (`@org/auth-ui`) — open PR #32, `feature/012-dev-auth-angular-ui`, not on `main` yet | In progress (unmerged)                                  |
 | 013 | [DevAuth ecosystem: modular architecture foundation](013-dev-auth-modular-architecture.md)              | Done                                                    |
+| 014 | [DevAuth Elements: framework-agnostic visual SDK](014-dev-auth-elements.md)                             | Done                                                    |
 
 (Keep this table updated — it's how agents discover active work.)

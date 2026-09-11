@@ -58,7 +58,7 @@ separate secrets and separate persistence rather than a feature inside
 ## Consumer examples
 
 An application that only needs identity uses `dev-auth` (optionally through
-`@org/dev-auth-core`/`@org/auth`) and never touches this service. An
+`@dev-auth/core`/`@dev-auth/angular`) and never touches this service. An
 application that only needs Cloudflare resource access will eventually use
 this service directly, with no `dev-auth` dependency. An application that
 needs both (e.g. a future Imageryx feature) composes them itself — neither

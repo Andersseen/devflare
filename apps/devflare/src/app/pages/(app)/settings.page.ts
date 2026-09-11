@@ -17,7 +17,7 @@ import {
   VoltTabsContent,
   VoltError,
 } from '@voltui/components';
-import { DevAuth } from '@org/auth';
+import { DevAuth } from '@dev-auth/angular';
 import { DevAuthAdminService } from '@org/core';
 import { CloudflareSection } from '../settings/cloudflare-section';
 import { IdentitySection } from '../settings/identity/identity-section';

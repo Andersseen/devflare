@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 
 /**
- * Vitest for @org/dev-auth-core.
+ * Vitest for @dev-auth/core.
  *
  * `node`, not `jsdom`: this library is deliberately Angular- and h3-free
  * protocol code (fetch, Web Crypto, URL/URLSearchParams), so its tests run

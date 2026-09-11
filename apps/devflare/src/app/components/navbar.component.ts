@@ -1,20 +1,14 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, CUSTOM_ELEMENTS_SCHEMA, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
-import { VoltAvatar, VoltAvatarFallback, VoltButton } from '@voltui/components';
 import { VoltSidebarService } from '@voltui/components';
-import { DevAuth } from '@org/auth';
+import { DevAuth } from '@dev-auth/angular';
 import { injectActiveSection, SHELL_SECTIONS } from './shell-navigation';
 
 @Component({
   selector: 'app-navbar',
-  imports: [
-    RouterLink,
-    LucideAngularModule,
-    VoltButton,
-    VoltAvatar,
-    VoltAvatarFallback,
-  ],
+  imports: [RouterLink, LucideAngularModule],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   template: `
     <header
       class="flex h-14 shrink-0 items-center gap-1 border-b border-border bg-card px-4"
@@ -65,26 +59,18 @@ import { injectActiveSection, SHELL_SECTIONS } from './shell-navigation';
       </nav>
 
       <div class="ml-auto flex items-center gap-2">
-        @if (auth.user(); as user) {
-          <volt-avatar class="h-8 w-8 text-xs">
-            @if (user.image) {
-              <img
-                [src]="user.image"
-                class="h-full w-full object-cover"
-                alt=""
-              />
-            } @else {
-              <volt-avatar-fallback>{{ initial() }}</volt-avatar-fallback>
-            }
-          </volt-avatar>
-          <span class="hidden text-sm text-muted-foreground md:inline">
-            {{ user.name || user.email }}
-          </span>
-          <volt-button variant="ghost" size="icon" (click)="logout()">
-            <lucide-icon name="log-out" class="h-4 w-4" />
-            <span class="sr-only">Log out</span>
-          </volt-button>
-        } @else if (!auth.isLoading()) {
+        <dev-auth-user-button
+          [style.--dev-auth-surface]="'var(--popover)'"
+          [style.--dev-auth-foreground]="'var(--popover-foreground)'"
+          [style.--dev-auth-muted]="'var(--muted-foreground)'"
+          [style.--dev-auth-border]="'var(--border)'"
+          [style.--dev-auth-focus]="'var(--ring)'"
+        >
+          <a slot="menu-actions" role="menuitem" routerLink="/settings">
+            Settings
+          </a>
+        </dev-auth-user-button>
+        @if (!auth.isLoading() && !auth.isAuthenticated()) {
           <a
             routerLink="/login"
             class="inline-flex h-8 items-center rounded-md px-3 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
@@ -101,13 +87,4 @@ export class NavbarComponent {
   protected readonly auth = inject(DevAuth);
   protected readonly sections = SHELL_SECTIONS;
   protected readonly activeSection = injectActiveSection();
-
-  protected readonly initial = computed(() => {
-    const user = this.auth.user();
-    return (user?.name || user?.email || '?').charAt(0).toUpperCase();
-  });
-
-  protected logout(): void {
-    this.auth.logout();
-  }
 }

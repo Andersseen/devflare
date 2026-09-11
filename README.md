@@ -167,7 +167,9 @@ devflare/
 │   └── devflare-e2e/       # Playwright E2E
 ├── libs/shared/
 │   ├── core/               # @org/core — all business logic lives here
-│   ├── auth/               # @org/auth — auth client + guards
+│   ├── dev-auth-angular/   # @dev-auth/angular — Angular session adapter + guards
+│   ├── dev-auth-core/      # @dev-auth/core — framework-agnostic OAuth/OIDC client
+│   ├── dev-auth-elements/  # @dev-auth/elements — <dev-auth-sign-in>/<dev-auth-user-button>
 │   └── ui/                 # @org/ui
 └── docs/ai/                # Architecture, conventions, workflows, state
 ```

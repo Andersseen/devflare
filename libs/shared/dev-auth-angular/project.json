@@ -1,7 +1,7 @@
 {
-  "name": "auth",
+  "name": "dev-auth-angular",
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "libs/shared/auth/src",
+  "sourceRoot": "libs/shared/dev-auth-angular/src",
   "prefix": "lib",
   "projectType": "library",
   "tags": ["scope:shared", "type:core", "domain:dev-auth-sdk"],

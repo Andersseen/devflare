@@ -57,7 +57,7 @@ export default defineConfig(() => {
             // only resolves @org/* for the client/SSR builds — so the one
             // @org/* package a server route imports (the DevAuth OIDC/OAuth
             // client) needs an explicit alias here.
-            '@org/dev-auth-core': resolve(
+            '@dev-auth/core': resolve(
               __dirname,
               '../../libs/shared/dev-auth-core/src/index.ts',
             ),

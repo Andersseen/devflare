@@ -1,9 +1,3 @@
-// Types
-export * from './lib/types/auth.types';
-
-// Client factory
-export * from './lib/client/auth-client';
-
 // Angular
 export * from './lib/tokens';
 export * from './lib/services/auth.service';

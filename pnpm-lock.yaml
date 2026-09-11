@@ -8,6 +8,12 @@ importers:
 
   .:
     dependencies:
+      '@andersseen/icon':
+        specifier: ^0.1.1
+        version: 0.1.1
+      '@andersseen/web-components':
+        specifier: ^0.5.0
+        version: 0.5.0
       '@angular-devkit/build-angular':
         specifier: 21.2.21
         version: 21.2.21(ba729f8fc66d964c289fbf79407450e2)
@@ -463,6 +469,18 @@ packages:
     peerDependenciesMeta:
       zone.js:
         optional: true
+
+  '@andersseen/headless-components@0.4.0':
+    resolution: {integrity: sha512-CCksOcDq946YQlEe8vTK3ovkYOQStXBIwnPKJPx49wLUiUYmiDPNQ0v4ggCwqKu9HvVWepWgxuq4MjNluCaMYA==}
+
+  '@andersseen/icon@0.1.1':
+    resolution: {integrity: sha512-Tkmjpx41TwjTpXOG0yal5D/j5KJSlq9NvHF2IknsA74uM/HC75P8adY2Y16sXBhjawQDm/dlXngco/3+bcyh1g==}
+
+  '@andersseen/motion@0.2.0':
+    resolution: {integrity: sha512-A7y+B93eqi4c3hOLlF7vyRXRgJaBPi89l9W+xk8n2daV2hFyS5PUn66zj7BiPp+7Giq7p6ffiKbtw5FC4ZnngQ==}
+
+  '@andersseen/web-components@0.5.0':
+    resolution: {integrity: sha512-OHWBMs5bTvTKg975Nty1+aT570WXVcBj0os72n4terAMCS8RHVZd0KHmFYfDoeqB+WVrn/NTQeV7KddCihQz8w==}
 
   '@angular-devkit/architect@0.2102.21':
     resolution: {integrity: sha512-WqITVviALevNpCQoI50e3YY9qNOQT+gqTow/4FhWsxlAJFMb5uyilFpVz2hGYWPgosF3OAKmT1h9r+Jm9S6SUQ==}
@@ -10960,6 +10978,21 @@ snapshots:
       vitest: 4.0.9(@types/debug@4.1.13)(@types/node@20.19.9)(@vitest/ui@4.0.9)(jiti@2.4.2)(jsdom@22.1.0)(less@4.6.4)(lightningcss@1.32.0)(sass-embedded@1.99.0)(sass@1.97.3)(terser@5.46.1)(tsx@4.21.0)(yaml@2.9.0)
     optionalDependencies:
       zone.js: 0.16.0
+
+  '@andersseen/headless-components@0.4.0': {}
+
+  '@andersseen/icon@0.1.1': {}
+
+  '@andersseen/motion@0.2.0': {}
+
+  '@andersseen/web-components@0.5.0':
+    dependencies:
+      '@andersseen/headless-components': 0.4.0
+      '@andersseen/icon': 0.1.1
+      '@andersseen/motion': 0.2.0
+      class-variance-authority: 0.7.1
+      clsx: 2.1.1
+      tailwind-merge: 3.5.0
 
   '@angular-devkit/architect@0.2102.21(chokidar@5.0.0)':
     dependencies:

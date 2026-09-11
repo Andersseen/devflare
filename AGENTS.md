@@ -21,9 +21,12 @@ and other apps in other repositories all authenticate against. Nx 22 monorepo, p
 
 ## Hard rules
 
-1. **Never edit generated files**: `apps/dev-auth/src/pages/*.flow.js` are compiled
-   from the sibling `.flow` files. Edit the `.flow` file, then run `pnpm --filter
-@devflare/dev-auth build:flow` (pure npm — `@flowview/compiler`; no Rust binary).
+1. **Never edit generated files**: `apps/dev-auth/src/pages/*.flow.js` and
+   `libs/shared/dev-auth-elements/src/lib/elements/*.flow.js` (+ their sibling
+   `*.flow.d.ts`) are compiled from the sibling `.flow` files. Edit the `.flow`
+   file, then run `pnpm --filter @devflare/dev-auth build:flow` or `npx nx run
+dev-auth-elements:build:flow` respectively (pure npm — `@flowview/compiler`;
+   no Rust binary).
 2. **Standalone Angular only** — no NgModules. Pages use `export default class`.
 3. **Signals over RxJS** for component state. `inject()` over constructor injection.
 4. **Business logic lives in `libs/shared/core`** (`@org/core`) services; page
@@ -46,7 +49,8 @@ and other apps in other repositories all authenticate against. Nx 22 monorepo, p
 - Package manager: **pnpm** (never npm/yarn). Node ≥ 22.
 - Run everything: `pnpm dev:all` → app on :4200, auth on :8787.
 - Test user: `test@devflare.com` / `TestPass123` (create with `pnpm seed:user`).
-- TS path aliases: `@org/core`, `@org/ui`, `@org/auth`, `@org/deploy` (see `tsconfig.base.json`).
+- TS path aliases: `@org/core`, `@org/ui`, `@dev-auth/angular`, `@org/deploy`,
+  `@dev-auth/core`, `@dev-auth/elements` (see `tsconfig.base.json`).
 - Main app routes: AnalogJS file-based routing from
   `apps/devflare/src/app/pages/**/*.page.ts`. Use route groups for layouts:
   `(app).page.ts` wraps authenticated app routes, `tools.page.ts` wraps public
