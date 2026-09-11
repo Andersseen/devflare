@@ -3,7 +3,7 @@
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "libs/shared/dev-auth-core/src",
   "projectType": "library",
-  "tags": ["scope:shared", "type:core"],
+  "tags": ["scope:shared", "type:core", "domain:dev-auth-sdk"],
   "targets": {
     "lint": {
       "executor": "@nx/eslint:lint"

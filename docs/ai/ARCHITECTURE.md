@@ -1,6 +1,6 @@
 # ARCHITECTURE — System map
 
-> Verified against the code on 2026-08-08. If something here contradicts the code,
+> Verified against the code on 2026-09-11. If something here contradicts the code,
 > the code wins — and update this file.
 
 ## Big picture
@@ -12,15 +12,60 @@ Browser ──► devflare (Analog/Nitro Worker, :4200 dev)
               │        └─ back channel: POST /oauth2/token, GET /oauth2/userinfo
               │  /api/auth/session|logout|user ── devflare's OWN session (D1)
               │  /api/v1/*    ── h3 handlers ─────► Cloudflare D1 `devflare-db` (via db0)
+              │  /api/v1/cloud/* ── DevFlare's OWN Cloudflare OAuth client, reading
+              │        the owner's Cloudflare account (see "DevAuth ecosystem" below —
+              │        this is a Cloudflare Connect migration candidate, not identity)
 
 dev-auth (Hono Worker, :8787) — OAuth 2.1 / OIDC identity provider
          ──► Cloudflare D1 (users/sessions/issued tokens/JWKS, Drizzle schema)
          ──► Cloudflare KV  (rate limiting)
+
+cloudflare-connect (Hono Worker) — boundary placeholder only, not implemented.
+         health endpoint, no bindings, no OAuth flow. See "DevAuth ecosystem" below.
 ```
 
 **dev-auth is an identity provider, not DevFlare's auth backend.** DevFlare is one
 registered OAuth client of it; applications in other repositories, on unrelated
 domains, register the same way. See `apps/dev-auth/README.md`.
+
+## DevAuth ecosystem
+
+DevAuth is not one thing — it is three related but independently usable
+layers, plus a separate concern (Cloudflare Connect) that looks similar but
+answers a different question and must never share a security boundary with
+it. Full rationale, dependency audit, and the Nx enforcement mechanism:
+[docs/specs/013-dev-auth-modular-architecture.md](../specs/013-dev-auth-modular-architecture.md).
+
+```
+domain:dev-auth        apps/dev-auth            "Who are you?" — mini Keycloak.
+                              ▲ OIDC (HTTP only, never an import)
+domain:dev-auth-sdk    libs/shared/dev-auth-core   framework-agnostic OIDC client
+                        libs/shared/auth            Angular session-state adapter
+                        (libs/shared/auth-ui — unmerged, PR #32; not part of this repo's main yet)
+                              ▲ used by
+domain:devflare         apps/devflare             a consumer, like any other app
+
+domain:cloudflare-connect   apps/cloudflare-connect   "Which Cloudflare resources
+                                                        can this app touch?" — a
+                                                        SEPARATE deployable, not
+                                                        identity. Health endpoint
+                                                        only today; see its README.
+
+domain:shared           libs/shared/ui, libs/deploy   generic infra, no domain
+```
+
+Enforced by a `domain:*` Nx tag dimension and `depConstraints` in
+`eslint.config.mjs` (additive to the pre-existing `scope:`/`type:`
+dimension): `dev-auth` cannot import `dev-auth-sdk`, `devflare`, or
+`cloudflare-connect`; `dev-auth-sdk` cannot import `devflare` or
+`cloudflare-connect`; `cloudflare-connect` cannot import `dev-auth` or
+`devflare`. `devflare` (or any future consumer app) may depend on both SDKs
+— composition belongs to the consumer, not to either service.
+
+`apps/devflare/src/server/lib/cloudflare-{oauth,oauth-client,connection}.ts`
+are today's working (DevFlare-only, single-tenant) Cloudflare OAuth code —
+**not yet Cloudflare Connect**. Spec 013 has the file-by-file migration map
+for what moves there eventually and what needs redesigning first.
 
 Two databases, on purpose: **auth data** lives in dev-auth's D1
 (`dev-auth-db-prod`); **app data** (projects, deployments) plus DevFlare's own
@@ -33,15 +78,24 @@ makes the arrangement work for a consumer on a different domain.
 
 ## Monorepo layout (Nx 22, pnpm)
 
-| Path                | Alias         | What it is                                                            |
-| ------------------- | ------------- | --------------------------------------------------------------------- |
-| `apps/devflare`     | —             | Main AnalogJS app (Angular 21 + Vite 7 + Nitro SSR)                   |
-| `apps/dev-auth`     | —             | Auth microservice (Hono + better-auth + D1, Cloudflare Workers)       |
-| `apps/devflare-e2e` | —             | Playwright E2E tests                                                  |
-| `libs/shared/core`  | `@org/core`   | Tool services (one per tool) + auth/projects/webcontainer services    |
-| `libs/shared/ui`    | `@org/ui`     | Small shared components (badge, button, card, input)                  |
-| `libs/shared/auth`  | `@org/auth`   | session client (this app's own endpoints), auth guard, service, types |
-| `libs/deploy`       | `@org/deploy` | Deployment library (early stage)                                      |
+| Path                        | Alias                | What it is                                                                                                                         |
+| --------------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/devflare`             | —                    | Main AnalogJS app (Angular 21 + Vite 7 + Nitro SSR)                                                                                |
+| `apps/dev-auth`             | —                    | Identity provider — OAuth 2.1/OIDC (Hono + better-auth + D1, Workers)                                                              |
+| `apps/cloudflare-connect`   | —                    | **Boundary placeholder** for a future Cloudflare OAuth broker (Hono/Workers); health endpoint only, see its README                 |
+| `apps/devflare-e2e`         | —                    | Playwright E2E tests                                                                                                               |
+| `libs/shared/core`          | `@org/core`          | DevFlare's tool services (one per tool) + auth/projects/webcontainer services                                                      |
+| `libs/shared/ui`            | `@org/ui`            | Small shared components (badge, button, card, input)                                                                               |
+| `libs/shared/auth`          | `@org/auth`          | DevAuth consumer SDK — Angular session adapter for a consumer app's OWN cookie session, guard, types (does not speak OAuth itself) |
+| `libs/shared/dev-auth-core` | `@org/dev-auth-core` | DevAuth consumer SDK — framework-agnostic OAuth 2.1/OIDC client (discovery, PKCE, code exchange, userinfo)                         |
+| `libs/deploy`               | `@org/deploy`        | DevFlare's deployment feature library (early stage)                                                                                |
+
+`libs/shared/auth-ui` (`@org/auth-ui`, optional `DevAuthSignIn`/
+`DevAuthUserButton` components) exists on an **open, unmerged** PR (#32,
+`feature/012-dev-auth-angular-ui`) — not part of this checkout yet. See
+[docs/specs/013-dev-auth-modular-architecture.md](../specs/013-dev-auth-modular-architecture.md)
+§6/§9 for why it was deliberately left alone rather than touched or
+duplicated by this document's own architecture pass.
 
 ## apps/devflare (main app)
 

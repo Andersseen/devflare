@@ -1,0 +1,29 @@
+# Deployable home for Cloudflare Connect — delegated Cloudflare infrastructure
+# authorization (OAuth scopes, tokens, grant revocation for R2/D1/Workers/etc).
+#
+# This is a boundary placeholder, not a working service yet: see README.md.
+# No D1, no KV, no secrets — those are only meaningful once the real OAuth
+# broker is implemented (docs/specs/013-dev-auth-modular-architecture.md,
+# section "Step 7 — Cloudflare Connect boundary").
+name = "cloudflare-connect"
+main = "src/index.ts"
+compatibility_date = "2026-05-23"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+ENVIRONMENT = "development"
+
+# Production environment. No route/custom_domain yet — not deployed anywhere
+# until there is a real broker behind it.
+[env.production]
+name = "cloudflare-connect-prod"
+
+[env.production.vars]
+ENVIRONMENT = "production"
+
+# Staging environment, mirroring dev-auth's shape for when this becomes real.
+[env.staging]
+name = "cloudflare-connect-staging"
+
+[env.staging.vars]
+ENVIRONMENT = "staging"

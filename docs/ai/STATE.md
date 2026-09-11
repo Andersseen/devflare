@@ -8,32 +8,47 @@
 > to the last ~5 entries, newest first. Update the date. Facts only; no plans
 > you didn't verify.
 
-_Last updated: 2026-09-10_
+_Last updated: 2026-09-11_
 
 ## Branch & repo status
 
-- **Spec 011 (identity control plane) is merged** — PR #30, `912f2f6`, squashed
-  from `df0f045`. The 2026-09-03 entry below this table had recorded it as
-  "uncommitted" at the start of that day; by the time the SDK work in this same
-  session began, `feature/011-identity-control-plane` had already been merged
-  and deleted. **Lesson repeated from the 2026-08-10 entry further down: STATE
-  drifts from reality between sessions — verify against `git log`/`git branch`
-  before trusting this file's "uncommitted" claims, don't just act on them.**
-  Not yet confirmed applied to remote D1 — migration `0006` ships with the next
-  deploy.
-- `main` is `912f2f6` and now contains spec 011 on top of the Ally client
-  registration (PR #25) and specs 006–010 (PRs #20–#24, #29). 001–005 merged
-  before that (PRs #17–#19).
-- **Consumer SDK work (this session, uncommitted at time of writing)**: a new
-  `@org/dev-auth-core` package plus a generalized `@org/auth` Angular adapter,
-  with DevFlare's OIDC consumer routes migrated onto both. See "DevAuth
-  consumer SDK" below and the 2026-09-03 session-log entry for the full
-  account. Not yet committed — the owner has not been asked whether to branch/
-  commit/PR this yet.
+Verified directly against `git log --oneline -15`, `git branch -a`, and
+`gh pr list --state merged` on 2026-09-11 — see
+[docs/specs/013-dev-auth-modular-architecture.md](../specs/013-dev-auth-modular-architecture.md)
+§10 for the full correction. **This section had drifted before this update**
+(it called PR #31 "uncommitted" after it had already merged, and called PR
+#34 "uncommitted" the same way) — that is now the third time this exact
+mistake has happened (see the 2026-08-10 and 2026-09-03 lessons below).
+**Standing rule for next time: before writing anything here, run `git log`/
+`git branch`/`gh pr list --state merged` yourself — do not carry forward a
+previous write-up's "uncommitted" claim.**
+
+- `main` is `3a54432`. Merged, newest first: PR #35 (favicons,
+  2026-09-10T18:02Z), **PR #34** (`feat: remove image api` — image-domain
+  tooling moved to Imageryx, 2026-09-10T17:28Z), PR #33 (consent redirect
+  field fix, 2026-09-09T20:37Z), **PR #31** (headless DevAuth consumer SDK —
+  `@org/dev-auth-core` + generalized `@org/auth`, 2026-09-03T18:42Z), PR #30
+  (spec 011, identity control plane, 2026-09-03T12:46Z), then specs 001–010
+  (PRs #17–#29) and the Ally client registration (PR #25) before that.
+- **PR #32 (`feature/012-dev-auth-angular-ui`, "add optional DevAuth Angular
+  UI") is OPEN, not merged.** Adds `libs/shared/auth-ui` (`@org/auth-ui`,
+  `DevAuthSignIn`/`DevAuthUserButton`). Not in this checkout. Anyone touching
+  `libs/shared/auth` or planning a DevAuth UI layer should read that PR
+  first rather than duplicating it.
+- **DevAuth modular architecture (this session, `feature/dev-auth-modular-architecture`,
+  uncommitted)**: bounded DevAuth into three Nx-enforced domains
+  (`domain:dev-auth`, `domain:dev-auth-sdk`, `domain:cloudflare-connect`,
+  plus `domain:devflare`/`domain:shared`), added a minimal non-functional
+  `apps/cloudflare-connect` scaffold, and produced a migration map for
+  DevFlare's existing Cloudflare OAuth code. No feature code moved. Full
+  account: [docs/specs/013-dev-auth-modular-architecture.md](../specs/013-dev-auth-modular-architecture.md).
+  Not committed — pending the owner's decision on branch/commit/PR, per this
+  repo's standing git-safety rule.
 - Production is current: the deploy for PR #23 succeeded at 2026-08-18T05:48Z
   and `wrangler d1 migrations list DB --env production --remote` reports nothing
-  pending. Spec 010 adds migration `0004_cloudflare_oauth_client.sql`, which the
-  deploy workflow will apply.
+  pending. Spec 010 adds migration `0004_cloudflare_oauth_client.sql`; spec 011
+  adds migration `0006` — neither's remote-D1 application was reconfirmed this
+  session (last confirmed: see 2026-08-18 / 2026-09-03 entries below).
 - **Spec 010 is verified locally** (Settings → Integrations, save/clear round
   trip, sealed row in D1). Specs 006–009 are still unverified in a browser.
 - **Production now has the fallback Cloudflare API token.** On 2026-08-25,
@@ -48,13 +63,14 @@ production` now reports `CLOUDFLARE_API_TOKEN`, `DEV_AUTH_ADMIN_TOKEN` and
 - **`quartz-headless` is a new dependency** (spec 009). The app had only
   `@voltui/components`; the splitter behind the resizable sidebar comes from
   Quartz because Volt's own `volt-resizable` keeps no state to persist.
-- **Image-domain tooling moved to Imageryx (2026-09-10, uncommitted, this
-  repo on `feature/remove-duplicate-image-tools`)**: `image-compressor` and
-  `svg-optimizer` are removed — pages, `@org/core` services, barrel
-  exports, `TOOLS` registry entries, and the `browser-image-compression`
-  dependency. `bg-remover` deliberately stays. See the 2026-09-10
-  session-log entry for the full account, including the matching work on
-  Imageryx (a separate repo, its own uncommitted branch).
+- **Image-domain tooling moved to Imageryx** (PR #34, merged 2026-09-10):
+  `image-compressor` and `svg-optimizer` are removed — pages, `@org/core`
+  services, barrel exports, `TOOLS` registry entries, and the
+  `browser-image-compression` dependency. `bg-remover` deliberately stays.
+  See the 2026-09-10 session-log entry for the full account, including the
+  matching work on Imageryx (a separate repo, own branch — check that repo's
+  own STATE/context doc for whether it has since merged; not reconfirmed
+  from here this session).
 
 ## 2026-08-10 — first real browser walkthrough of prod auth, and what it found
 
@@ -492,11 +508,12 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
 
 ## Next steps (owner's apparent intent — confirm before large work)
 
-0. **Decide whether to commit/branch/PR the consumer-SDK work** (this session,
-   see "DevAuth consumer SDK" above) — it was implemented and verified but not
-   committed, pending that decision. If shipped, confirm migration `0006` (spec
-   011, already merged to `main` — see "Branch & repo status") actually reached
-   remote D1, since that was still unconfirmed as of this write-up.
+0. **Decide whether to commit/branch/PR this session's DevAuth modular-
+   architecture work** (`feature/dev-auth-modular-architecture` — see
+   "Branch & repo status" and spec 013). The consumer-SDK work this item
+   used to be about is merged (PR #31); confirm migration `0006` (spec 011)
+   actually reached remote D1, since that was still unconfirmed as of the
+   last write-up that checked.
 1. **Connect Cloudflare in production.** Everything else is in place: the
    OAuth client exists (`5246101a…`, both redirect URIs registered), the
    client id is in `[env.production.vars]`, and production runs the current
@@ -566,6 +583,57 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
    worth deciding on, rather than speculating about now.
 
 ## Session log
+
+- **2026-09-11** — DevAuth modular architecture foundation
+  (`feature/dev-auth-modular-architecture`, off `main`, uncommitted). Task
+  was explicitly architecture-only: draw boundaries between DevAuth Identity
+  (`apps/dev-auth`), the DevAuth Consumer SDK (`libs/shared/dev-auth-core` +
+  `libs/shared/auth`), and a future separate Cloudflare Connect service —
+  no feature code, no UI, no OAuth broker implementation. Full account:
+  [docs/specs/013-dev-auth-modular-architecture.md](../specs/013-dev-auth-modular-architecture.md).
+  Git safety first: working tree was clean on `main`, so the "unrelated
+  active DevFlare work" the task warned about turned out to already be
+  merged (PR #34) rather than sitting dirty — but a real piece of unrelated,
+  unmerged, in-flight work was found by checking remote branches/open PRs
+  that a `git status`-only check would have missed: **PR #32**
+  (`feature/012-dev-auth-angular-ui`, open) already implements the DevAuth
+  UI layer this task said not to build, under `libs/shared/auth-ui`
+  depending on `@org/auth`. That finding drove two decisions: rejected
+  renaming `@org/auth` (would conflict with that branch on merge) and did
+  not scaffold `libs/shared/auth-ui` (a real implementation already exists
+  there). Dependency audit (grep + reading the actual files, not assumed):
+  `apps/dev-auth` imports nothing else in the repo; `@org/dev-auth-core` is
+  genuinely framework-agnostic OIDC (not hardcoded to dev-auth's issuer) and
+  is already reused by DevFlare's _unrelated_ Cloudflare-OAuth-for-its-own-
+  account code (`cloudflare-oauth.ts`) for generic PKCE primitives only —
+  legitimate today, flagged as a future naming smell once Cloudflare Connect
+  is a real separate deployable; `@org/auth` is not an OAuth client at all,
+  just an Angular facade over a consumer app's own session cookie. Added a
+  `domain:*` Nx tag dimension (additive to the existing `scope:`/`type:`
+  one) with `depConstraints` in `eslint.config.mjs` enforcing `dev-auth` ↛
+  `dev-auth-sdk`/`devflare`/`cloudflare-connect`, `dev-auth-sdk` ↛
+  `devflare`/`cloudflare-connect`, `cloudflare-connect` ↛
+  `dev-auth`/`devflare` — verified live by temporarily adding a real
+  violating import to `apps/dev-auth/src/index.ts`, confirming
+  `nx run dev-auth:lint` failed with the expected
+  `@nx/enforce-module-boundaries` error, then reverting it (not left behind
+  as a committed test — the lint rule itself is the ongoing check). Also
+  closed a pre-existing gap: `scope:backend` had no `depConstraints` rule at
+  all before this. New minimal `apps/cloudflare-connect` (Hono/Workers,
+  mirroring `apps/dev-auth`'s project shape): `GET /health`, no bindings, no
+  OAuth code, 2 smoke tests, README covering responsibility/non-
+  responsibilities/dependencies/deployment/data/security ownership/consumer
+  examples. Produced a file-by-file migration map for
+  `apps/devflare/src/server/lib/cloudflare-{oauth,oauth-client,connection}.ts`
+  and `cloudflare.ts` (protocol-level vs. DevFlare-persistence-specific vs.
+  needs-redesign-before-extraction) — none of it moved, per task scope.
+  Verified: `npx nx run-many -t lint,typecheck,test --projects=dev-auth,
+devflare,devflare-e2e,auth,core,dev-auth-core,ui,deploy,cloudflare-connect`
+  all green (dev-auth/devflare/auth/deploy test counts unchanged from
+  before; 2 new cloudflare-connect tests). This section and PR/merge state
+  above were corrected against `git log`/`gh pr list` directly, catching two
+  more stale "uncommitted" claims (PRs #31, #34) — see spec 013 §10. Not
+  committed — pending the owner's decision on branch/commit/PR.
 
 - **2026-09-10** — Image-domain tooling (compression, format conversion, SVG
   optimization) moved to Imageryx; the DevFlare duplicates were removed.
@@ -687,38 +755,3 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
   D1 and the audit trail; revoked a real (already-expired) session, confirmed
   gone from D1 with its own audit row and no effect on the live browser
   session. Not yet committed, pushed, or deployed — see Next steps 0.
-
-- **2026-08-25** — Deployment was repositioned away from "Vercel clone /
-  upload a folder" and into a personal Cloudflare projects dashboard. The main
-  app now uses AnalogJS file-based routing (`provideFileRouter`) instead of the
-  deleted manual `app.routes.ts`: `(app).page.ts` wraps authenticated
-  dashboard/cloud/settings routes with `routeMeta.canActivateChild`, and
-  `tools.page.ts` wraps public DevTools routes. `/deploy` and `/projects`
-  remain as file-based redirects to `/`; `/login` is the canonical login route,
-  with `/auth/login` redirected for compatibility. The dashboard itself lives
-  at `(app)/(home).page.ts`, tracks the owner's project watchlist, and now shows
-  one high-level card per product/project rather than one card per Cloudflare
-  resource. Shared grouping logic in `(app)/dashboard-projects.ts` merges saved
-  DevFlare metadata with related Cloudflare Pages/Workers; `/projects/[slug]`
-  is the detail page that splits those related resources into Pages and Workers
-  sections and offers redeploy only for git-connected Pages projects. DevFlare
-  itself is one of those high-level groups, so `devflare`, `dev-auth-prod`,
-  `dev-auth-staging`, `worker-devflare-hono`, `devflare-worker` and
-  `control-bucket` do not appear as separate dashboard cards. The sidebar keeps
-  the Volt shell container but now renders custom section headers and links, so
-  group names read as non-clickable dividers and navigation options read as
-  clickable rows with hover/active states. Follow-up dependency refresh kept the
-  app on Angular 21 while moving Angular packages to `21.2.21`, VoltUI to
-  `1.0.1`, Quartz Headless to `0.2.0`, added `angular-movement@0.8.0`, and
-  bumped dev-auth's Lumen Icons CDN pin to `@andersseen/icon@0.1.1`.
-  `angular-movement` is wired globally with subtle dashboard card enter/stagger
-  motion. Quartz `0.2.0` requires `qzSplitterPanel`; the shell now uses it only
-  for the expanded sidebar panel, lets the main area flex into the remaining
-  space, and sets Volt's `--volt-sidebar-width` so the inner `<aside>` fills the
-  resizable panel. Verified: `pnpm format:check`, direct `tsc -p
-apps/devflare/tsconfig.app.json --noEmit`, direct ESLint over touched files,
-  `pnpm exec vite build --config apps/devflare/vite.config.ts`, and Playwright
-  route smoke against local Vite (`/projects` and `/projects/imageryx` redirect
-  to `/login` signed out; `/tools` renders with shell; `/login` renders without
-  shell). Full `pnpm lint` / `pnpm typecheck` through Nx still fail before
-  targets run with `Failed to start plugin worker`.
