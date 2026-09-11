@@ -36,6 +36,48 @@ export default [
               sourceTag: 'scope:shared',
               onlyDependOnLibsWithTags: ['scope:shared'],
             },
+            // `scope:backend` had no rule at all until now, so nothing enforced
+            // the same layering the frontend already gets — closed as part of
+            // the `domain:` work below, not a pre-existing decision.
+            {
+              sourceTag: 'scope:backend',
+              onlyDependOnLibsWithTags: ['scope:backend', 'scope:shared'],
+            },
+            // `domain:*` is a second, independent tag dimension — bounded
+            // contexts within the DevAuth ecosystem — layered on top of the
+            // `scope:`/`type:` dimension above rather than replacing it. Both
+            // sets of constraints apply at once: an import must satisfy every
+            // rule that matches one of the source project's tags. See
+            // docs/specs/013-dev-auth-modular-architecture.md for the full
+            // rationale and the bounded-context map.
+            {
+              sourceTag: 'domain:dev-auth',
+              onlyDependOnLibsWithTags: ['domain:dev-auth'],
+            },
+            {
+              sourceTag: 'domain:dev-auth-sdk',
+              onlyDependOnLibsWithTags: ['domain:dev-auth-sdk'],
+            },
+            {
+              sourceTag: 'domain:cloudflare-connect',
+              onlyDependOnLibsWithTags: [
+                'domain:cloudflare-connect',
+                'domain:shared',
+              ],
+            },
+            {
+              sourceTag: 'domain:devflare',
+              onlyDependOnLibsWithTags: [
+                'domain:devflare',
+                'domain:dev-auth-sdk',
+                'domain:cloudflare-connect',
+                'domain:shared',
+              ],
+            },
+            {
+              sourceTag: 'domain:shared',
+              onlyDependOnLibsWithTags: ['domain:shared'],
+            },
           ],
         },
       ],

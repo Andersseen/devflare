@@ -1,16 +1,16 @@
 {
-  "name": "dev-auth",
+  "name": "cloudflare-connect",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "application",
-  "sourceRoot": "apps/dev-auth/src",
-  "tags": ["scope:backend", "type:service", "domain:dev-auth"],
+  "sourceRoot": "apps/cloudflare-connect/src",
+  "tags": ["scope:backend", "type:service", "domain:cloudflare-connect"],
   "targets": {
     "build": {
       "executor": "nx:run-commands",
-      "outputs": ["{workspaceRoot}/dist/apps/dev-auth"],
+      "outputs": ["{workspaceRoot}/dist/apps/cloudflare-connect"],
       "options": {
-        "command": "wrangler deploy --dry-run --outdir=dist/apps/dev-auth",
-        "cwd": "apps/dev-auth"
+        "command": "wrangler deploy --dry-run --outdir=dist/apps/cloudflare-connect",
+        "cwd": "apps/cloudflare-connect"
       }
     },
     "serve": {
@@ -18,14 +18,14 @@
       "continuous": true,
       "options": {
         "command": "wrangler dev --local",
-        "cwd": "apps/dev-auth"
+        "cwd": "apps/cloudflare-connect"
       }
     },
     "deploy": {
       "executor": "nx:run-commands",
       "options": {
         "command": "wrangler deploy",
-        "cwd": "apps/dev-auth"
+        "cwd": "apps/cloudflare-connect"
       }
     },
     "lint": {
@@ -35,13 +35,13 @@
       "executor": "nx:run-commands",
       "options": {
         "command": "tsc --noEmit -p tsconfig.app.json",
-        "cwd": "apps/dev-auth"
+        "cwd": "apps/cloudflare-connect"
       }
     },
     "test": {
       "executor": "@nx/vitest:test",
       "options": {
-        "config": "apps/dev-auth/vitest.config.ts"
+        "config": "apps/cloudflare-connect/vitest.config.ts"
       }
     }
   }

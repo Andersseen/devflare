@@ -4,6 +4,7 @@
   "projectType": "application",
   "sourceRoot": "apps/devflare-e2e/src",
   "implicitDependencies": ["devflare"],
+  "tags": ["scope:frontend", "domain:devflare"],
   "// targets": "to see all targets run: nx show project devflare-e2e --web",
   "targets": {}
 }
