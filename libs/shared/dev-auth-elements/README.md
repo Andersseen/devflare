@@ -133,6 +133,19 @@ consumer's own CSS flowing with no shadow-piercing tricks, and lets
 `menu-actions` content be projected with ordinary DOM operations (see below)
 rather than through `::slotted()`/composed-event complexity.
 
+**and-button/and-card/etc. get scoped default tokens, not a global import.**
+Their Shadow DOM already ships compiled Tailwind utility classes (e.g.
+`.bg-primary { background-color: hsl(var(--primary)) }`); only the _values_
+need to come from an ancestor via ordinary custom-property inheritance
+(which does cross shadow boundaries). An earlier version of this package
+imported `@andersseen/web-components/tokens.css` at `:root` for this — which
+broke a real consumer, since that stylesheet's `:root { --primary: ...; }`
+clobbered the consumer's own same-named tokens app-wide (hex vs. this
+library's HSL-triplet format). `src/styles/tokens.css` now defines
+and-web-components' own default palette scoped to `dev-auth-sign-in`/
+`dev-auth-user-button` instead — visible only to these two elements and
+their and-\* children, never leaking to the rest of the page.
+
 **No native `<slot>`.** A `<slot>` element only has projection behavior
 inside an attached shadow root, which these elements deliberately don't have.
 `menu-actions` content is captured once at first connect

@@ -85,7 +85,15 @@ export function createDevAuthUserButtonElement(): CustomElementConstructor {
         '[data-dev-auth-outlet="menu-actions"]',
       );
       if (outlet && this.#menuActionNodes) {
-        for (const node of this.#menuActionNodes) outlet.appendChild(node);
+        for (const node of this.#menuActionNodes) {
+          // Additive, not a replacement: a consumer that already styled
+          // their own item keeps that styling, but without this every
+          // slotted action rendered as bare unstyled text/a plain link —
+          // no full-width row, no min-height, no hover state — starkly
+          // inconsistent next to the "Sign out" row this component owns.
+          node.classList.add('dev-auth-menu-item');
+          outlet.appendChild(node);
+        }
       }
 
       this.dispatchEvent(

@@ -1,5 +1,4 @@
 import '../styles/tokens.css';
-import '@andersseen/web-components/tokens.css';
 import {
   defineAndButton,
   defineAndCard,

@@ -117,6 +117,78 @@ import {
         }
       </app-cloud-gate>
 
+      <volt-card>
+        <volt-card-content class="space-y-4 p-5">
+          <div>
+            <h2 class="text-base font-semibold">Add Metadata</h2>
+            <p class="mt-1 text-sm text-muted-foreground">
+              Save GitHub URLs or link a name to a specific Pages project or
+              Worker.
+            </p>
+          </div>
+          <form
+            class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_minmax(0,1fr)_auto]"
+            (submit)="onCreate($event)"
+          >
+            <volt-form-field>
+              <volt-label>Project</volt-label>
+              <volt-input
+                type="text"
+                placeholder="lumen-icons"
+                [(value)]="newName"
+                autocomplete="off"
+              />
+            </volt-form-field>
+            <volt-form-field>
+              <volt-label>Repository URL</volt-label>
+              <volt-input
+                type="url"
+                placeholder="https://github.com/andriipap/lumen-icons"
+                [(value)]="newRepoUrl"
+                autocomplete="off"
+              />
+            </volt-form-field>
+            <div class="space-y-2">
+              <label for="cloud-resource" class="text-sm font-medium">
+                Cloudflare resource
+              </label>
+              <select
+                id="cloud-resource"
+                class="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                [value]="newCloudLink()"
+                (change)="onNewLinkChange($event)"
+              >
+                <option value="">Not linked</option>
+                @for (option of linkOptions(); track option.value) {
+                  <option [value]="option.value">{{ option.label }}</option>
+                }
+              </select>
+            </div>
+            <div class="flex items-end">
+              <volt-button
+                type="submit"
+                variant="solid"
+                [disabled]="isCreating() || !newName()"
+              >
+                @if (isCreating()) {
+                  <lucide-icon
+                    name="loader"
+                    class="mr-1 h-4 w-4 animate-spin"
+                  />
+                  Saving
+                } @else {
+                  <lucide-icon name="plus" class="mr-1 h-4 w-4" />
+                  Save
+                }
+              </volt-button>
+            </div>
+          </form>
+          @if (createError()) {
+            <volt-error>{{ createError() }}</volt-error>
+          }
+        </volt-card-content>
+      </volt-card>
+
       @if (loading() && !groups().some(groupHasCloudResource)) {
         <div class="flex items-center justify-center py-12">
           <lucide-icon
@@ -223,78 +295,6 @@ import {
           }
         </section>
       }
-
-      <volt-card>
-        <volt-card-content class="space-y-4 p-5">
-          <div>
-            <h2 class="text-base font-semibold">Add Metadata</h2>
-            <p class="mt-1 text-sm text-muted-foreground">
-              Save GitHub URLs or link a name to a specific Pages project or
-              Worker.
-            </p>
-          </div>
-          <form
-            class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_minmax(0,1fr)_auto]"
-            (submit)="onCreate($event)"
-          >
-            <volt-form-field>
-              <volt-label>Project</volt-label>
-              <volt-input
-                type="text"
-                placeholder="lumen-icons"
-                [(value)]="newName"
-                autocomplete="off"
-              />
-            </volt-form-field>
-            <volt-form-field>
-              <volt-label>Repository URL</volt-label>
-              <volt-input
-                type="url"
-                placeholder="https://github.com/andriipap/lumen-icons"
-                [(value)]="newRepoUrl"
-                autocomplete="off"
-              />
-            </volt-form-field>
-            <div class="space-y-2">
-              <label for="cloud-resource" class="text-sm font-medium">
-                Cloudflare resource
-              </label>
-              <select
-                id="cloud-resource"
-                class="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                [value]="newCloudLink()"
-                (change)="onNewLinkChange($event)"
-              >
-                <option value="">Not linked</option>
-                @for (option of linkOptions(); track option.value) {
-                  <option [value]="option.value">{{ option.label }}</option>
-                }
-              </select>
-            </div>
-            <div class="flex items-end">
-              <volt-button
-                type="submit"
-                variant="solid"
-                [disabled]="isCreating() || !newName()"
-              >
-                @if (isCreating()) {
-                  <lucide-icon
-                    name="loader"
-                    class="mr-1 h-4 w-4 animate-spin"
-                  />
-                  Saving
-                } @else {
-                  <lucide-icon name="plus" class="mr-1 h-4 w-4" />
-                  Save
-                }
-              </volt-button>
-            </div>
-          </form>
-          @if (createError()) {
-            <volt-error>{{ createError() }}</volt-error>
-          }
-        </volt-card-content>
-      </volt-card>
     </div>
   `,
 })
