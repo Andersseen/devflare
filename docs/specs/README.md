@@ -34,21 +34,22 @@ the code is the implementation of it.
 
 ## Index
 
-| #   | Spec                                                                                                    | Status                                                  |
-| --- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| 001 | [Hybrid OAuth client registry](001-hybrid-client-registry.md)                                           | Done                                                    |
-| 002 | [OAuth client admin API](002-client-admin-api.md)                                                       | Done                                                    |
-| 003 | [Provider settings: GitHub + access](003-provider-settings.md)                                          | Done                                                    |
-| 004 | [DevFlare admin UI for dev-auth](004-devflare-admin-ui.md)                                              | Done                                                    |
-| 005 | [Cloudflare account](005-cloudflare-account.md)                                                         | Done                                                    |
-| 006 | [Pages direct upload](006-pages-direct-upload.md)                                                       | In progress (code complete; awaiting live verification) |
-| 007 | [Cloudflare OAuth connect](007-cloudflare-oauth-connect.md)                                             | In progress (code complete; needs the OAuth client)     |
-| 008 | [R2 bucket browser](008-r2-bucket-browser.md)                                                           | In progress (code complete; needs a browser check)      |
-| 009 | [Resizable sidebar](009-resizable-sidebar.md)                                                           | In progress (code complete; needs a browser check)      |
-| 010 | [Cloudflare account in Settings](010-cloudflare-settings.md)                                            | In progress (verified locally; needs a deploy)          |
-| 011 | [Identity control plane: Users, Sessions, Providers](011-identity-control-plane.md)                     | In progress (verified locally; needs a deploy)          |
-| 012 | DevAuth Angular UI (`@org/auth-ui`) — open PR #32, `feature/012-dev-auth-angular-ui`, not on `main` yet | In progress (unmerged)                                  |
-| 013 | [DevAuth ecosystem: modular architecture foundation](013-dev-auth-modular-architecture.md)              | Done                                                    |
-| 014 | [DevAuth Elements: framework-agnostic visual SDK](014-dev-auth-elements.md)                             | Done                                                    |
+| #   | Spec                                                                                                    | Status                                                        |
+| --- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| 001 | [Hybrid OAuth client registry](001-hybrid-client-registry.md)                                           | Done                                                          |
+| 002 | [OAuth client admin API](002-client-admin-api.md)                                                       | Done                                                          |
+| 003 | [Provider settings: GitHub + access](003-provider-settings.md)                                          | Done                                                          |
+| 004 | [DevFlare admin UI for dev-auth](004-devflare-admin-ui.md)                                              | Done                                                          |
+| 005 | [Cloudflare account](005-cloudflare-account.md)                                                         | Done                                                          |
+| 006 | [Pages direct upload](006-pages-direct-upload.md)                                                       | In progress (code complete; awaiting live verification)       |
+| 007 | [Cloudflare OAuth connect](007-cloudflare-oauth-connect.md)                                             | In progress (code complete; needs the OAuth client)           |
+| 008 | [R2 bucket browser](008-r2-bucket-browser.md)                                                           | In progress (code complete; needs a browser check)            |
+| 009 | [Resizable sidebar](009-resizable-sidebar.md)                                                           | In progress (code complete; needs a browser check)            |
+| 010 | [Cloudflare account in Settings](010-cloudflare-settings.md)                                            | In progress (verified locally; needs a deploy)                |
+| 011 | [Identity control plane: Users, Sessions, Providers](011-identity-control-plane.md)                     | In progress (verified locally; needs a deploy)                |
+| 012 | DevAuth Angular UI (`@org/auth-ui`) — open PR #32, `feature/012-dev-auth-angular-ui`, not on `main` yet | In progress (unmerged)                                        |
+| 013 | [DevAuth ecosystem: modular architecture foundation](013-dev-auth-modular-architecture.md)              | Done                                                          |
+| 014 | [DevAuth Elements: framework-agnostic visual SDK](014-dev-auth-elements.md)                             | Done                                                          |
+| 015 | [Publish the DevAuth SDK to npm](015-dev-auth-npm-publishing.md)                                        | In progress (packaging + CI done; first real publish pending) |
 
 (Keep this table updated — it's how agents discover active work.)

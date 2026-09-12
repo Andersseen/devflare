@@ -20,6 +20,46 @@
         "command": "node scripts/compile-flow.mjs",
         "cwd": "libs/shared/dev-auth-elements"
       }
+    },
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "dependsOn": ["build:flow"],
+      "options": {
+        "outputPath": "dist/libs/shared/dev-auth-elements",
+        "main": "libs/shared/dev-auth-elements/src/index.ts",
+        "tsConfig": "libs/shared/dev-auth-elements/tsconfig.lib.json",
+        "rootDir": "libs/shared/dev-auth-elements/src",
+        "assets": [
+          {
+            "input": "libs/shared/dev-auth-elements",
+            "glob": "README.md",
+            "output": "."
+          },
+          {
+            "input": "libs/shared/dev-auth-elements/src/styles",
+            "glob": "tokens.css",
+            "output": "styles"
+          },
+          {
+            "input": "libs/shared/dev-auth-elements/src/lib/elements",
+            "glob": "*.flow.js",
+            "output": "lib/elements"
+          },
+          {
+            "input": "libs/shared/dev-auth-elements/src/lib/elements",
+            "glob": "*.flow.d.ts",
+            "output": "lib/elements"
+          }
+        ]
+      }
+    },
+    "nx-release-publish": {
+      "executor": "@nx/js:release-publish",
+      "dependsOn": ["build"],
+      "options": {
+        "packageRoot": "dist/libs/shared/dev-auth-elements"
+      }
     }
   }
 }

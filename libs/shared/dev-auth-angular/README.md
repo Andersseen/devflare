@@ -18,6 +18,20 @@ elsewhere (e.g. one already shared with `<dev-auth-sign-in>`/
 `DevAuth` construct its own — see `@dev-auth/elements`'s README for the
 shared-controller pattern.
 
+## Install
+
+**Outside this monorepo:** `pnpm add @dev-auth/angular @dev-auth/elements`
+(or npm/yarn) — `@dev-auth/elements` is a real dependency of this package,
+not just a peer, since `DevAuth`'s controller comes straight from it.
+Requires these peer dependencies from your own app:
+
+- `@angular/core` `^21.0.0`
+- `@angular/common` `^21.0.0`
+- `@angular/router` `^21.0.0`
+
+**Inside this monorepo:** consumed straight from TypeScript source via the
+`@dev-auth/angular` path alias (`tsconfig.base.json`) — nothing to install.
+
 ## Running unit tests
 
 Run `nx run dev-auth-angular:test` to execute the unit tests.

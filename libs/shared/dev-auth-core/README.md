@@ -1,9 +1,9 @@
 # @dev-auth/core
 
 Framework-agnostic OAuth 2.1 / OIDC consumer SDK for **dev-auth**, this repo's
-standalone identity provider. Path-aliased as `@dev-auth/core` — the `@dev-auth`
-npm scope is reserved for this SDK's eventual publication, though this
-package itself isn't published yet (see [Naming](#naming) below).
+standalone identity provider. Published to npm as `@dev-auth/core`, and
+path-aliased the same way for consumers inside this monorepo (see
+[Installation](#installation) below).
 
 ## Architecture
 
@@ -36,11 +36,15 @@ time Angular code can inject it, the server-side flow above has already run.
 
 ## Installation
 
-Internal workspace package, resolved through the `@dev-auth/*` TS path
-aliases (see `tsconfig.base.json`) — nothing to install. A consumer app using
-Nitro/Vite needs an explicit alias if it imports this package from a server
-route (see `apps/devflare/vite.config.ts`'s `nitro.alias`): Nitro's server
-bundle does not inherit the client build's `nxViteTsPaths()` resolution.
+**Outside this monorepo:** `pnpm add @dev-auth/core` (or npm/yarn). No
+runtime dependencies of its own beyond the platform's `fetch` and Web Crypto.
+
+**Inside this monorepo:** resolved through the `@dev-auth/*` TS path aliases
+(see `tsconfig.base.json`), straight from source — nothing to install. A
+consumer app using Nitro/Vite needs an explicit alias if it imports this
+package from a server route (see `apps/devflare/vite.config.ts`'s
+`nitro.alias`): Nitro's server bundle does not inherit the client build's
+`nxViteTsPaths()` resolution.
 
 ## Configuration
 
@@ -185,17 +189,14 @@ retries discovery instead of assuming the outage continues forever.
 - Manage refresh tokens, token storage, or silent renewal — a caller decides
   what to do with the token response `handleCallback` returns.
 - Support any framework adapter beyond the one server-side pattern documented
-  here and the Angular consumer-session facade in `@dev-auth/angular`. React/Vue/Astro
-  adapters, an Analog-specific server package, and npm publication are
-  explicitly out of scope for this phase.
+  here and the Angular consumer-session facade in `@dev-auth/angular`.
+  React/Vue/Astro adapters and an Analog-specific server package remain out
+  of scope for this phase.
 
 ## Naming
 
-This package is internal to the `devflare` Nx workspace and published nowhere
-yet. The `@dev-auth` npm scope is reserved for this SDK's eventual
-publication (`@dev-auth/core`, `@dev-auth/angular`, `@dev-auth/elements`), and
-the TS path aliases already use it — but actually publishing still needs: a
-real `package.json` per package with `name`/`exports`/`types` (no library in
-this monorepo has one today — they are all consumed through TS path aliases
-only) and a semver/release process. None of that is done here by design —
-see the task's explicit non-goals.
+Published to npm under the `@dev-auth` scope (`@dev-auth/core`,
+`@dev-auth/angular`, `@dev-auth/elements`) — see
+[docs/specs/015-dev-auth-npm-publishing.md](../../../docs/specs/015-dev-auth-npm-publishing.md)
+for the packaging/versioning/CI design. Independently versioned per package;
+`nx release` handles version bumps, changelogs, and publishing.

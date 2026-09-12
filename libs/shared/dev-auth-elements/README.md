@@ -11,11 +11,23 @@ DevAuth Angular      Angular DI/signals adapter over this package's controller (
 DevAuth Elements     this package — optional, framework-independent visual Custom Elements
 ```
 
-## Install (within this monorepo)
+## Install
 
-There is no build step or `package.json` for this library — like every other
-`libs/shared/*` package here, it's consumed straight from TypeScript source
-via the `@dev-auth/elements` path alias (`tsconfig.base.json`).
+**Outside this monorepo:** `pnpm add @dev-auth/elements` (or npm/yarn). Pulls
+in `@andersseen/web-components` and `@andersseen/icon` as real dependencies.
+
+The stylesheet (`tokens.css`) loads itself automatically the first time you
+call `defineDevAuthSignIn()`/`defineDevAuthUserButton()`/`defineDevAuthElements()`
+in a real browser — a lazy `import()`, which every mainstream bundler (Vite,
+webpack, esbuild-based setups) handles the same as a static CSS import. If
+your setup has no bundler at all (a bare `<script type="module">` loading
+straight from a CDN/`node_modules`), import the stylesheet yourself instead:
+`import '@dev-auth/elements/tokens.css'`, or a plain `<link rel="stylesheet"
+href=".../node_modules/@dev-auth/elements/styles/tokens.css">`.
+
+**Inside this monorepo:** consumed straight from TypeScript source via the
+`@dev-auth/elements` path alias (`tsconfig.base.json`), like every other
+`libs/shared/*` package here — nothing to install.
 
 ## Vanilla usage
 
@@ -182,6 +194,6 @@ by importing the package.
 ## Non-goals (this phase)
 
 No UserProfile/SignUp/account-settings/org-switcher/MFA components, no React/
-Vue/Astro wrappers, no npm publication, no new `@andersseen/web-components`
+Vue/Astro wrappers, no new `@andersseen/web-components`
 primitives (there is no `and-avatar` — confirmed absent, not reimplemented
 here either).

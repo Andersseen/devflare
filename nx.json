@@ -20,6 +20,11 @@
       "dependsOn": ["^build"],
       "inputs": ["production", "^production"]
     },
+    "build": {
+      "cache": true,
+      "dependsOn": ["^build"],
+      "inputs": ["production", "^production"]
+    },
     "@nx/eslint:lint": {
       "cache": true,
       "inputs": [
@@ -71,6 +76,26 @@
       }
     }
   ],
+  "release": {
+    "projects": ["dev-auth-core", "dev-auth-elements", "dev-auth-angular"],
+    "projectsRelationship": "independent",
+    "releaseTagPattern": "{projectName}@{version}",
+    "version": {
+      "conventionalCommits": true,
+      "updateDependents": "auto",
+      "preserveMatchingDependencyRanges": false,
+      "preVersionCommand": "npx nx run-many -t build -p dev-auth-core,dev-auth-elements,dev-auth-angular",
+      "git": {
+        "commit": true,
+        "commitMessage": "chore(release): publish {projectName}@{version}",
+        "tag": true,
+        "push": true
+      }
+    },
+    "changelog": {
+      "projectChangelogs": true
+    }
+  },
   "generators": {
     "@nx/angular:application": {
       "e2eTestRunner": "none",

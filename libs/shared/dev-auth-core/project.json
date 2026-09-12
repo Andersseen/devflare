@@ -13,6 +13,30 @@
       "options": {
         "configFile": "libs/shared/dev-auth-core/vite.config.ts"
       }
+    },
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/shared/dev-auth-core",
+        "main": "libs/shared/dev-auth-core/src/index.ts",
+        "tsConfig": "libs/shared/dev-auth-core/tsconfig.lib.json",
+        "rootDir": "libs/shared/dev-auth-core/src",
+        "assets": [
+          {
+            "input": "libs/shared/dev-auth-core",
+            "glob": "README.md",
+            "output": "."
+          }
+        ]
+      }
+    },
+    "nx-release-publish": {
+      "executor": "@nx/js:release-publish",
+      "dependsOn": ["build"],
+      "options": {
+        "packageRoot": "dist/libs/shared/dev-auth-core"
+      }
     }
   }
 }
