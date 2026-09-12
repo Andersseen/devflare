@@ -1,0 +1,38 @@
+{
+  "name": "@dev-auth/elements",
+  "version": "0.1.0",
+  "description": "Framework-agnostic Custom Elements for the DevAuth SDK",
+  "type": "module",
+  "main": "./index.js",
+  "module": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "default": "./index.js"
+    },
+    "./tokens.css": "./styles/tokens.css",
+    "./package.json": "./package.json"
+  },
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "files": [
+    "**/*"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "author": "andersseen",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Andersseen/devflare.git",
+    "directory": "libs/shared/dev-auth-elements"
+  },
+  "dependencies": {
+    "@andersseen/web-components": "^0.5.0",
+    "@andersseen/icon": "^0.1.1"
+  }
+}

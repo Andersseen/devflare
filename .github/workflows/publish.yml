@@ -1,0 +1,57 @@
+name: Publish DevAuth SDK to npm
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run — no git push, no npm publish'
+        type: boolean
+        default: true
+      first_release:
+        description: 'First-ever release for these packages (no prior tag to diff against)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write # nx release commits, tags, and pushes the version bump to main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false # never cancel a partially-completed publish
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # nx release needs full history + existing tags
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Configure git identity for the release commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Version (bump manifests, changelog, commit, tag, push)
+        run: >
+          pnpm nx release version --yes
+          ${{ inputs.first_release && '--first-release' || '' }}
+          ${{ inputs.dry_run && '--dry-run' || '' }}
+
+      - name: Publish to npm
+        run: pnpm nx release publish ${{ inputs.dry_run && '--dry-run' || '' }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

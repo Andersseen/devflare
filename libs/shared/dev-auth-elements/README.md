@@ -11,11 +11,23 @@ DevAuth Angular      Angular DI/signals adapter over this package's controller (
 DevAuth Elements     this package — optional, framework-independent visual Custom Elements
 ```
 
-## Install (within this monorepo)
+## Install
 
-There is no build step or `package.json` for this library — like every other
-`libs/shared/*` package here, it's consumed straight from TypeScript source
-via the `@dev-auth/elements` path alias (`tsconfig.base.json`).
+**Outside this monorepo:** `pnpm add @dev-auth/elements` (or npm/yarn). Pulls
+in `@andersseen/web-components` and `@andersseen/icon` as real dependencies.
+
+The stylesheet (`tokens.css`) loads itself automatically the first time you
+call `defineDevAuthSignIn()`/`defineDevAuthUserButton()`/`defineDevAuthElements()`
+in a real browser — a lazy `import()`, which every mainstream bundler (Vite,
+webpack, esbuild-based setups) handles the same as a static CSS import. If
+your setup has no bundler at all (a bare `<script type="module">` loading
+straight from a CDN/`node_modules`), import the stylesheet yourself instead:
+`import '@dev-auth/elements/tokens.css'`, or a plain `<link rel="stylesheet"
+href=".../node_modules/@dev-auth/elements/styles/tokens.css">`.
+
+**Inside this monorepo:** consumed straight from TypeScript source via the
+`@dev-auth/elements` path alias (`tsconfig.base.json`), like every other
+`libs/shared/*` package here — nothing to install.
 
 ## Vanilla usage
 
@@ -133,6 +145,19 @@ consumer's own CSS flowing with no shadow-piercing tricks, and lets
 `menu-actions` content be projected with ordinary DOM operations (see below)
 rather than through `::slotted()`/composed-event complexity.
 
+**and-button/and-card/etc. get scoped default tokens, not a global import.**
+Their Shadow DOM already ships compiled Tailwind utility classes (e.g.
+`.bg-primary { background-color: hsl(var(--primary)) }`); only the _values_
+need to come from an ancestor via ordinary custom-property inheritance
+(which does cross shadow boundaries). An earlier version of this package
+imported `@andersseen/web-components/tokens.css` at `:root` for this — which
+broke a real consumer, since that stylesheet's `:root { --primary: ...; }`
+clobbered the consumer's own same-named tokens app-wide (hex vs. this
+library's HSL-triplet format). `src/styles/tokens.css` now defines
+and-web-components' own default palette scoped to `dev-auth-sign-in`/
+`dev-auth-user-button` instead — visible only to these two elements and
+their and-\* children, never leaking to the rest of the page.
+
 **No native `<slot>`.** A `<slot>` element only has projection behavior
 inside an attached shadow root, which these elements deliberately don't have.
 `menu-actions` content is captured once at first connect
@@ -169,6 +194,6 @@ by importing the package.
 ## Non-goals (this phase)
 
 No UserProfile/SignUp/account-settings/org-switcher/MFA components, no React/
-Vue/Astro wrappers, no npm publication, no new `@andersseen/web-components`
+Vue/Astro wrappers, no new `@andersseen/web-components`
 primitives (there is no `and-avatar` — confirmed absent, not reimplemented
 here either).

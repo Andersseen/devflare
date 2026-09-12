@@ -198,6 +198,25 @@ export const SHELL_SECTIONS: ShellSection[] = [
       },
     ],
   },
+  {
+    id: 'dev-auth-sdk',
+    label: 'DevAuth SDK',
+    link: '/dev-auth-sdk',
+    matches: ['/dev-auth-sdk'],
+    groups: [
+      {
+        label: 'DevAuth SDK',
+        items: [
+          {
+            label: 'Components',
+            link: '/dev-auth-sdk',
+            icon: 'user',
+            exact: true,
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 /** Item pinned to the sidebar footer, shown in every section. */

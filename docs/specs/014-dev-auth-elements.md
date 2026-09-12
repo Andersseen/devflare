@@ -35,9 +35,12 @@ Angular.
   controller between Angular and the elements; SSR-safe import; accessible
   by default; dogfooded in DevFlare with the real OAuth flow unchanged.
 - **Non-goals**: UserProfile/SignUp/account-settings/org-switcher/MFA
-  components; React/Vue/Astro wrapper packages; npm publication; Imageryx
-  integration; new `@andersseen/web-components` primitives; Cloudflare
-  Connect work of any kind.
+  components; React/Vue/Astro wrapper packages; npm publication (**Superseded
+  2026-09-12**, see
+  [docs/specs/015-dev-auth-npm-publishing.md](015-dev-auth-npm-publishing.md)
+  — reversed once a real `@dev-auth` npm org existed); Imageryx integration;
+  new `@andersseen/web-components` primitives; Cloudflare Connect work of any
+  kind.
 
 ## 4. Design
 

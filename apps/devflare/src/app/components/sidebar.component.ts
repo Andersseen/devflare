@@ -66,7 +66,11 @@ import {
       </volt-sidebar-header>
 
       <volt-sidebar-content>
-        <nav class="space-y-6 px-3 py-4" aria-label="Section navigation">
+        <nav
+          class="space-y-6 py-4"
+          [class.px-3]="!sidebarService.isCollapsed()"
+          aria-label="Section navigation"
+        >
           @for (group of activeSection().groups; track group.label) {
             <section class="space-y-1">
               <div class="flex items-center gap-2 px-2 pb-1">
@@ -88,8 +92,9 @@ import {
                       [href]="item.link"
                       target="_blank"
                       rel="noreferrer"
-                      class="group flex h-11 items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      class="group flex h-11 items-center gap-3 rounded-md text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       [class.justify-center]="sidebarService.isCollapsed()"
+                      [class.px-3]="!sidebarService.isCollapsed()"
                       [attr.aria-label]="
                         sidebarService.isCollapsed() ? item.label : null
                       "
@@ -107,8 +112,9 @@ import {
                       [routerLink]="item.link"
                       routerLinkActive="bg-primary/15 text-foreground ring-1 ring-primary/30"
                       [routerLinkActiveOptions]="{ exact: item.exact ?? false }"
-                      class="group flex h-11 items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      class="group flex h-11 items-center gap-3 rounded-md text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       [class.justify-center]="sidebarService.isCollapsed()"
+                      [class.px-3]="!sidebarService.isCollapsed()"
                       [attr.aria-label]="
                         sidebarService.isCollapsed() ? item.label : null
                       "
@@ -130,12 +136,16 @@ import {
       </volt-sidebar-content>
 
       <volt-sidebar-footer>
-        <div class="border-t border-border px-3 py-4">
+        <div
+          class="border-t border-border py-4"
+          [class.px-3]="!sidebarService.isCollapsed()"
+        >
           <a
             [routerLink]="settingsItem.link"
             routerLinkActive="bg-primary/15 text-foreground ring-1 ring-primary/30"
-            class="group flex h-11 items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            class="group flex h-11 items-center gap-3 rounded-md text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             [class.justify-center]="sidebarService.isCollapsed()"
+            [class.px-3]="!sidebarService.isCollapsed()"
             [attr.aria-label]="
               sidebarService.isCollapsed() ? settingsItem.label : null
             "

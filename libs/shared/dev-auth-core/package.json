@@ -1,0 +1,31 @@
+{
+  "name": "@dev-auth/core",
+  "version": "0.1.0",
+  "description": "Framework-agnostic OAuth 2.1 / OIDC client for the DevAuth SDK",
+  "type": "module",
+  "main": "./index.js",
+  "module": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "default": "./index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "files": [
+    "**/*"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "author": "andersseen",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Andersseen/devflare.git",
+    "directory": "libs/shared/dev-auth-core"
+  }
+}

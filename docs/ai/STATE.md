@@ -8,48 +8,44 @@
 > to the last ~5 entries, newest first. Update the date. Facts only; no plans
 > you didn't verify.
 
-_Last updated: 2026-09-11_
+_Last updated: 2026-09-12_
 
 ## Branch & repo status
 
-Verified directly against `git log --oneline -15`, `git branch -a`, and
-`gh pr list --state merged` on 2026-09-11 (start of the DevAuth Elements
-session — see the 2026-09-11 session-log entry below). **This section has
-drifted before** (three separate times, see the 2026-08-10 / 2026-09-03 /
-earlier-2026-09-11 lessons) from carrying forward a previous write-up's
-"uncommitted" claim instead of re-checking. **Standing rule: before writing
-anything here, run `git log`/`git branch`/`gh pr list --state merged`
+Verified directly against `git log --oneline -5`, `git branch --show-current`,
+and `gh pr list` (open + merged) on 2026-09-12. **This section has drifted
+before** (see the 2026-08-10 / 2026-09-03 / 2026-09-11 lessons) from carrying
+forward a previous write-up's claim instead of re-checking. **Standing rule:
+before writing anything here, run `git log`/`git branch`/`gh pr list`
 yourself.**
 
-- `main` is `99e70c1`. Merged, newest first: **PR #36** (`feat: update
-auth` — the DevAuth modular-architecture foundation described below,
-  2026-09-11), PR #35 (favicons, 2026-09-10T18:02Z), PR #34 (image-domain
-  tooling moved to Imageryx, 2026-09-10T17:28Z), PR #33 (consent redirect
-  field fix, 2026-09-09T20:37Z), PR #31 (headless DevAuth consumer SDK —
-  `@dev-auth/core` + generalized `@dev-auth/angular`, 2026-09-03T18:42Z), PR #30
-  (spec 011, identity control plane, 2026-09-03T12:46Z), then specs 001–010
-  (PRs #17–#29) and the Ally client registration (PR #25) before that.
+- `main` is `5f271c6` (merge of PR #37). Merged, newest first: **PR #37**
+  (`feat: add DevAuth Elements` — the framework-agnostic visual SDK,
+  2026-09-11T21:09Z), PR #36 (DevAuth modular-architecture foundation,
+  2026-09-11T07:07Z), PR #35 (favicons, 2026-09-10T18:02Z), PR #34
+  (image-domain tooling moved to Imageryx, 2026-09-10T17:28Z), PR #33
+  (consent redirect field fix, 2026-09-09T20:37Z), then specs 001–011 (PRs
+  #17–#30) and the Ally client registration (PR #25) before that.
 - **PR #32 (`feature/012-dev-auth-angular-ui`, "add optional DevAuth Angular
-  UI") is OPEN, not merged, and now superseded.** It adds an Angular-only
-  `libs/shared/auth-ui` (`@org/auth-ui`); the framework-agnostic
-  `libs/shared/dev-auth-elements` built this session (see below) replaces
-  what it was for — DevFlare now dogfoods the Elements version, not this
-  PR. Recommended disposition: close #32, crediting its identity-fallback
-  algorithms/accessibility contract/test scenarios as prior art (all reused
-  — see [docs/specs/014-dev-auth-elements.md](../specs/014-dev-auth-elements.md)
-  §4). Not auto-closed — that's a GitHub-visible action for the owner.
-- **DevAuth modular architecture (PR #36, merged)**: bounded DevAuth into
-  three Nx-enforced domains (`domain:dev-auth`, `domain:dev-auth-sdk`,
-  `domain:cloudflare-connect`, plus `domain:devflare`/`domain:shared`),
-  added a minimal non-functional `apps/cloudflare-connect` scaffold, and
-  produced a migration map for DevFlare's existing Cloudflare OAuth code.
-  No feature code moved. Full account:
-  [docs/specs/013-dev-auth-modular-architecture.md](../specs/013-dev-auth-modular-architecture.md).
-- **DevAuth Elements (this session, `feature/dev-auth-elements`, off `main`,
-  uncommitted)**: new `libs/shared/dev-auth-elements` — see the "DevAuth
-  Elements" section below and
-  [docs/specs/014-dev-auth-elements.md](../specs/014-dev-auth-elements.md).
-  Not committed — pending the owner's decision on branch/commit/PR.
+  UI") is still OPEN, not merged, and superseded** by the now-merged PR #37.
+  Recommended disposition unchanged: close #32, crediting its reused
+  concepts — see
+  [docs/specs/014-dev-auth-elements.md](../specs/014-dev-auth-elements.md)
+  §4. Not auto-closed — that's a GitHub-visible action for the owner.
+- **PR #38 (`feature/dev-auth-sdk-polish`, OPEN, opened 2026-09-11T22:44Z)**
+  — everything built on top of the merged DevAuth Elements SDK this session:
+  (a) real bugs found and fixed in the dogfooded SDK itself (global CSS
+  token collision, the loading-skeleton width collapse, the fully-transparent
+  account-menu panel, inconsistent slotted-menu-item styling — all in
+  `libs/shared/dev-auth-elements`), (b) the `/dev-auth-sdk` showcase page
+  moved into the `(app)` route group (it had no navbar/sidebar before — a
+  real routing bug, not a styling one) and redesigned, (c) the dashboard's
+  "Add Metadata" card repositioned, (d) the collapsed-sidebar icon-padding
+  fix in `sidebar.component.ts`, and (e) the whole npm-publishing pipeline —
+  see [docs/specs/015-dev-auth-npm-publishing.md](../specs/015-dev-auth-npm-publishing.md).
+  All committed to this one branch/PR per this repo's one-branch-per-
+  workstream convention. Local verification green (`pnpm check` equivalent +
+  live smoke tests); not yet merged.
 - Production is current: the deploy for PR #23 succeeded at 2026-08-18T05:48Z
   and `wrangler d1 migrations list DB --env production --remote` reports nothing
   pending. Spec 010 adds migration `0004_cloudflare_oauth_client.sql`; spec 011
@@ -675,6 +671,39 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
 
 ## Session log
 
+- **2026-09-12** — DevAuth SDK polish + npm publishing
+  (`feature/dev-auth-sdk-polish`, off `main` @ `5f271c6`, PR #38 open).
+  Two parts, both requested mid-session by the owner after live-testing
+  PR #37's merged SDK and finding it visibly broken in several ways.
+  **Part 1 — real bugs in the dogfooded SDK**, each root-caused rather than
+  dismissed as stale state (the owner explicitly called out prior
+  "it's just cache" claims that turned out wrong): the `/dev-auth-sdk`
+  showcase page had no navbar/sidebar at all — it lived outside the `(app)`
+  route group, a routing bug, not styling; `.dev-auth-card` had no width of
+  its own, so the loading-state skeletons collapsed to slivers inside any
+  centered ancestor (the standard way to center a login card); `.dev-auth-panel`
+  (the account menu) had no background/border/shadow of its own — genuinely
+  transparent, with page content visible through it; a consumer-slotted
+  `menu-actions` item (e.g. DevFlare's own "Settings" link) never received
+  the component's own menu-item styling, unlike "Sign out". Also: the
+  dashboard's "Add Metadata" card moved above the project list, and a real
+  collapsed-sidebar padding bug in `sidebar.component.ts` (unrelated to the
+  SDK — the nav/link padding stacked with `VoltSidebarContent`'s own
+  internal padding, leaving ~0px for a 20px icon). **Part 2 — npm
+  publishing**: `@dev-auth/core`/`@dev-auth/angular`/`@dev-auth/elements`
+  are now real, independently-versioned, publishable packages (`nx release`,
+  a new `workflow_dispatch`-triggered `.github/workflows/publish.yml`) —
+  full design and the three CI-pipeline bugs found only by dry-running it
+  (not by reading docs) are in
+  [docs/specs/015-dev-auth-npm-publishing.md](../specs/015-dev-auth-npm-publishing.md).
+  Root `package.json` flipped to `"private": true"` (was `false`, a footgun
+  once a publish pipeline existed). Full repo `pnpm format:check && pnpm
+lint && pnpm typecheck && pnpm test` and `nx run-many -t build` across the
+  app + all three libraries green; local `nx release`/`npm pack` dry runs
+  clean. Not yet: the owner adding the `NPM_TOKEN` GitHub Environment
+  secret, or a first real publish (see spec 015 §7 for the remaining
+  checklist).
+
 - **2026-09-11 (later)** — DevAuth Elements: the first framework-agnostic
   visual SDK layer (`feature/dev-auth-elements`, off `main`, uncommitted).
   Full account: [docs/specs/014-dev-auth-elements.md](../specs/014-dev-auth-elements.md)
@@ -702,12 +731,11 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
   tests in the library, `auth`'s 11 tests rewritten against the new
   controller boundary, `devflare-e2e`'s `auth.spec.ts` updated (21 tests,
   Chromium/Firefox/WebKit). `pnpm format:check && pnpm lint && pnpm
-typecheck && pnpm test` green; `pnpm build` not yet run this session — do
-  that before considering this mergeable. Not committed — pending the
-  owner's decision on branch/commit/PR. Recommended follow-up: close PR #32
-  (superseded), crediting its reused concepts, and pick a second real
-  consumer (Imageryx) to prove `dev-auth-elements` actually portable outside
-  DevFlare.
+typecheck && pnpm test` green. Merged as PR #37 on 2026-09-11T21:09Z.
+  Recommended follow-up (still open): close PR #32 (superseded), crediting
+  its reused concepts, and pick a second real consumer (Imageryx, paused
+  pending the `@dev-auth` npm scope — see the 2026-09-12 entry above this
+  one) to prove `dev-auth-elements` actually portable outside DevFlare.
 
 - **2026-09-11** — DevAuth modular architecture foundation
   (`feature/dev-auth-modular-architecture`, off `main`, uncommitted). Task
@@ -832,51 +860,3 @@ devflare,devflare-e2e,auth,core,dev-auth-core,ui,deploy,cloudflare-connect`
   logout → login → dev-auth → callback → session → dashboard → logout, plus
   both callback error paths. Not committed — pending the owner's decision on
   branch/commit/PR.
-
-- **2026-09-03** — Built spec 011 on `feature/011-identity-control-plane`
-  (uncommitted): dev-auth's admin surface is now the four-area identity
-  control plane the owner asked for (Applications/Users/Sessions/Providers).
-  New: `routes/admin-users.ts` (list/get/ban/unban) and
-  `routes/admin-sessions.ts` (list/revoke/revoke-all), both hand-rolled rather
-  than better-auth's `admin` plugin — investigated first, rejected because its
-  own request authorization is role/adminUserIds-based, which conflicts with
-  this provider's deliberate ADMIN*EMAILS-only model (no DB write can promote
-  an attacker to admin), and it bundles impersonation/role-setting endpoints
-  this task explicitly excludes. Ban is a binary switch enforced by a new
-  `databaseHooks.session.create.before` hook in `auth.config.ts` — blocks new
-  sign-ins, leaves existing sessions alone by design (revoking those is the
-  separate Sessions action). `oauthClientAudit` (spec 002) became the general
-  admin audit table via one additive `targetType` column rather than a new
-  parallel table. Applications gained status/scopes/timestamp display and a
-  `disabled` toggle — the latter wasn't in the original design but turned out
-  necessary once `GET /admin/clients` was found to silently drop disabled
-  managed clients from the list entirely (`toRegisteredClient` correctly
-  returns `null` for them, which is right for authorization and wrong for an
-  admin list — fixed with a new `presentRow()` that reads the row directly
-  for display). Migration `0006_users_sessions_admin.sql`, additive.
-  Two real bugs surfaced by testing against the actual stack rather than
-  assumptions: (1) the ban hook originally read the user through
-  `ctx.context.internalAdapter.findUserById`, mirroring the `admin` plugin's
-  own code — but better-auth's internal adapter silently drops any `user`
-  column not registered as `additionalFields`, so `bannedAt` never came back;
-  caught by a new integration test built against the real D1/drizzle adapter
-  (not the `memoryAdapter` the rest of the OAuth test suite uses for speed),
-  fixed by querying `env.DB` directly, matching how every other admin-added
-  column in this service is already read. (2) nesting a second `<volt-tabs>`
-  inside DevFlare's own Settings tab content renders a correctly-active
-  trigger row but every inner panel stays `display: none` — the installed
-  `ng-primitives` (0.110.2) resolves the inner panel's active state against
-  the \_outer* tabset. Found by inspecting the live DOM after Playwright
-  showed an empty tab; worked around with a plain button row + `@switch`
-  instead of a second primitive-tabset, so Identity's four sub-tabs are their
-  own the thing rather than nested tabs.
-  Verified: `pnpm format:check`/`lint`/`typecheck`/`build` clean; `pnpm test`
-  — 214 dev-auth (up from 182), 118 devflare, 8 core, 6 auth, 65 deploy, all
-  passing; migration applied cleanly to local D1 with 2 existing users and
-  prior audit history intact. Live via `pnpm dev:all` + Playwright, signed in
-  as the local admin: all four Identity sub-tabs render real data (including
-  9 real sessions accumulated across this project's own development
-  history); banned and unbanned a real local user with a reason, confirmed in
-  D1 and the audit trail; revoked a real (already-expired) session, confirmed
-  gone from D1 with its own audit row and no effect on the live browser
-  session. Not yet committed, pushed, or deployed — see Next steps 0.

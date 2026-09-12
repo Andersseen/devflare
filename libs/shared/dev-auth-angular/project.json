@@ -8,6 +8,26 @@
   "targets": {
     "lint": {
       "executor": "@nx/eslint:lint"
+    },
+    "build": {
+      "executor": "@nx/angular:package",
+      "outputs": ["{workspaceRoot}/dist/libs/shared/dev-auth-angular"],
+      "options": {
+        "project": "libs/shared/dev-auth-angular/ng-package.json"
+      },
+      "configurations": {
+        "production": {
+          "tsConfig": "libs/shared/dev-auth-angular/tsconfig.lib.json"
+        }
+      },
+      "defaultConfiguration": "production"
+    },
+    "nx-release-publish": {
+      "executor": "@nx/js:release-publish",
+      "dependsOn": ["build"],
+      "options": {
+        "packageRoot": "dist/libs/shared/dev-auth-angular"
+      }
     }
   }
 }

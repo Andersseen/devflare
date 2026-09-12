@@ -7,6 +7,9 @@
     "inlineSources": true,
     "types": ["node"]
   },
+  "angularCompilerOptions": {
+    "compilationMode": "partial"
+  },
   "include": ["src/**/*.ts"],
   "exclude": [
     "src/**/*.spec.ts",
