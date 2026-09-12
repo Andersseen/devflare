@@ -19,7 +19,8 @@ forward a previous write-up's claim instead of re-checking. **Standing rule:
 before writing anything here, run `git log`/`git branch`/`gh pr list`
 yourself.**
 
-- `main` is `5f271c6` (merge of PR #37). Merged, newest first: **PR #37**
+- `main` is `a4acae6` (merge of PR #38). Merged, newest first: **PR #38**
+  (SDK polish + npm publishing, see the bullet below), **PR #37**
   (`feat: add DevAuth Elements` — the framework-agnostic visual SDK,
   2026-09-11T21:09Z), PR #36 (DevAuth modular-architecture foundation,
   2026-09-11T07:07Z), PR #35 (favicons, 2026-09-10T18:02Z), PR #34
@@ -32,8 +33,8 @@ yourself.**
   concepts — see
   [docs/specs/014-dev-auth-elements.md](../specs/014-dev-auth-elements.md)
   §4. Not auto-closed — that's a GitHub-visible action for the owner.
-- **PR #38 (`feature/dev-auth-sdk-polish`, OPEN, opened 2026-09-11T22:44Z)**
-  — everything built on top of the merged DevAuth Elements SDK this session:
+- **PR #38 (`feature/dev-auth-sdk-polish`, MERGED 2026-09-12)** —
+  everything built on top of the merged DevAuth Elements SDK this session:
   (a) real bugs found and fixed in the dogfooded SDK itself (global CSS
   token collision, the loading-skeleton width collapse, the fully-transparent
   account-menu panel, inconsistent slotted-menu-item styling — all in
@@ -43,9 +44,12 @@ yourself.**
   "Add Metadata" card repositioned, (d) the collapsed-sidebar icon-padding
   fix in `sidebar.component.ts`, and (e) the whole npm-publishing pipeline —
   see [docs/specs/015-dev-auth-npm-publishing.md](../specs/015-dev-auth-npm-publishing.md).
-  All committed to this one branch/PR per this repo's one-branch-per-
-  workstream convention. Local verification green (`pnpm check` equivalent +
-  live smoke tests); not yet merged.
+- **Post-merge follow-up (uncommitted, on `main` locally, not yet its own
+  branch)**: the owner noticed no GitHub Release appeared after PR #38
+  merged, which surfaced a real gap in the just-merged publish pipeline —
+  see the 2026-09-12 session-log entry below and spec 015 §9. Needs a new
+  branch off `main` before committing (PR #38's branch is already merged
+  and gone as a target).
 - Production is current: the deploy for PR #23 succeeded at 2026-08-18T05:48Z
   and `wrangler d1 migrations list DB --env production --remote` reports nothing
   pending. Spec 010 adds migration `0004_cloudflare_oauth_client.sql`; spec 011
@@ -672,7 +676,7 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
 ## Session log
 
 - **2026-09-12** — DevAuth SDK polish + npm publishing
-  (`feature/dev-auth-sdk-polish`, off `main` @ `5f271c6`, PR #38 open).
+  (`feature/dev-auth-sdk-polish`, off `main` @ `5f271c6`, merged as PR #38).
   Two parts, both requested mid-session by the owner after live-testing
   PR #37's merged SDK and finding it visibly broken in several ways.
   **Part 1 — real bugs in the dogfooded SDK**, each root-caused rather than
@@ -693,9 +697,16 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
   publishing**: `@dev-auth/core`/`@dev-auth/angular`/`@dev-auth/elements`
   are now real, independently-versioned, publishable packages (`nx release`,
   a new `workflow_dispatch`-triggered `.github/workflows/publish.yml`) —
-  full design and the three CI-pipeline bugs found only by dry-running it
+  full design and the four CI-pipeline bugs found only by dry-running it
   (not by reading docs) are in
   [docs/specs/015-dev-auth-npm-publishing.md](../specs/015-dev-auth-npm-publishing.md).
+  One of those bugs was found post-merge: after PR #38 landed the owner
+  asked why no GitHub Release appeared, which led to discovering the CI
+  workflow's split `nx release version`/`nx release publish` subcommands
+  never generate a changelog or create a release at all — only the combined
+  `nx release` command does all four phases (version, changelog, GitHub
+  Release, publish) together. Fixed as a follow-up commit on a new branch
+  off `main` (PR #38 had already merged by the time this was found).
   Root `package.json` flipped to `"private": true"` (was `false`, a footgun
   once a publish pipeline existed). Full repo `pnpm format:check && pnpm
 lint && pnpm typecheck && pnpm test` and `nx run-many -t build` across the
