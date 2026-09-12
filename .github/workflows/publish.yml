@@ -45,13 +45,21 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Version (bump manifests, changelog, commit, tag, push)
+      # The combined `nx release` command, not the split version/publish
+      # subcommands: it's the only entry point that sequences version bump
+      # -> changelog -> one git commit/tag/push -> GitHub Release creation
+      # -> npm publish correctly for independently-versioned projects. The
+      # split subcommands each do only their own piece — `nx release
+      # version` alone never generates a changelog or creates a release at
+      # all, confirmed by dry-running it during development.
+      - name: Release (version, changelog, GitHub Release, npm publish)
         run: >
-          pnpm nx release version --yes
+          pnpm nx release --yes
           ${{ inputs.first_release && '--first-release' || '' }}
           ${{ inputs.dry_run && '--dry-run' || '' }}
-
-      - name: Publish to npm
-        run: pnpm nx release publish ${{ inputs.dry_run && '--dry-run' || '' }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # Default token GitHub Actions already provides every run — used
+          # to create a GitHub Release per published tag (nx.json's
+          # release.changelog.projectChangelogs.createRelease: "github").
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

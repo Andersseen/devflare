@@ -84,16 +84,18 @@
       "conventionalCommits": true,
       "updateDependents": "auto",
       "preserveMatchingDependencyRanges": false,
-      "preVersionCommand": "npx nx run-many -t build -p dev-auth-core,dev-auth-elements,dev-auth-angular",
-      "git": {
-        "commit": true,
-        "commitMessage": "chore(release): publish {projectName}@{version}",
-        "tag": true,
-        "push": true
-      }
+      "preVersionCommand": "npx nx run-many -t build -p dev-auth-core,dev-auth-elements,dev-auth-angular"
     },
     "changelog": {
-      "projectChangelogs": true
+      "projectChangelogs": {
+        "createRelease": "github"
+      }
+    },
+    "git": {
+      "commit": true,
+      "commitMessage": "chore(release): publish {projectName}@{version}",
+      "tag": true,
+      "push": true
     }
   },
   "generators": {

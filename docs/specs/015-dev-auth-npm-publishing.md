@@ -102,7 +102,7 @@ for non-peer runtime deps in a publishable Angular library).
   `nx build dev-auth-angular` build `dev-auth-elements` first, since Nx's
   project graph already resolves the real import edge.
 
-### `nx release` — versioning + publish orchestration
+### `nx release` — versioning + changelog + GitHub Release + publish orchestration
 
 `nx.json`'s new `release` block: `projectsRelationship: "independent"`,
 `version.conventionalCommits: true` (this repo's `feat:`/`fix:` convention
@@ -112,10 +112,27 @@ found only by actually dry-running it —
 option says "false by default," but the actual `@nx/js` version-actions code
 treats an _unset_ value the same as `true` (applies to every dependency
 type); left unset, bumping `dev-auth-elements` past its `^0.1.0` range in
-`dev-auth-angular`'s manifest throws instead of rewriting the range. Also
-found only by dry-running: `release.git` (top-level) is rejected by the
-split `nx release version`/`nx release publish` subcommands the CI workflow
-uses — it has to be `release.version.git` instead.
+`dev-auth-angular`'s manifest throws instead of rewriting the range.
+`changelog.projectChangelogs.createRelease: "github"` creates one GitHub
+Release per published tag.
+
+**CI uses the combined `nx release` command, not the split `nx release
+version`/`nx release publish` subcommands** — found only by dry-running
+both. The split subcommands each do only their own narrow piece: `nx
+release version` alone never generates a changelog or creates a release at
+all (that's a separate phase entirely — confirmed by reading
+`command-line/release/version.js`, which contains no changelog/release
+logic), and `nx release changelog` run standalone requires an explicit
+single target `version` argument, which doesn't make sense for three
+independently-versioned projects with three different new versions. Only
+the combined `nx release` command (`command-line/release/release.js`)
+correctly sequences version → changelog (generated but not yet
+committed/pushed) → one git commit/tag/push covering all three projects
+together → a GitHub Release per project → npm publish, in that order. It
+also reads git config from the top-level `release.git`, not
+`release.version.git`/`release.changelog.git` (those nested locations are
+specifically for the split subcommands, and are what an earlier iteration
+of this config used before switching to the combined command).
 
 **The most significant thing the dry run caught**: `nx release publish`
 defaults to publishing from the _project root_ (`libs/shared/<lib>`, raw
@@ -136,9 +153,12 @@ main," while still meeting "I don't run `npm publish` locally myself."
 is the only place `NPM_TOKEN` is exposed. `cancel-in-progress: false` on the
 concurrency group (unlike this repo's other three workflows) — cancelling
 mid-publish could leave a pushed version-bump tag with only some of the
-three packages actually on npm. Two steps: `nx release version` then
-`nx release publish`, both accepting `--dry-run`/`--first-release` from the
-workflow inputs.
+three packages actually on npm. One step, the combined `nx release`
+command (see above — not the split subcommands), accepting
+`--dry-run`/`--first-release` from the workflow inputs, with both
+`NODE_AUTH_TOKEN` (npm) and `GITHUB_TOKEN` (GitHub Release creation — the
+default token every Actions run already gets, no extra secret needed) set
+on that one step.
 
 **Owner action items** (GitHub/npm UI only, cannot be done from here):
 
@@ -171,8 +191,10 @@ enforces it stays regenerated, never stale, at build time too.
    copying.
 2. `npm pack --dry-run` from each `dist/libs/shared/<lib>` — confirms exact
    tarball contents before ever touching a registry.
-3. `nx release version --dry-run --first-release` then
-   `nx release publish --dry-run` — confirms version bump, changelog,
+3. `nx release --yes --dry-run --first-release` (the combined command) —
+   confirms version bump, changelog generation (including per-project
+   `CHANGELOG.md` previews), the GitHub Release preview
+   (`CREATE https://github.com/.../releases/tag/<project>@<version>`),
    dependency-range rewrite, and (critically) that publish actually reads
    from `dist/`, not source.
 4. `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && nx
@@ -213,9 +235,15 @@ files, includes `lib/elements/{sign-in,user-button}.flow.{js,d.ts}` and
 `styles/tokens.css` at the right paths), `dev-auth-angular` (6 files, real
 Angular Package Format — `fesm2022/dev-auth-angular.mjs` + `types/*.d.ts`).
 
-`nx release publish --dry-run` (after the `nx-release-publish`/`packageRoot`
-fix): tarball contents for all three match the clean `dist/` output exactly
-— no source `.ts`/`.spec.ts` files, no raw `.flow`, no `eslint.config.mjs`.
+`nx release --yes --dry-run --first-release` (after the
+`nx-release-publish`/`packageRoot` fix, and after switching from the split
+subcommands to the combined command): tarball contents for all three match
+the clean `dist/` output exactly — no source `.ts`/`.spec.ts` files, no raw
+`.flow`, no `eslint.config.mjs`. Output confirmed, per project: a real
+conventional-commits-derived `CHANGELOG.md` entry, `CREATE
+https://github.com/Andersseen/devflare/releases/tag/<project>@0.2.0
+[dry-run]`, and "Creating GitHub Release" — all three phases (changelog,
+release, publish) actually run, not just version bumping.
 
 Full repo `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`:
 all green (108 devflare tests, 64 dev-auth-elements tests, 11
@@ -229,12 +257,24 @@ runtime, not just at typecheck time.
 
 ## 9. Log / Deviations
 
-**2026-09-12**: Three configuration bugs were found only by actually
-dry-running `nx release`, not by reading the docs — all three are recorded
+**2026-09-12**: Four configuration bugs were found only by actually
+dry-running `nx release`, not by reading the docs — all four are recorded
 in §4 because a future session re-touching this pipeline needs to know they
-were deliberate, not oversights: (1) `release.git` must live under
-`release.version.git` when using the split subcommands; (2)
-`preserveMatchingDependencyRanges` defaults to `true`-like behavior in the
-actual `@nx/js` code despite the type doc comment claiming `false`; (3)
-`nx release publish` needs an explicit `nx-release-publish` target with
-`packageRoot` pointed at `dist/` or it silently packages from source.
+were deliberate, not oversights: (1) `preserveMatchingDependencyRanges`
+defaults to `true`-like behavior in the actual `@nx/js` code despite the
+type doc comment claiming `false`; (2) `nx release publish` needs an
+explicit `nx-release-publish` target with `packageRoot` pointed at `dist/`
+or it silently packages from source; (3) the CI workflow originally called
+the split `nx release version` + `nx release publish` subcommands — after
+merging, the owner asked why no GitHub Release had appeared, which led to
+discovering that `nx release version` alone never generates a changelog or
+creates a release at all (confirmed by reading
+`command-line/release/version.js`: no changelog/release logic anywhere in
+it), and that `nx release changelog` run standalone requires a single
+explicit target version, meaningless for three independently-versioned
+projects. Switched to the combined `nx release` command, which correctly
+orchestrates all four phases together. (4) That switch also moved
+`release.git` from the nested `release.version.git`/`release.changelog.git`
+(required for the split subcommands, which reject a top-level
+`release.git`) back to a single top-level `release.git` (required for the
+combined command, confirmed by reading `release.js`'s git-handling code).
