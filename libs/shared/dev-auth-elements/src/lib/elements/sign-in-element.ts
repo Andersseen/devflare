@@ -3,9 +3,10 @@ import {
   createAuthController,
   type AuthController,
   type AuthControllerState,
-} from '../controller/auth-controller';
-import { getDefaultAuthController } from '../registry';
-import { displayIdentity, initials } from '../identity';
+  safeReturnTo,
+} from '@dev-auth/client';
+import { getDefaultAuthController } from '../registry.js';
+import { displayIdentity, initials } from '../identity.js';
 
 const OBSERVED_ATTRIBUTES = [
   'heading',
@@ -14,19 +15,6 @@ const OBSERVED_ATTRIBUTES = [
   'return-to',
   'error-message',
 ] as const;
-
-/**
- * `returnTo` is a path on *this app*; an absolute URL or a protocol-relative
- * one here would be an open redirect, so anything that doesn't look like a
- * same-origin path collapses to '/'. Deliberately not imported from
- * `@dev-auth/core` (which has an equivalent `safeReturnTo`) — this
- * package must not depend on the OAuth/token-exchange package at all.
- */
-function sanitizeReturnTo(value: string | null): string {
-  const trimmed = (value ?? '').trim();
-  if (!trimmed.startsWith('/') || trimmed.startsWith('//')) return '/';
-  return trimmed;
-}
 
 type AndButtonLike = HTMLElement & { loading: boolean };
 
@@ -90,6 +78,7 @@ export function createDevAuthSignInElement(): CustomElementConstructor {
         actionLabel:
           this.getAttribute('action-label') ?? 'Continue with DevAuth',
         errorMessage: this.getAttribute('error-message') ?? '',
+        sessionError: state.error?.message ?? '',
         identity: displayIdentity(user?.name, user?.email),
         initial: initials(user?.name, user?.email) || '?',
       });
@@ -112,7 +101,7 @@ export function createDevAuthSignInElement(): CustomElementConstructor {
         );
 
         try {
-          controller.login(sanitizeReturnTo(this.getAttribute('return-to')));
+          controller.login(safeReturnTo(this.getAttribute('return-to')));
         } catch {
           // login() only throws synchronously (it navigates on success, so
           // there is nothing to await) — surface it and let the visitor retry.

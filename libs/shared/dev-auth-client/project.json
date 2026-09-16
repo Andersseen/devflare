@@ -1,0 +1,42 @@
+{
+  "name": "dev-auth-client",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/shared/dev-auth-client/src",
+  "projectType": "library",
+  "tags": ["scope:shared", "type:core", "domain:dev-auth-sdk"],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "options": {
+        "configFile": "libs/shared/dev-auth-client/vite.config.ts"
+      }
+    },
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/shared/dev-auth-client",
+        "main": "libs/shared/dev-auth-client/src/index.ts",
+        "tsConfig": "libs/shared/dev-auth-client/tsconfig.lib.json",
+        "rootDir": "libs/shared/dev-auth-client/src",
+        "assets": [
+          {
+            "input": "libs/shared/dev-auth-client",
+            "glob": "README.md",
+            "output": "."
+          }
+        ]
+      }
+    },
+    "nx-release-publish": {
+      "executor": "@nx/js:release-publish",
+      "dependsOn": ["build"],
+      "options": {
+        "packageRoot": "dist/libs/shared/dev-auth-client"
+      }
+    }
+  }
+}

@@ -15,13 +15,14 @@ path-aliased the same way for consumers inside this monorepo (see
                        ▼
                @dev-auth/core        ← this package (framework-agnostic)
                        │
-              ┌────────┴────────┐
-              ▼                 ▼
-       apps/devflare      future server consumers (Hono, other Analog apps)
-       (server routes)
-              │
               ▼
-         @dev-auth/angular               ← Angular adapter (app-session facade)
+       apps/devflare / future server consumers
+
+Browser session UI and state live in separate packages:
+
+@dev-auth/client   same-origin browser session controller
+@dev-auth/angular  Angular DI/signals adapter over @dev-auth/client
+@dev-auth/elements optional Custom Elements over @dev-auth/client
 ```
 
 `@dev-auth/core` owns the OAuth/OIDC protocol: discovery, PKCE, state and
@@ -29,10 +30,12 @@ nonce, the authorization code exchange, userinfo, and normalized errors. It
 never touches cookies, an HTTP framework, or a consumer app's own session —
 see [Session boundary](#session-boundary).
 
-`@dev-auth/angular` is a separate, smaller package: a signals-based Angular facade
-over a _consumer application's own_ session endpoints (`/api/auth/session`,
-`/login`, `/logout`, `/user`). It does not speak OAuth/OIDC at all — by the
-time Angular code can inject it, the server-side flow above has already run.
+`@dev-auth/client` is the browser/session package: a framework-independent
+controller over a _consumer application's own_ session endpoints
+(`/api/auth/session`, `/login`, `/logout`, `/user`). `@dev-auth/angular` and
+`@dev-auth/elements` both build on it. None of those browser packages speak
+OAuth/OIDC at all — by the time browser code runs, the server-side flow above
+has already created the app's own session.
 
 ## Installation
 
@@ -94,9 +97,9 @@ full, real integration this is drawn from.
 
 ## Angular consumption
 
-`@dev-auth/core` has no Angular dependency and is not used from browser
-code — Angular consumes `@dev-auth/angular` instead, which talks to the _application's_
-own session API:
+`@dev-auth/core` has no Angular or visual dependency and is not used from
+browser code. Angular consumes `@dev-auth/angular` instead, which talks to the
+_application's_ own session API through `@dev-auth/client`:
 
 ```ts
 // app.config.ts
@@ -196,7 +199,7 @@ retries discovery instead of assuming the outage continues forever.
 ## Naming
 
 Published to npm under the `@dev-auth` scope (`@dev-auth/core`,
-`@dev-auth/angular`, `@dev-auth/elements`) — see
+`@dev-auth/client`, `@dev-auth/angular`, `@dev-auth/elements`) — see
 [docs/specs/015-dev-auth-npm-publishing.md](../../../docs/specs/015-dev-auth-npm-publishing.md)
 for the packaging/versioning/CI design. Independently versioned per package;
 `nx release` handles version bumps, changelogs, and publishing.

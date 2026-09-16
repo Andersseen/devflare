@@ -3,7 +3,7 @@ import type {
   AuthController,
   AuthControllerState,
   AuthUser,
-} from '../controller/auth-controller';
+} from '@dev-auth/client';
 
 /**
  * A hand-driven `AuthController` double for element tests — no fetch, no
@@ -11,16 +11,21 @@ import type {
  * the element rendered/dispatched in response.
  */
 export function createFakeController(
-  initial: AuthControllerState = { status: 'loading', user: null },
+  initial: Partial<AuthControllerState> = {},
 ): {
   controller: AuthController;
-  setState: (next: AuthControllerState) => void;
+  setState: (next: Partial<AuthControllerState>) => void;
 } {
-  let state = initial;
+  let state: AuthControllerState = {
+    status: 'loading',
+    user: null,
+    error: null,
+    ...initial,
+  };
   const listeners = new Set<(state: AuthControllerState) => void>();
 
-  function setState(next: AuthControllerState): void {
-    state = next;
+  function setState(next: Partial<AuthControllerState>): void {
+    state = { user: null, error: null, ...next } as AuthControllerState;
     for (const listener of Array.from(listeners)) listener(state);
   }
 
@@ -35,6 +40,7 @@ export function createFakeController(
     logout: vi.fn(async () => undefined),
     updateProfile: vi.fn(async () => undefined),
     refresh: vi.fn(async () => undefined),
+    dispose: vi.fn(),
   };
 
   return { controller, setState };

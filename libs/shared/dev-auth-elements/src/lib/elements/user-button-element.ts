@@ -3,12 +3,29 @@ import {
   createAuthController,
   type AuthController,
   type AuthControllerState,
-} from '../controller/auth-controller';
-import { getDefaultAuthController } from '../registry';
-import { displayIdentity, initials } from '../identity';
+} from '@dev-auth/client';
+import { getDefaultAuthController } from '../registry.js';
+import { displayIdentity, initials } from '../identity.js';
 
 const MENU_ITEM_SELECTOR =
   '[role="menuitem"]:not([disabled]):not([aria-disabled="true"])';
+const VIEWPORT_PADDING = 8;
+const PANEL_CUSTOM_PROPERTIES = [
+  '--dev-auth-surface',
+  '--dev-auth-foreground',
+  '--dev-auth-muted',
+  '--dev-auth-border',
+  '--dev-auth-focus',
+  '--dev-auth-radius',
+  '--dev-auth-shadow',
+  '--dev-auth-error',
+  '--dev-auth-error-surface',
+] as const;
+
+type PopoverPanel = HTMLElement & {
+  showPopover?: () => void;
+  hidePopover?: () => void;
+};
 
 /**
  * Class body lives inside this factory, not at module scope, so importing
@@ -21,9 +38,16 @@ export function createDevAuthUserButtonElement(): CustomElementConstructor {
     #unsubscribe: (() => void) | null = null;
     #explicitController: AuthController | undefined;
     #menuActionNodes: Element[] | null = null;
+    #panel: PopoverPanel | null = null;
+    #panelHome: HTMLElement | null = null;
     #open = false;
+    #viewportHandler = (): void => this.#positionPanel();
     #outsideClickHandler = (event: MouseEvent): void => {
-      if (!(event.target instanceof Node) || !this.contains(event.target)) {
+      const panel = this.#panel;
+      if (
+        !(event.target instanceof Node) ||
+        (!this.contains(event.target) && !panel?.contains(event.target))
+      ) {
         this.#closeMenu();
       }
     };
@@ -48,6 +72,11 @@ export function createDevAuthUserButtonElement(): CustomElementConstructor {
 
     disconnectedCallback(): void {
       document.removeEventListener('click', this.#outsideClickHandler, true);
+      window.removeEventListener('resize', this.#viewportHandler);
+      window.removeEventListener('scroll', this.#viewportHandler, true);
+      this.#panel?.remove();
+      this.#panel = null;
+      this.#panelHome = null;
       this.#unsubscribe?.();
       this.#unsubscribe = null;
       this.#controller = null;
@@ -63,8 +92,13 @@ export function createDevAuthUserButtonElement(): CustomElementConstructor {
     }
 
     #render(state: AuthControllerState): void {
+      this.#closeMenu();
+      this.#panel = null;
+      this.#panelHome = null;
       this.#open = false;
       document.removeEventListener('click', this.#outsideClickHandler, true);
+      window.removeEventListener('resize', this.#viewportHandler);
+      window.removeEventListener('scroll', this.#viewportHandler, true);
 
       const user = state.user;
       const identity = displayIdentity(
@@ -74,6 +108,7 @@ export function createDevAuthUserButtonElement(): CustomElementConstructor {
       );
       this.innerHTML = renderUserButton({
         status: state.status,
+        errorMessage: state.error?.message ?? '',
         identity,
         email: user?.email ?? '',
         image: user?.image ?? '',
@@ -99,7 +134,7 @@ export function createDevAuthUserButtonElement(): CustomElementConstructor {
       this.dispatchEvent(
         new CustomEvent('dev-auth-state-change', {
           bubbles: true,
-          detail: { status: state.status, user: state.user },
+          detail: { status: state.status },
         }),
       );
 
@@ -109,13 +144,15 @@ export function createDevAuthUserButtonElement(): CustomElementConstructor {
     #bindListeners(): void {
       const trigger =
         this.querySelector<HTMLButtonElement>('#dev-auth-trigger');
-      const panel = this.querySelector<HTMLElement>('#dev-auth-panel');
+      const panel = this.querySelector<PopoverPanel>('#dev-auth-panel');
       const signOut =
         this.querySelector<HTMLButtonElement>('#dev-auth-signout');
       const logoutError = this.querySelector<HTMLElement>(
         '#dev-auth-logout-error',
       );
       if (!trigger || !panel) return;
+      this.#panel = panel;
+      this.#panelHome = panel.parentElement as HTMLElement | null;
 
       trigger.addEventListener('click', () => {
         if (this.#open) this.#closeMenu();
@@ -153,7 +190,11 @@ export function createDevAuthUserButtonElement(): CustomElementConstructor {
 
       this.addEventListener('focusout', (event) => {
         const next = event.relatedTarget;
-        if (!(next instanceof Node) || !this.contains(next)) {
+        const currentPanel = this.#panel;
+        if (
+          !(next instanceof Node) ||
+          (!this.contains(next) && !currentPanel?.contains(next))
+        ) {
           this.#closeMenu();
         }
       });
@@ -197,7 +238,7 @@ export function createDevAuthUserButtonElement(): CustomElementConstructor {
      * inside an open menu, not Tab.
      */
     #menuItems(): HTMLElement[] {
-      const panel = this.querySelector('#dev-auth-panel');
+      const panel = this.#panel;
       const items = panel
         ? Array.from(panel.querySelectorAll<HTMLElement>(MENU_ITEM_SELECTOR))
         : [];
@@ -215,22 +256,68 @@ export function createDevAuthUserButtonElement(): CustomElementConstructor {
 
     #openMenu(): void {
       const trigger = this.querySelector('#dev-auth-trigger');
-      const panel = this.querySelector<HTMLElement>('#dev-auth-panel');
+      const panel = this.#panel;
       if (!trigger || !panel) return;
       this.#open = true;
+      this.#syncPanelTokens(panel);
+      if (panel.parentElement !== document.body) {
+        document.body.appendChild(panel);
+      }
       panel.style.display = '';
       trigger.setAttribute('aria-expanded', 'true');
+      panel.showPopover?.();
+      this.#positionPanel();
       document.addEventListener('click', this.#outsideClickHandler, true);
+      window.addEventListener('resize', this.#viewportHandler);
+      window.addEventListener('scroll', this.#viewportHandler, true);
       queueMicrotask(() => this.#focusMenuItem('first'));
+    }
+
+    #syncPanelTokens(panel: HTMLElement): void {
+      const styles = getComputedStyle(this);
+      for (const property of PANEL_CUSTOM_PROPERTIES) {
+        const value = styles.getPropertyValue(property);
+        if (value) panel.style.setProperty(property, value.trim());
+      }
+    }
+
+    #positionPanel(): void {
+      const trigger = this.querySelector<HTMLElement>('#dev-auth-trigger');
+      const panel = this.#panel;
+      if (!trigger || !panel || !this.#open) return;
+
+      const triggerRect = trigger.getBoundingClientRect();
+      const panelRect = panel.getBoundingClientRect();
+      const maxLeft = window.innerWidth - panelRect.width - VIEWPORT_PADDING;
+      const preferredLeft = triggerRect.right - panelRect.width;
+      const left = Math.max(VIEWPORT_PADDING, Math.min(preferredLeft, maxLeft));
+      const top = Math.min(
+        triggerRect.bottom + VIEWPORT_PADDING,
+        Math.max(
+          VIEWPORT_PADDING,
+          window.innerHeight - panelRect.height - VIEWPORT_PADDING,
+        ),
+      );
+
+      panel.style.left = `${left}px`;
+      panel.style.top = `${top}px`;
     }
 
     #closeMenu(options: { restoreFocus?: boolean } = {}): void {
       if (!this.#open) return;
       const trigger = this.querySelector<HTMLElement>('#dev-auth-trigger');
-      const panel = this.querySelector<HTMLElement>('#dev-auth-panel');
+      const panel = this.#panel;
       this.#open = false;
       document.removeEventListener('click', this.#outsideClickHandler, true);
-      if (panel) panel.style.display = 'none';
+      window.removeEventListener('resize', this.#viewportHandler);
+      window.removeEventListener('scroll', this.#viewportHandler, true);
+      if (panel) {
+        panel.hidePopover?.();
+        panel.style.display = 'none';
+        panel.style.removeProperty('left');
+        panel.style.removeProperty('top');
+        this.#panelHome?.appendChild(panel);
+      }
       trigger?.setAttribute('aria-expanded', 'false');
       if (options.restoreFocus) trigger?.focus();
     }

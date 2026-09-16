@@ -4,7 +4,7 @@ export {
   createAuthController,
   safeReturnTo,
   signInUrl,
-} from '@dev-auth/client';
+} from './lib/auth-controller.js';
 export type {
   AuthController,
   AuthControllerConfig,
@@ -13,4 +13,4 @@ export type {
   AuthStatus,
   AuthUser,
   AuthUserWire,
-} from '@dev-auth/client';
+} from './lib/auth-controller.js';

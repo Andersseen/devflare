@@ -50,7 +50,8 @@ dev-auth-elements:build:flow` respectively (pure npm — `@flowview/compiler`;
 - Run everything: `pnpm dev:all` → app on :4200, auth on :8787.
 - Test user: `test@devflare.com` / `TestPass123` (create with `pnpm seed:user`).
 - TS path aliases: `@org/core`, `@org/ui`, `@dev-auth/angular`, `@org/deploy`,
-  `@dev-auth/core`, `@dev-auth/elements` (see `tsconfig.base.json`).
+  `@dev-auth/client`, `@dev-auth/core`, `@dev-auth/elements` (see
+  `tsconfig.base.json`).
 - Main app routes: AnalogJS file-based routing from
   `apps/devflare/src/app/pages/**/*.page.ts`. Use route groups for layouts:
   `(app).page.ts` wraps authenticated app routes, `tools.page.ts` wraps public

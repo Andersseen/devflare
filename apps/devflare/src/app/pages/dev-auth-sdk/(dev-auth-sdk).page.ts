@@ -4,7 +4,7 @@ import type {
   AuthController,
   AuthControllerState,
   AuthUser,
-} from '@dev-auth/elements';
+} from '@dev-auth/client';
 
 /**
  * Showcase page for @dev-auth/elements — not part of the SDK itself. Each
@@ -23,6 +23,7 @@ function staticController(state: AuthControllerState): AuthController {
     logout: async () => undefined,
     updateProfile: async () => undefined,
     refresh: async () => undefined,
+    dispose: () => undefined,
   };
 }
 
@@ -63,6 +64,8 @@ const USER_NO_PROFILE: AuthUser = {
 
 const QUICK_START = `import {
   createAuthController,
+} from '@dev-auth/client';
+import {
   provideDevAuthElements,
   defineDevAuthElements,
 } from '@dev-auth/elements';
@@ -249,21 +252,26 @@ export default class DevAuthSdkPage {
   protected readonly loadingController = staticController({
     status: 'loading',
     user: null,
+    error: null,
   });
   protected readonly anonymousController = staticController({
     status: 'anonymous',
     user: null,
+    error: null,
   });
   protected readonly authPhotoController = staticController({
     status: 'authenticated',
     user: USER_WITH_PHOTO,
+    error: null,
   });
   protected readonly authInitialsController = staticController({
     status: 'authenticated',
     user: USER_INITIALS_ONLY,
+    error: null,
   });
   protected readonly authFallbackController = staticController({
     status: 'authenticated',
     user: USER_NO_PROFILE,
+    error: null,
   });
 }

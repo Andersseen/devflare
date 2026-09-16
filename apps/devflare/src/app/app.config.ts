@@ -10,8 +10,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { importProvidersFrom } from '@angular/core';
 import { provideMovement } from 'angular-movement';
 import { provideDevAuth } from '@dev-auth/angular';
+import { createAuthController } from '@dev-auth/client';
 import {
-  createAuthController,
   defineDevAuthElements,
   provideDevAuthElements,
 } from '@dev-auth/elements';

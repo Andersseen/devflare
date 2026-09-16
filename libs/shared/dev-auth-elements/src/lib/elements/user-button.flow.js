@@ -6,6 +6,18 @@ export function render(context) {
     output += '\n  ';
     output += '<span class="dev-auth-avatar" role="status" aria-label="Loading account">\n    <and-skeleton width="100%" height="100%"></and-skeleton>\n  </span>';
     output += '\n';
+  }   else if (context.status === 'error') {
+    output += '\n  ';
+    output += '<span';
+    output += ' class="dev-auth-inline-error"';
+    output += ' role="status"';
+    output += ' aria-live="polite"';
+    output += '>';
+      output += '\n    ';
+      output += renderValue(context.errorMessage || 'Unable to load account');
+      output += '\n  ';
+    output += '</span>';
+    output += '\n';
   }   else if (context.status === 'authenticated') {
     output += '\n  ';
     output += '<div';
@@ -57,7 +69,8 @@ export function render(context) {
       output += '<and-menu-list';
       output += ' id="dev-auth-panel"';
       output += ' class="dev-auth-panel"';
-      output += ' aria-menu-label="Account"';
+      output += ' menu-label="Account"';
+      output += ' popover="manual"';
       output += ' style="display:none"';
       output += '>';
         output += '\n      ';

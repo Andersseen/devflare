@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import tsconfigPaths from 'vite-tsconfig-paths';
 
 /**
  * Vitest for @dev-auth/elements.
@@ -11,6 +12,7 @@ import { defineConfig } from 'vite';
  */
 export default defineConfig({
   root: __dirname,
+  plugins: [tsconfigPaths({ root: '../../..' })],
   test: {
     name: 'dev-auth-elements',
     globals: true,

@@ -2,6 +2,10 @@
   <span class="dev-auth-avatar" role="status" aria-label="Loading account">
     <and-skeleton width="100%" height="100%"></and-skeleton>
   </span>
+} @else if (context.status === 'error') {
+  <span class="dev-auth-inline-error" role="status" aria-live="polite">
+    {{ context.errorMessage || 'Unable to load account' }}
+  </span>
 } @else if (context.status === 'authenticated') {
   <div class="dev-auth-menu-shell">
     <button
@@ -24,7 +28,8 @@
     <and-menu-list
       id="dev-auth-panel"
       class="dev-auth-panel"
-      aria-menu-label="Account"
+      menu-label="Account"
+      popover="manual"
       style="display:none">
       <div class="dev-auth-menu-identity" role="presentation">
         <p class="dev-auth-name">{{ context.identity }}</p>

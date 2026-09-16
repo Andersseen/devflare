@@ -2,11 +2,17 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { defineDevAuthUserButton } from '../register';
 import { provideDevAuthElements } from '../registry';
 import { createFakeController, TEST_USER } from '../test-utils/fake-controller';
-import type { AuthController } from '../controller/auth-controller';
+import type { AuthController } from '@dev-auth/client';
 
 defineDevAuthUserButton();
 
 type Host = HTMLElement & { controller?: AuthController };
+
+function openPanel(): HTMLElement {
+  const panel = document.querySelector<HTMLElement>('#dev-auth-panel');
+  if (!panel) throw new Error('Expected user menu panel to be open');
+  return panel;
+}
 
 function mount(controller: AuthController): Host {
   const el = document.createElement('dev-auth-user-button') as Host;
@@ -99,6 +105,11 @@ describe('<dev-auth-user-button>', () => {
     await Promise.resolve();
 
     expect(trigger.getAttribute('aria-expanded')).toBe('true');
+    const panel = openPanel();
+    expect(panel.parentElement).toBe(document.body);
+    expect(panel.getAttribute('menu-label')).toBe('Account');
+    expect(panel.hasAttribute('aria-menu-label')).toBe(false);
+    expect(panel.getAttribute('popover')).toBe('manual');
     expect(document.activeElement?.getAttribute('role')).toBe('menuitem');
   });
 
@@ -137,7 +148,8 @@ describe('<dev-auth-user-button>', () => {
     el.querySelector<HTMLElement>('#dev-auth-trigger')?.click();
     await Promise.resolve();
 
-    const items = () => Array.from(el.querySelectorAll('[role="menuitem"]'));
+    const panel = openPanel();
+    const items = () => Array.from(panel.querySelectorAll('[role="menuitem"]'));
     expect(items()).toHaveLength(2); // Settings + Sign out
 
     document.activeElement?.dispatchEvent(
@@ -180,7 +192,7 @@ describe('<dev-auth-user-button>', () => {
     el.querySelector<HTMLElement>('#dev-auth-trigger')?.click();
     await Promise.resolve();
 
-    const settingsLink = el.querySelector('a[role="menuitem"]');
+    const settingsLink = openPanel().querySelector('a[role="menuitem"]');
     expect(settingsLink?.textContent).toBe('Settings');
     settingsLink?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
@@ -206,7 +218,9 @@ describe('<dev-auth-user-button>', () => {
 
     el.querySelector<HTMLElement>('#dev-auth-trigger')?.click();
     await Promise.resolve();
-    const signOut = el.querySelector('#dev-auth-signout') as HTMLElement;
+    const signOut = openPanel().querySelector(
+      '#dev-auth-signout',
+    ) as HTMLElement;
     signOut.click();
     signOut.click(); // double-click guard
     await Promise.resolve();
@@ -227,7 +241,7 @@ describe('<dev-auth-user-button>', () => {
 
     el.querySelector<HTMLElement>('#dev-auth-trigger')?.click();
     await Promise.resolve();
-    el.querySelector<HTMLElement>('#dev-auth-signout')?.click();
+    openPanel().querySelector<HTMLElement>('#dev-auth-signout')?.click();
     await Promise.resolve();
     await Promise.resolve();
 
@@ -237,7 +251,9 @@ describe('<dev-auth-user-button>', () => {
         ?.getAttribute('aria-expanded'),
     ).toBe('true');
     expect(
-      el.querySelector('#dev-auth-logout-error')?.hasAttribute('hidden'),
+      openPanel()
+        .querySelector('#dev-auth-logout-error')
+        ?.hasAttribute('hidden'),
     ).toBe(false);
   });
 

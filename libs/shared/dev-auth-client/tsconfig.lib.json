@@ -7,10 +7,5 @@
     "types": ["node"]
   },
   "include": ["src/**/*.ts"],
-  "exclude": [
-    "src/**/*.spec.ts",
-    "src/lib/test-utils/**/*",
-    "vite.config.ts",
-    "scripts/**/*"
-  ]
+  "exclude": ["src/**/*.spec.ts", "vite.config.ts"]
 }
