@@ -5,6 +5,7 @@
   "prefix": "lib",
   "projectType": "library",
   "tags": ["scope:shared", "type:core", "domain:dev-auth-sdk"],
+  "implicitDependencies": ["dev-auth-client"],
   "targets": {
     "lint": {
       "executor": "@nx/eslint:lint"
@@ -12,6 +13,12 @@
     "build": {
       "executor": "@nx/angular:package",
       "outputs": ["{workspaceRoot}/dist/libs/shared/dev-auth-angular"],
+      "dependsOn": [
+        {
+          "projects": ["dev-auth-client"],
+          "target": "build"
+        }
+      ],
       "options": {
         "project": "libs/shared/dev-auth-angular/ng-package.json"
       },

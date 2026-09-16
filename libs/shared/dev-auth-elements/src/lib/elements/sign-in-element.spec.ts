@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { defineDevAuthSignIn } from '../register';
 import { provideDevAuthElements } from '../registry';
 import { createFakeController, TEST_USER } from '../test-utils/fake-controller';
-import type { AuthController } from '../controller/auth-controller';
+import type { AuthController } from '@dev-auth/client';
 
 defineDevAuthSignIn();
 

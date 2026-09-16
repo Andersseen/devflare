@@ -13,7 +13,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@dev-auth/elements": "^0.1.0"
+    "@dev-auth/client": "^0.1.0"
   },
   "peerDependencies": {
     "@angular/core": "^21.0.0",

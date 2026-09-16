@@ -1,4 +1,4 @@
-import type { AuthController } from './controller/auth-controller';
+import type { AuthController } from '@dev-auth/client';
 
 /**
  * Holds the default `AuthController` that `<dev-auth-sign-in>` and

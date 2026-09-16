@@ -10,8 +10,8 @@ import {
   defineAndSkeleton,
 } from '@andersseen/web-components';
 import { registerIcons, EXTERNAL_LINK, USER } from '@andersseen/icon';
-import { createDevAuthSignInElement } from './elements/sign-in-element';
-import { createDevAuthUserButtonElement } from './elements/user-button-element';
+import { createDevAuthSignInElement } from './elements/sign-in-element.js';
+import { createDevAuthUserButtonElement } from './elements/user-button-element.js';
 
 const SIGN_IN_TAG = 'dev-auth-sign-in';
 const USER_BUTTON_TAG = 'dev-auth-user-button';

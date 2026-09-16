@@ -6,12 +6,17 @@ import {
   PLATFORM_ID,
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import type { AuthControllerState, AuthUser } from '@dev-auth/elements';
+import type {
+  AuthControllerError,
+  AuthControllerState,
+  AuthStatus,
+  AuthUser,
+} from '@dev-auth/client';
 import { DEV_AUTH_CONTROLLER } from '../tokens';
 
 /**
  * DevAuth's Angular adapter: application auth state as signals, layered over
- * the framework-agnostic `AuthController` from `@dev-auth/elements` (see
+ * the framework-agnostic `AuthController` from `@dev-auth/client` (see
  * `DEV_AUTH_CONTROLLER` in `../tokens`) rather than fetching the session
  * itself — the same controller instance can be shared with
  * `<dev-auth-sign-in>`/`<dev-auth-user-button>` via `provideDevAuth({ controller })`
@@ -32,9 +37,13 @@ export class DevAuth {
 
   #_user = signal<AuthUser | null>(null);
   #_isLoading = signal(true);
+  #_status = signal<AuthStatus>('loading');
+  #_error = signal<AuthControllerError | null>(null);
 
   readonly user = this.#_user.asReadonly();
   readonly isLoading = this.#_isLoading.asReadonly();
+  readonly status = this.#_status.asReadonly();
+  readonly error = this.#_error.asReadonly();
   readonly isAuthenticated = computed(() => !!this.#_user());
 
   #sessionReady: Promise<void>;
@@ -45,6 +54,7 @@ export class DevAuth {
       this.#controller.subscribe((state) => this.#applyState(state));
       this.#sessionReady = this.#controller.ready();
     } else {
+      this.#_status.set('anonymous');
       this.#_isLoading.set(false);
       this.#sessionReady = Promise.resolve();
     }
@@ -52,6 +62,8 @@ export class DevAuth {
 
   #applyState(state: AuthControllerState): void {
     this.#_user.set(state.user);
+    this.#_status.set(state.status);
+    this.#_error.set(state.error);
     this.#_isLoading.set(state.status === 'loading');
   }
 

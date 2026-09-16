@@ -4,7 +4,7 @@ import type {
   AuthController,
   AuthControllerState,
   AuthUser,
-} from '@dev-auth/elements';
+} from '@dev-auth/client';
 import { DEV_AUTH_CONTROLLER } from '../tokens';
 import { DevAuth } from './auth.service';
 
@@ -29,11 +29,12 @@ function fakeController(initial: AuthControllerState) {
     ready: vi.fn(() => Promise.resolve()),
     login: vi.fn(),
     logout: vi.fn(async () => {
-      state = { status: 'anonymous', user: null };
+      state = { status: 'anonymous', user: null, error: null };
       for (const listener of listeners) listener(state);
     }),
     updateProfile: vi.fn(),
     refresh: vi.fn(async () => undefined),
+    dispose: vi.fn(),
   };
   return controller;
 }
@@ -44,7 +45,11 @@ beforeEach(() => {
 
 describe('DevAuth', () => {
   it('starts loading, then resolves to anonymous with no session', async () => {
-    const controller = fakeController({ status: 'loading', user: null });
+    const controller = fakeController({
+      status: 'loading',
+      user: null,
+      error: null,
+    });
     TestBed.configureTestingModule({
       providers: [
         DevAuth,
@@ -55,7 +60,11 @@ describe('DevAuth', () => {
 
     expect(auth.isLoading()).toBe(true);
 
-    controller.getState = () => ({ status: 'anonymous', user: null });
+    controller.getState = () => ({
+      status: 'anonymous',
+      user: null,
+      error: null,
+    });
     await auth.ready();
 
     expect(controller.ready).toHaveBeenCalled();
@@ -65,6 +74,7 @@ describe('DevAuth', () => {
     const controller = fakeController({
       status: 'authenticated',
       user: AUTH_USER,
+      error: null,
     });
     TestBed.configureTestingModule({
       providers: [
@@ -80,7 +90,11 @@ describe('DevAuth', () => {
   });
 
   it('updates its signals when the controller notifies a state change', () => {
-    const controller = fakeController({ status: 'loading', user: null });
+    const controller = fakeController({
+      status: 'loading',
+      user: null,
+      error: null,
+    });
     TestBed.configureTestingModule({
       providers: [
         DevAuth,
@@ -91,7 +105,7 @@ describe('DevAuth', () => {
     expect(auth.isLoading()).toBe(true);
 
     const listener = vi.mocked(controller.subscribe).mock.calls[0][0];
-    listener({ status: 'authenticated', user: AUTH_USER });
+    listener({ status: 'authenticated', user: AUTH_USER, error: null });
 
     expect(auth.isLoading()).toBe(false);
     expect(auth.isAuthenticated()).toBe(true);
@@ -99,7 +113,11 @@ describe('DevAuth', () => {
   });
 
   it('login() delegates to the shared controller', () => {
-    const controller = fakeController({ status: 'anonymous', user: null });
+    const controller = fakeController({
+      status: 'anonymous',
+      user: null,
+      error: null,
+    });
     TestBed.configureTestingModule({
       providers: [
         DevAuth,
@@ -117,6 +135,7 @@ describe('DevAuth', () => {
     const controller = fakeController({
       status: 'authenticated',
       user: AUTH_USER,
+      error: null,
     });
     TestBed.configureTestingModule({
       providers: [
@@ -138,6 +157,7 @@ describe('DevAuth', () => {
     const controller = fakeController({
       status: 'authenticated',
       user: AUTH_USER,
+      error: null,
     });
     TestBed.configureTestingModule({
       providers: [

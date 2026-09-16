@@ -7,14 +7,16 @@ OAuth/token-exchange logic is required (or exposed) to consume them.
 
 ```text
 DevAuth Core        framework-independent OAuth/OIDC protocol client (server-side)
-DevAuth Angular      Angular DI/signals adapter over this package's controller (@dev-auth/angular)
+DevAuth Client      framework-independent browser session controller (@dev-auth/client)
+DevAuth Angular     Angular DI/signals adapter over @dev-auth/client
 DevAuth Elements     this package — optional, framework-independent visual Custom Elements
 ```
 
 ## Install
 
-**Outside this monorepo:** `pnpm add @dev-auth/elements` (or npm/yarn). Pulls
-in `@andersseen/web-components` and `@andersseen/icon` as real dependencies.
+**Outside this monorepo:** `pnpm add @dev-auth/client @dev-auth/elements` (or
+npm/yarn). Elements pulls in `@andersseen/web-components` and `@andersseen/icon`
+as real visual dependencies, but no Angular packages.
 
 The stylesheet (`tokens.css`) loads itself automatically the first time you
 call `defineDevAuthSignIn()`/`defineDevAuthUserButton()`/`defineDevAuthElements()`
@@ -36,7 +38,8 @@ href=".../node_modules/@dev-auth/elements/styles/tokens.css">`.
 <dev-auth-user-button></dev-auth-user-button>
 
 <script type="module">
-  import { createAuthController, provideDevAuthElements, defineDevAuthElements } from '@dev-auth/elements';
+  import { createAuthController } from '@dev-auth/client';
+  import { provideDevAuthElements, defineDevAuthElements } from '@dev-auth/elements';
 
   const auth = createAuthController({ basePath: '/api/auth' });
   provideDevAuthElements(auth); // do this before defineDevAuthElements()
@@ -44,17 +47,16 @@ href=".../node_modules/@dev-auth/elements/styles/tokens.css">`.
 </script>
 ```
 
-`createAuthController` only ever talks to _this application's own_
+`createAuthController` (from `@dev-auth/client`) only ever talks to _this application's own_
 `{basePath}/session`, `/login`, `/logout`, `/user` routes — same-origin,
 cookie-based. It never sees an OAuth client secret, an authorization code, or
 an access token; that exchange happens entirely on your server (see
-`@dev-auth/core`), which is a deliberately separate package this one does
-not depend on.
+`@dev-auth/core`), which is a deliberately separate package.
 
 ## Angular usage
 
-`@dev-auth/angular`'s `DevAuth` service already wraps an `AuthController` from this
-package. To share one session-fetch instance between Angular's signals and
+`@dev-auth/angular`'s `DevAuth` service already wraps an `AuthController` from
+`@dev-auth/client`. To share one session-fetch instance between Angular's signals and
 these elements in the same app (rather than each polling `/session`
 independently), build the controller once and hand it to both:
 
@@ -123,7 +125,7 @@ one `role="menuitem"` yourself — this package doesn't own DevFlare- or
 app-specific navigation, e.g. Settings/Projects links).
 
 Events: `dev-auth-logout` (after a successful sign-out), `dev-auth-state-change`
-(`detail: { status, user }` — never tokens).
+(`detail: { status }` — never profile data or tokens).
 
 Accessibility: `aria-haspopup="menu"`/dynamic `aria-expanded`/`aria-label`;
 `role="menu"`/`"menuitem"`/`"separator"`/`"presentation"`; focus moves into
@@ -156,7 +158,16 @@ clobbered the consumer's own same-named tokens app-wide (hex vs. this
 library's HSL-triplet format). `src/styles/tokens.css` now defines
 and-web-components' own default palette scoped to `dev-auth-sign-in`/
 `dev-auth-user-button` instead — visible only to these two elements and
-their and-\* children, never leaking to the rest of the page.
+their and-\* children, never leaking to the rest of the page. Explicit app
+theme ancestors (`.dark`, `.light`, `[data-theme='dark'|'light']`) are
+honored in addition to `prefers-color-scheme`, so a consumer's application
+theme is not forced to match the OS setting.
+
+**Account menu overlay.** The menu uses the native Popover API top layer when
+available, plus anchored fixed-position collision handling. It is not clipped
+by navbar containers, stays inside the viewport near the right edge, and
+falls back to the same fixed positioning in browsers/tests without Popover
+support.
 
 **No native `<slot>`.** A `<slot>` element only has projection behavior
 inside an attached shadow root, which these elements deliberately don't have.

@@ -4,6 +4,7 @@
   "sourceRoot": "libs/shared/dev-auth-elements/src",
   "projectType": "library",
   "tags": ["scope:shared", "type:ui", "domain:dev-auth-sdk"],
+  "implicitDependencies": ["dev-auth-client"],
   "targets": {
     "lint": {
       "executor": "@nx/eslint:lint"
@@ -24,7 +25,13 @@
     "build": {
       "executor": "@nx/js:tsc",
       "outputs": ["{options.outputPath}"],
-      "dependsOn": ["build:flow"],
+      "dependsOn": [
+        "build:flow",
+        {
+          "projects": ["dev-auth-client"],
+          "target": "build"
+        }
+      ],
       "options": {
         "outputPath": "dist/libs/shared/dev-auth-elements",
         "main": "libs/shared/dev-auth-elements/src/index.ts",

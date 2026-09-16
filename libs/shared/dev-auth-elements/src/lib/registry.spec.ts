@@ -1,16 +1,17 @@
 import { describe, it, expect, vi } from 'vitest';
 import { provideDevAuthElements, getDefaultAuthController } from './registry';
-import type { AuthController } from './controller/auth-controller';
+import type { AuthController } from '@dev-auth/client';
 
 function fakeController(): AuthController {
   return {
-    getState: () => ({ status: 'anonymous', user: null }),
+    getState: () => ({ status: 'anonymous', user: null, error: null }),
     subscribe: vi.fn(() => () => undefined),
     ready: () => Promise.resolve(),
     login: vi.fn(),
     logout: vi.fn(),
     updateProfile: vi.fn(),
     refresh: vi.fn(),
+    dispose: vi.fn(),
   };
 }
 

@@ -8,31 +8,27 @@
 > to the last ~5 entries, newest first. Update the date. Facts only; no plans
 > you didn't verify.
 
-_Last updated: 2026-09-12_
+_Last updated: 2026-09-16_
 
 ## Branch & repo status
 
-Verified directly against `git log --oneline -5`, `git branch --show-current`,
-and `gh pr list` (open + merged) on 2026-09-12. **This section has drifted
+Verified directly against `git log --oneline -15`, `git branch --show-current`,
+and `gh pr list --state all --limit 15` (open + merged) on 2026-09-16. **This section has drifted
 before** (see the 2026-08-10 / 2026-09-03 / 2026-09-11 lessons) from carrying
 forward a previous write-up's claim instead of re-checking. **Standing rule:
 before writing anything here, run `git log`/`git branch`/`gh pr list`
 yourself.**
 
-- `main` is `a4acae6` (merge of PR #38). Merged, newest first: **PR #38**
-  (SDK polish + npm publishing, see the bullet below), **PR #37**
-  (`feat: add DevAuth Elements` — the framework-agnostic visual SDK,
-  2026-09-11T21:09Z), PR #36 (DevAuth modular-architecture foundation,
-  2026-09-11T07:07Z), PR #35 (favicons, 2026-09-10T18:02Z), PR #34
-  (image-domain tooling moved to Imageryx, 2026-09-10T17:28Z), PR #33
-  (consent redirect field fix, 2026-09-09T20:37Z), then specs 001–011 (PRs
-  #17–#30) and the Ally client registration (PR #25) before that.
+- Current branch is **`feature/dev-auth-hardening`**, started from local
+  `main` at `ef1662e` (merge of PR #39).
+- `main` is `ef1662e` (merge of PR #39). Merged, newest first: **PR #39**
+  (`fix/nx-release-github-releases`, combined `nx release` command so publish
+  creates GitHub Releases), **PR #38** (SDK polish + npm publishing),
+  **PR #37** (`feat: add DevAuth Elements`), PR #36 (DevAuth
+  modular-architecture foundation), PR #35 (favicons), PR #34 (image-domain
+  tooling moved to Imageryx), PR #33 (consent redirect field fix).
 - **PR #32 (`feature/012-dev-auth-angular-ui`, "add optional DevAuth Angular
-  UI") is still OPEN, not merged, and superseded** by the now-merged PR #37.
-  Recommended disposition unchanged: close #32, crediting its reused
-  concepts — see
-  [docs/specs/014-dev-auth-elements.md](../specs/014-dev-auth-elements.md)
-  §4. Not auto-closed — that's a GitHub-visible action for the owner.
+  UI") is CLOSED** as of 2026-09-04T09:15:31Z and superseded by PR #37.
 - **PR #38 (`feature/dev-auth-sdk-polish`, MERGED 2026-09-12)** —
   everything built on top of the merged DevAuth Elements SDK this session:
   (a) real bugs found and fixed in the dogfooded SDK itself (global CSS
@@ -44,12 +40,9 @@ yourself.**
   "Add Metadata" card repositioned, (d) the collapsed-sidebar icon-padding
   fix in `sidebar.component.ts`, and (e) the whole npm-publishing pipeline —
   see [docs/specs/015-dev-auth-npm-publishing.md](../specs/015-dev-auth-npm-publishing.md).
-- **Post-merge follow-up (uncommitted, on `main` locally, not yet its own
-  branch)**: the owner noticed no GitHub Release appeared after PR #38
-  merged, which surfaced a real gap in the just-merged publish pipeline —
-  see the 2026-09-12 session-log entry below and spec 015 §9. Needs a new
-  branch off `main` before committing (PR #38's branch is already merged
-  and gone as a target).
+- **PR #39 fixed the PR #38 publish-pipeline follow-up**: the owner noticed no
+  GitHub Release appeared after PR #38 merged; PR #39 switched CI to the
+  combined `nx release` command so GitHub Releases are created.
 - Production is current: the deploy for PR #23 succeeded at 2026-08-18T05:48Z
   and `wrangler d1 migrations list DB --env production --remote` reports nothing
   pending. Spec 010 adds migration `0004_cloudflare_oauth_client.sql`; spec 011
@@ -674,6 +667,44 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
    reused from it.
 
 ## Session log
+
+- **2026-09-16** — DevAuth SDK hardening
+  (`feature/dev-auth-hardening`, off `main` @ `ef1662e`). Created spec 016 and
+  began the requested hardening pass without adding new auth methods or
+  Cloudflare Connect work. Added `libs/shared/dev-auth-client`
+  (`@dev-auth/client`) as the headless browser/session package and moved the
+  reusable `AuthController` contract there; `@dev-auth/angular` now depends on
+  `@dev-auth/client` instead of `@dev-auth/elements`, while Elements remains
+  visual-only over the same client. Hardened controller semantics: status now
+  includes `error`, `/session` network/backend failures no longer collapse to
+  anonymous, `createdAt`/`updatedAt` normalize from wire strings to real
+  `Date`s, `returnTo` is sanitized on the client as defense-in-depth, request
+  generation prevents stale session/profile/logout responses from overwriting
+  newer state, and operation failures throw normalized
+  `AuthControllerRequestError`s. Elements hardening so far: UserButton menu
+  now portals its panel to `document.body` while open, copies computed DevAuth
+  tokens onto that portaled panel, uses Popover/fixed anchored positioning with
+  viewport collision handling and scroll/resize repositioning, and owns an
+  explicit opaque surface/border/shadow instead of relying on the navbar
+  stacking context; `and-menu-list` now uses the current `menu-label` API,
+  SignIn uses intrinsic responsive sizing instead of a hard fixed width,
+  explicit `.dark`/`.light`/`[data-theme]` ancestors are honored, and
+  `dev-auth-state-change` no longer bubbles the user object.
+  Packaging smoke tests outside TS path aliases found real issues and fixed
+  them: published ESM needed `.js` relative imports; `@dev-auth/client` and
+  `@dev-auth/elements` needed runtime dependency declarations (`tslib`, plus
+  `@flowview/runtime` for Elements); Elements was accidentally publishing
+  `src/lib/test-utils`, now excluded. Verification completed: targeted
+  `dev-auth-client` + `dev-auth-elements` tests green, `dev-auth-angular`
+  tests green, SDK build green before the later ESM/package-manifest smoke
+  fixes, `pnpm format:check` green, direct TS checks for client/elements
+  green, packed `@dev-auth/client` and `@dev-auth/elements` import in plain
+  Node fixtures with local deps linked. Not yet complete: full repo
+  `pnpm lint`/`typecheck`/`test`/`build`, browser visual baseline, final
+  closeout, commit, push, and PR. Local wrinkle: after several Nx resets,
+  `pnpm lint`/some `nx run-many` commands intermittently hang during
+  "Calculating the project graph" or fail with "Failed to start plugin
+  worker"; reset/daemonless runs may be needed before final verification.
 
 - **2026-09-12** — DevAuth SDK polish + npm publishing
   (`feature/dev-auth-sdk-polish`, off `main` @ `5f271c6`, merged as PR #38).

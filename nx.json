@@ -77,14 +77,19 @@
     }
   ],
   "release": {
-    "projects": ["dev-auth-core", "dev-auth-elements", "dev-auth-angular"],
+    "projects": [
+      "dev-auth-core",
+      "dev-auth-client",
+      "dev-auth-elements",
+      "dev-auth-angular"
+    ],
     "projectsRelationship": "independent",
     "releaseTagPattern": "{projectName}@{version}",
     "version": {
       "conventionalCommits": true,
       "updateDependents": "auto",
       "preserveMatchingDependencyRanges": false,
-      "preVersionCommand": "npx nx run-many -t build -p dev-auth-core,dev-auth-elements,dev-auth-angular"
+      "preVersionCommand": "npx nx run-many -t build -p dev-auth-core,dev-auth-client,dev-auth-elements,dev-auth-angular"
     },
     "changelog": {
       "projectChangelogs": {

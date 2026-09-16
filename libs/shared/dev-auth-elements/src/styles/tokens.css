@@ -10,8 +10,8 @@
  * 1. --dev-auth-* — this package's own contract, ported from PR #32's tested
  *    CSS custom-property model, for the bespoke chrome it hand-rolls (the
  *    avatar, the account-menu trigger, the menu panel's identity block/
- *    separator/items). Defaults use CSS system colors (Canvas/CanvasText) so
- *    an un-themed consumer still gets a readable, theme-aware result.
+ *    separator/items). Defaults use explicit opaque surfaces so a portaled
+ *    account menu never inherits transparent host-page chrome by accident.
  *
  * 2. --primary/--background/--border/etc — and-card/and-button/and-skeleton/
  *    and-menu-list are real @andersseen/web-components primitives; their own
@@ -35,15 +35,16 @@
 dev-auth-sign-in,
 dev-auth-user-button {
   display: block;
-  --dev-auth-surface: Canvas;
-  --dev-auth-foreground: CanvasText;
-  --dev-auth-muted: color-mix(in srgb, CanvasText 60%, transparent);
-  --dev-auth-border: color-mix(in srgb, CanvasText 20%, transparent);
+  --dev-auth-surface: #ffffff;
+  --dev-auth-foreground: #0f172a;
+  --dev-auth-muted: #64748b;
+  --dev-auth-border: #cbd5e1;
   --dev-auth-primary: #2563eb;
   --dev-auth-primary-foreground: #ffffff;
   --dev-auth-focus: #2563eb;
   --dev-auth-radius: 0.5rem;
-  --dev-auth-shadow: 0 4px 16px color-mix(in srgb, CanvasText 12%, transparent);
+  --dev-auth-shadow:
+    0 18px 50px rgb(15 23 42 / 0.22), 0 4px 14px rgb(15 23 42 / 0.14);
   --dev-auth-error: #dc2626;
   --dev-auth-error-surface: color-mix(in srgb, #dc2626 10%, transparent);
   font-family: inherit;
@@ -76,6 +77,10 @@ dev-auth-user-button {
 @media (prefers-color-scheme: dark) {
   dev-auth-sign-in,
   dev-auth-user-button {
+    --dev-auth-surface: #0f172a;
+    --dev-auth-foreground: #f8fafc;
+    --dev-auth-muted: #94a3b8;
+    --dev-auth-border: #334155;
     --dev-auth-primary: #60a5fa;
     --dev-auth-primary-foreground: #0b1220;
     --dev-auth-focus: #60a5fa;
@@ -103,6 +108,68 @@ dev-auth-user-button {
   }
 }
 
+:where(.dark, [data-theme='dark']) dev-auth-sign-in,
+:where(.dark, [data-theme='dark']) dev-auth-user-button {
+  --dev-auth-surface: #0f172a;
+  --dev-auth-foreground: #f8fafc;
+  --dev-auth-muted: #94a3b8;
+  --dev-auth-border: #334155;
+  --dev-auth-primary: #60a5fa;
+  --dev-auth-primary-foreground: #0b1220;
+  --dev-auth-focus: #60a5fa;
+
+  --primary: 234 89% 74%;
+  --primary-foreground: 244 47% 20%;
+  --secondary: 343 80% 35%;
+  --secondary-foreground: 356 100% 95%;
+  --background: 229 50% 6%;
+  --foreground: 226 100% 97%;
+  --card: 230 40% 9%;
+  --card-foreground: 226 100% 97%;
+  --popover: 230 40% 9%;
+  --popover-foreground: 226 100% 97%;
+  --muted: 230 30% 14%;
+  --muted-foreground: 220 15% 60%;
+  --accent: 244 47% 20%;
+  --accent-foreground: 226 100% 94%;
+  --destructive: 0 63% 31%;
+  --destructive-foreground: 0 86% 97%;
+  --border: 230 25% 18%;
+  --input: 230 25% 18%;
+  --ring: 234 89% 74%;
+}
+
+:where(.light, [data-theme='light']) dev-auth-sign-in,
+:where(.light, [data-theme='light']) dev-auth-user-button {
+  --dev-auth-surface: #ffffff;
+  --dev-auth-foreground: #0f172a;
+  --dev-auth-muted: #64748b;
+  --dev-auth-border: #cbd5e1;
+  --dev-auth-primary: #2563eb;
+  --dev-auth-primary-foreground: #ffffff;
+  --dev-auth-focus: #2563eb;
+
+  --primary: 243 75% 59%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 356 100% 95%;
+  --secondary-foreground: 345 83% 41%;
+  --background: 226 30% 98%;
+  --foreground: 224 71% 4%;
+  --card: 226 40% 99%;
+  --card-foreground: 224 71% 4%;
+  --popover: 226 40% 99%;
+  --popover-foreground: 224 71% 4%;
+  --muted: 226 25% 93%;
+  --muted-foreground: 220 9% 46%;
+  --accent: 226 100% 94%;
+  --accent-foreground: 244 47% 20%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 226 20% 89%;
+  --input: 226 20% 89%;
+  --ring: 243 75% 59%;
+}
+
 .dev-auth-visually-hidden {
   position: absolute;
   width: 1px;
@@ -116,21 +183,8 @@ dev-auth-user-button {
 }
 
 .dev-auth-card {
-  /*
-   * A fixed width, not just a max-width: and-card's own box has no
-   * width of its own, so inside any ancestor that sizes to its content
-   * (e.g. a consumer's `display:flex; align-items:center` wrapper —
-   * the single most common way to center a sign-in card on a page),
-   * the card shrinks to fit its content. The loading state's content is
-   * three percentage-width <and-skeleton> bars with no text to anchor a
-   * size against, so with no explicit width here the whole chain
-   * collapses toward 0 and the skeletons render as slivers. A fixed
-   * width sidesteps the shrink-to-fit computation entirely, and matches
-   * how a login card is expected to look anyway (a stable width, not
-   * one that jumps between loading/anonymous/authenticated states).
-   */
-  width: 20rem;
-  max-width: 24rem;
+  inline-size: min(22rem, calc(100vw - 2rem));
+  max-inline-size: 100%;
   box-sizing: border-box;
 }
 
@@ -150,6 +204,20 @@ dev-auth-user-button {
   color: var(--dev-auth-error);
   background: var(--dev-auth-error-surface);
   border-radius: var(--dev-auth-radius);
+  padding: 0.5rem 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.dev-auth-inline-error {
+  display: inline-flex;
+  max-width: min(18rem, calc(100vw - 1rem));
+  align-items: center;
+  border: 1px solid var(--dev-auth-border);
+  border-radius: var(--dev-auth-radius);
+  background: var(--dev-auth-error-surface);
+  color: var(--dev-auth-error);
+  font-size: 0.8125rem;
+  line-height: 1.25;
   padding: 0.5rem 0.75rem;
   overflow-wrap: anywhere;
 }
@@ -209,7 +277,6 @@ dev-auth-user-button {
 }
 
 .dev-auth-menu-shell {
-  position: relative;
   display: inline-block;
 }
 
@@ -223,23 +290,26 @@ dev-auth-user-button {
    * showed straight through, with only text floating over it — the
    * "weird rectangle peeking out" was the actual page underneath.
    */
-  position: absolute;
-  right: 0;
-  z-index: 50;
-  margin-top: 0.5rem;
-  min-width: 14rem;
-  max-width: min(20rem, calc(100vw - 1rem));
+  position: fixed;
+  inset: auto;
+  z-index: 2147483647;
+  margin: 0;
+  display: block;
+  inline-size: min(16rem, calc(100vw - 1rem));
+  max-inline-size: calc(100vw - 1rem);
   box-sizing: border-box;
-  background: var(--dev-auth-surface);
+  background: var(--dev-auth-surface) !important;
   color: var(--dev-auth-foreground);
   border: 1px solid var(--dev-auth-border);
   border-radius: var(--dev-auth-radius);
   box-shadow: var(--dev-auth-shadow);
   overflow: hidden;
+  opacity: 1;
+  isolation: isolate;
 }
 
 .dev-auth-menu-identity {
-  padding: 0.5rem 0.75rem;
+  padding: 0.75rem;
 }
 
 .dev-auth-menu-identity .dev-auth-name {
@@ -256,7 +326,7 @@ dev-auth-user-button {
 .dev-auth-separator {
   border: none;
   border-top: 1px solid var(--dev-auth-border);
-  margin: 0.375rem 0;
+  margin: 0.25rem 0;
 }
 
 .dev-auth-menu-item {
@@ -266,7 +336,7 @@ dev-auth-user-button {
   gap: 0.5rem;
   width: 100%;
   min-height: 2.75rem;
-  padding: 0.5rem 0.75rem;
+  padding: 0.625rem 0.75rem;
   border-radius: calc(var(--dev-auth-radius) - 0.125rem);
   cursor: pointer;
   box-sizing: border-box;

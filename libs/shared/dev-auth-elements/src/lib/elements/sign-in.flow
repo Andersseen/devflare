@@ -15,6 +15,22 @@
       </div>
     </div>
   </and-card>
+} @else if (context.status === 'error') {
+  <and-card variant="elevated" padded class="dev-auth-card" role="status" aria-live="polite">
+    <and-card-header>
+      <and-card-title>{{ context.heading }}</and-card-title>
+      <and-card-description>We could not check your session.</and-card-description>
+    </and-card-header>
+    <and-card-content>
+      <p class="dev-auth-alert" role="alert">
+        {{ context.sessionError || 'Please try again in a moment.' }}
+      </p>
+      <and-button id="dev-auth-action" variant="default" data-full>
+        <and-icon slot="start" name="external-link" size="16"></and-icon>
+        {{ context.actionLabel }}
+      </and-button>
+    </and-card-content>
+  </and-card>
 } @else {
   <and-card variant="elevated" padded class="dev-auth-card">
     <and-card-header>
