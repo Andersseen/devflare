@@ -52,5 +52,6 @@ the code is the implementation of it.
 | 014 | [DevAuth Elements: framework-agnostic visual SDK](014-dev-auth-elements.md)                             | Done                                                          |
 | 015 | [Publish the DevAuth SDK to npm](015-dev-auth-npm-publishing.md)                                        | In progress (packaging + CI done; first real publish pending) |
 | 016 | [DevAuth SDK hardening](016-dev-auth-hardening.md)                                                      | In progress                                                   |
+| 017 | [Prefer and expose custom deployment domains](017-custom-domain-links.md)                               | Done                                                          |
 
 (Keep this table updated — it's how agents discover active work.)

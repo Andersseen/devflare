@@ -8,25 +8,23 @@
 > to the last ~5 entries, newest first. Update the date. Facts only; no plans
 > you didn't verify.
 
-_Last updated: 2026-09-16_
+_Last updated: 2026-09-22_
 
 ## Branch & repo status
 
-Verified directly against `git log --oneline -15`, `git branch --show-current`,
-and `gh pr list --state all --limit 15` (open + merged) on 2026-09-16. **This section has drifted
-before** (see the 2026-08-10 / 2026-09-03 / 2026-09-11 lessons) from carrying
-forward a previous write-up's claim instead of re-checking. **Standing rule:
-before writing anything here, run `git log`/`git branch`/`gh pr list`
-yourself.**
+Verified directly against `git log --oneline -15` and `git branch --show-current`
+on 2026-09-22. `gh pr list --state all --limit 15` was attempted but could not
+reach GitHub from this environment. **This section has drifted before** (see
+the 2026-08-10 / 2026-09-03 / 2026-09-11 lessons) from carrying forward a
+previous write-up's claim instead of re-checking. **Standing rule: before
+writing anything here, run `git log`/`git branch`/`gh pr list` yourself.**
 
-- Current branch is **`feature/dev-auth-hardening`**, started from local
-  `main` at `ef1662e` (merge of PR #39).
-- `main` is `ef1662e` (merge of PR #39). Merged, newest first: **PR #39**
-  (`fix/nx-release-github-releases`, combined `nx release` command so publish
-  creates GitHub Releases), **PR #38** (SDK polish + npm publishing),
-  **PR #37** (`feat: add DevAuth Elements`), PR #36 (DevAuth
-  modular-architecture foundation), PR #35 (favicons), PR #34 (image-domain
-  tooling moved to Imageryx), PR #33 (consent redirect field fix).
+- Current branch is **`main`** at `43c2eb6` (merge of PR #40,
+  `feature/dev-auth-hardening`). The working tree contains the uncommitted
+  Spec 017 custom-domain-link implementation.
+- Newest confirmed history: `43c2eb6` (PR #40 merge), `f89a0e7` (`feat:
+updates`), `ef1662e` (PR #39 merge). GitHub PR state beyond those local log
+  entries was not rechecked because the CLI could not reach GitHub.
 - **PR #32 (`feature/012-dev-auth-angular-ui`, "add optional DevAuth Angular
   UI") is CLOSED** as of 2026-09-04T09:15:31Z and superseded by PR #37.
 - **PR #38 (`feature/dev-auth-sdk-polish`, MERGED 2026-09-12)** —
@@ -70,6 +68,10 @@ production` now reports `CLOUDFLARE_API_TOKEN`, `DEV_AUTH_ADMIN_TOKEN` and
   matching work on Imageryx (a separate repo, own branch — check that repo's
   own STATE/context doc for whether it has since merged; not reconfirmed
   from here this session).
+- **Spec 017 is complete locally.** Cloudflare returns `pages.dev` before a
+  custom hostname, so the dashboard now prefers the custom host and the
+  project detail renders every reported Pages URL. Format, lint, test, and
+  serial Nx typechecks pass; see `docs/specs/017-custom-domain-links.md`.
 
 ## 2026-08-10 — first real browser walkthrough of prod auth, and what it found
 
@@ -667,6 +669,19 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
    reused from it.
 
 ## Session log
+
+- **2026-09-22 — Custom deployment-domain links (Spec 017).** A read-only
+  Cloudflare query showed that Pages returns its fallback `*.pages.dev` domain
+  first — for `my-blog`, `my-blog-6vo.pages.dev` precedes `andersseen.dev`.
+  The shared URL helper now orders custom domains before fallbacks, removes
+  duplicate hosts, retains every URL, and uses the project's explicit
+  `subdomain` when `domains` is empty. Dashboard cards therefore present a
+  custom domain as canonical; project detail cards render all available Pages
+  links. Added three focused unit cases. Full format/lint/test gates passed;
+  `pnpm typecheck`'s concurrent shortcut printed bare `tsc` help, while all
+  nine equivalent targets passed serially. Portfolio remains unlisted because
+  it is hosted on Vercel; Lumen still needs an explicit mapping to a real
+  Cloudflare resource before it can be grouped.
 
 - **2026-09-16** — DevAuth SDK hardening
   (`feature/dev-auth-hardening`, off `main` @ `ef1662e`). Created spec 016 and

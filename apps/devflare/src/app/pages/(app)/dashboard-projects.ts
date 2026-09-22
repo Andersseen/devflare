@@ -139,12 +139,32 @@ export function resourceUrl(
   project: CloudPagesProject | null,
   worker: CloudWorker | null,
 ): string | null {
-  const domain = project?.domains[0] ?? worker?.domains[0];
-  if (domain) return `https://${domain}`;
+  return resourceUrls(project, worker)[0] ?? null;
+}
 
-  if (project?.subdomain) return `https://${project.subdomain}`;
+/**
+ * Every public URL Cloudflare reported for a resource, with its custom hostname
+ * ahead of the generated Pages fallback. Cloudflare currently sends `.pages.dev`
+ * first, but that is rarely the address an owner wants to share.
+ */
+export function resourceUrls(
+  project: CloudPagesProject | null,
+  worker: CloudWorker | null,
+): string[] {
+  const domains = [
+    ...(project?.domains ?? []),
+    ...(project?.subdomain ? [project.subdomain] : []),
+    ...(worker?.domains ?? []),
+  ];
+  const unique = [...new Set(domains)];
 
-  return null;
+  return unique
+    .sort(
+      (left, right) =>
+        Number(left.endsWith('.pages.dev')) -
+        Number(right.endsWith('.pages.dev')),
+    )
+    .map((domain) => `https://${domain}`);
 }
 
 export function repoHref(repoUrl: string | null, repo: string | null): string {
