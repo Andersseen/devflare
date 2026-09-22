@@ -28,7 +28,7 @@ import {
   findDashboardProject,
   groupDashboardProjects,
   repoHref,
-  resourceUrl,
+  resourceUrls,
 } from '../dashboard-projects';
 
 @Component({
@@ -146,7 +146,7 @@ import {
                       </div>
                     </div>
 
-                    @if (pageUrl(project); as url) {
+                    @for (url of pageUrls(project); track url) {
                       <a
                         [href]="url"
                         target="_blank"
@@ -366,8 +366,8 @@ export default class ProjectDetailPage {
     await this.load(true);
   }
 
-  protected pageUrl(project: CloudPagesProject): string | null {
-    return resourceUrl(project, null);
+  protected pageUrls(project: CloudPagesProject): string[] {
+    return resourceUrls(project, null);
   }
 
   protected pageActivity(project: CloudPagesProject): string {

@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { CloudPagesProject, CloudWorker, Project } from '@org/core';
-import { groupDashboardProjects } from './dashboard-projects';
+import {
+  groupDashboardProjects,
+  resourceUrl,
+  resourceUrls,
+} from './dashboard-projects';
 
 const baseProject: Project = {
   id: 'saved-1',
@@ -61,5 +65,38 @@ describe('groupDashboardProjects', () => {
     expect(groups.some((group) => group.slug === 'worker-devflare-hono')).toBe(
       false,
     );
+  });
+});
+
+describe('resource URLs', () => {
+  it('prefers a Pages custom domain but retains the Pages fallback', () => {
+    const project = {
+      ...pages('my-blog'),
+      domains: ['my-blog.pages.dev', 'andersseen.dev'],
+    };
+
+    expect(resourceUrls(project, null)).toEqual([
+      'https://andersseen.dev',
+      'https://my-blog.pages.dev',
+    ]);
+    expect(resourceUrl(project, null)).toBe('https://andersseen.dev');
+  });
+
+  it('removes repeated domains and preserves a default-only Pages URL', () => {
+    const project = {
+      ...pages('demo'),
+      domains: ['demo.pages.dev', 'demo.pages.dev'],
+    };
+
+    expect(resourceUrls(project, null)).toEqual(['https://demo.pages.dev']);
+  });
+
+  it('falls back to the explicit Pages subdomain when domains is empty', () => {
+    const project = pages('empty-domains');
+
+    expect(resourceUrls(project, null)).toEqual([
+      'https://empty-domains.pages.dev',
+    ]);
+    expect(resourceUrl(project, null)).toBe('https://empty-domains.pages.dev');
   });
 });
