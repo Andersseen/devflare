@@ -232,8 +232,16 @@ import {
                             {{ group.workers.length }} Workers
                           </span>
                         }
-                        @if (!group.pages.length && !group.workers.length) {
+                        @if (
+                          !group.pages.length &&
+                          !group.workers.length &&
+                          !group.url
+                        ) {
                           <volt-badge variant="secondary">planned</volt-badge>
+                        } @else if (
+                          !group.pages.length && !group.workers.length
+                        ) {
+                          <volt-badge variant="secondary">live</volt-badge>
                         }
                         @if (group.lastActivity) {
                           <span
@@ -317,7 +325,7 @@ export default class ProjectsPage {
   );
   protected readonly relative = formatRelative;
   protected readonly groupHasCloudResource = (group: ProjectGroup) =>
-    Boolean(group.pages.length || group.workers.length);
+    Boolean(group.pages.length || group.workers.length || group.url);
 
   protected readonly connectedAccount = computed(
     () => this.status()?.connection.accountName ?? null,

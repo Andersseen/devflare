@@ -19,11 +19,11 @@ the 2026-08-10 / 2026-09-03 / 2026-09-11 lessons) from carrying forward a
 previous write-up's claim instead of re-checking. **Standing rule: before
 writing anything here, run `git log`/`git branch`/`gh pr list` yourself.**
 
-- Current branch is **`main`** at `425ec7c` (merge of PR #41,
-  `feature/updates`). The working tree contains the uncommitted Spec 017
-  Worker-public-URL integration.
-- Newest confirmed history: `425ec7c` (PR #41 merge), `d467db4` (`feat:
-updates`), `43c2eb6` (PR #40 merge). GitHub PR state beyond those local log
+- Current branch is **`main`** at `7f921e4` (merge of PR #42,
+  `feature/updates`). The working tree contains uncommitted Spec 017
+  Cloudflare-only dashboard changes; they have not been deployed.
+- Newest confirmed history: `7f921e4` (PR #42 merge), `6cfaede` (`feat:
+updates`), `425ec7c` (PR #41 merge). GitHub PR state beyond those local log
   entries was not rechecked because the CLI could not reach GitHub.
 - **PR #32 (`feature/012-dev-auth-angular-ui`, "add optional DevAuth Angular
   UI") is CLOSED** as of 2026-09-04T09:15:31Z and superseded by PR #37.
@@ -72,8 +72,14 @@ production` now reports `CLOUDFLARE_API_TOKEN`, `DEV_AUTH_ADMIN_TOKEN` and
   custom hostname, so the dashboard prefers the custom host and the project
   detail renders every reported Pages URL. Worker list/detail API responses
   now also include a `workers.dev` host only after Cloudflare confirms that
-  specific script is enabled. Format, lint, full tests, and serial Nx
-  typechecks pass; see `docs/specs/017-custom-domain-links.md`.
+  specific script is enabled. It also explicitly presents verified live
+  Cloudflare-routed domains that the current token cannot list as Pages or
+  Worker custom domains: Volt UI, Lumen Icons, and Angular Movement. Empty
+  watched placeholders, Portfolio, and unlinked saved metadata are omitted.
+  A live account reconciliation confirms all 10 Pages projects and all 16
+  Workers appear exactly once. DevFlare has 117 passing tests; format, lint,
+  serial typechecks, the full test suite, and production build pass. See
+  `docs/specs/017-custom-domain-links.md`.
 
 ## 2026-08-10 — first real browser walkthrough of prod auth, and what it found
 
@@ -672,6 +678,28 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
 
 ## Session log
 
+- **2026-09-23 — Cloudflare-only hub inventory completion (Spec 017).** Queried
+  the connected Cloudflare account read-only and reconciled its exact inventory:
+  10 Pages projects, 16 Workers, and four Worker custom domains. The dashboard
+  now keeps every Cloudflare resource exactly once, rejects saved projects that
+  are not linked to a live Cloudflare resource, and removes Portfolio and Quartz
+  from its watched list. Added regression coverage for the complete inventory
+  and duplicate saved links. DevFlare has 117 passing tests; format, lint, all
+  nine typecheck targets, the full test suite, and the production build pass.
+  This is local, uncommitted work and has not been deployed.
+
+- **2026-09-23 — Route-only Cloudflare domain integration (Spec 017).** The
+  dashboard incorrectly assumed the Pages and Worker-domain APIs enumerate all
+  public Cloudflare URLs. Direct production reads proved that Volt UI, Lumen
+  Icons, and Angular Movement are live at their `andersseen.dev` hostnames,
+  while the configured token is denied `Workers Routes:Read`. Added explicit,
+  verified route-only domains to those dashboard groups, made them live rather
+  than planned, rendered the links on project detail pages, and omitted empty
+  watched placeholders. `my-blog` is now grouped once under Andersseen Dev,
+  whose canonical URL is `https://andersseen.dev`. Tests: 115 passing;
+  DevFlare lint/typecheck/format all pass. This is local, uncommitted work; it
+  has not been deployed.
+
 - **2026-09-23 — Worker public URLs (Spec 017 completion).** The previous
   Pages-domain work did not integrate the actual standalone Workers shown in
   the dashboard. The server now reads the account Workers subdomain and checks
@@ -696,44 +724,6 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
   nine equivalent targets passed serially. Portfolio remains unlisted because
   it is hosted on Vercel; Lumen still needs an explicit mapping to a real
   Cloudflare resource before it can be grouped.
-
-- **2026-09-16** — DevAuth SDK hardening
-  (`feature/dev-auth-hardening`, off `main` @ `ef1662e`). Created spec 016 and
-  began the requested hardening pass without adding new auth methods or
-  Cloudflare Connect work. Added `libs/shared/dev-auth-client`
-  (`@dev-auth/client`) as the headless browser/session package and moved the
-  reusable `AuthController` contract there; `@dev-auth/angular` now depends on
-  `@dev-auth/client` instead of `@dev-auth/elements`, while Elements remains
-  visual-only over the same client. Hardened controller semantics: status now
-  includes `error`, `/session` network/backend failures no longer collapse to
-  anonymous, `createdAt`/`updatedAt` normalize from wire strings to real
-  `Date`s, `returnTo` is sanitized on the client as defense-in-depth, request
-  generation prevents stale session/profile/logout responses from overwriting
-  newer state, and operation failures throw normalized
-  `AuthControllerRequestError`s. Elements hardening so far: UserButton menu
-  now portals its panel to `document.body` while open, copies computed DevAuth
-  tokens onto that portaled panel, uses Popover/fixed anchored positioning with
-  viewport collision handling and scroll/resize repositioning, and owns an
-  explicit opaque surface/border/shadow instead of relying on the navbar
-  stacking context; `and-menu-list` now uses the current `menu-label` API,
-  SignIn uses intrinsic responsive sizing instead of a hard fixed width,
-  explicit `.dark`/`.light`/`[data-theme]` ancestors are honored, and
-  `dev-auth-state-change` no longer bubbles the user object.
-  Packaging smoke tests outside TS path aliases found real issues and fixed
-  them: published ESM needed `.js` relative imports; `@dev-auth/client` and
-  `@dev-auth/elements` needed runtime dependency declarations (`tslib`, plus
-  `@flowview/runtime` for Elements); Elements was accidentally publishing
-  `src/lib/test-utils`, now excluded. Verification completed: targeted
-  `dev-auth-client` + `dev-auth-elements` tests green, `dev-auth-angular`
-  tests green, SDK build green before the later ESM/package-manifest smoke
-  fixes, `pnpm format:check` green, direct TS checks for client/elements
-  green, packed `@dev-auth/client` and `@dev-auth/elements` import in plain
-  Node fixtures with local deps linked. Not yet complete: full repo
-  `pnpm lint`/`typecheck`/`test`/`build`, browser visual baseline, final
-  closeout, commit, push, and PR. Local wrinkle: after several Nx resets,
-  `pnpm lint`/some `nx run-many` commands intermittently hang during
-  "Calculating the project graph" or fail with "Failed to start plugin
-  worker"; reset/daemonless runs may be needed before final verification.
 
 - **2026-09-12** — DevAuth SDK polish + npm publishing
   (`feature/dev-auth-sdk-polish`, off `main` @ `5f271c6`, merged as PR #38).

@@ -114,6 +114,25 @@ import {
           />
         </div>
       } @else if (group(); as projectGroup) {
+        @if (projectGroup.verifiedUrls.length) {
+          <section class="space-y-3">
+            <h2 class="text-lg font-semibold">Public URLs</h2>
+            <div class="flex flex-col gap-2">
+              @for (url of projectGroup.verifiedUrls; track url) {
+                <a
+                  [href]="url"
+                  target="_blank"
+                  rel="noreferrer"
+                  class="flex min-w-0 items-center gap-2 text-sm text-primary hover:underline"
+                >
+                  <lucide-icon name="external-link" class="h-4 w-4 shrink-0" />
+                  <span class="truncate">{{ url }}</span>
+                </a>
+              }
+            </div>
+          </section>
+        }
+
         <section class="space-y-4">
           <div class="flex items-center justify-between gap-3">
             <h2 class="text-lg font-semibold">Pages</h2>
