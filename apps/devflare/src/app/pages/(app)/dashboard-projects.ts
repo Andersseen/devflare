@@ -4,6 +4,11 @@ export interface WatchedProject {
   name: string;
   slug: string;
   aliases?: string[];
+  /**
+   * Public domains verified in production but not returned by the current
+   * Cloudflare Pages/Workers-domain permissions (for example Worker routes).
+   */
+  verifiedDomains?: string[];
 }
 
 export interface ProjectGroup {
@@ -14,6 +19,8 @@ export interface ProjectGroup {
   workers: CloudWorker[];
   repoUrl: string | null;
   url: string | null;
+  /** Route-only URLs rendered separately from the Pages/Worker resource cards. */
+  verifiedUrls: string[];
   lastActivity: string | null;
 }
 
@@ -31,25 +38,33 @@ export const WATCHED_PROJECTS: WatchedProject[] = [
       'control-bucket',
     ],
   },
-  { name: 'Volt UI', slug: 'volt-ui', aliases: ['voltui'] },
+  {
+    name: 'Volt UI',
+    slug: 'volt-ui',
+    aliases: ['voltui'],
+    verifiedDomains: ['volt-ui.andersseen.dev'],
+  },
   {
     name: 'Angular Movement',
     slug: 'angular-movement',
     aliases: ['angular movemnt'],
+    verifiedDomains: ['angular-movement.andersseen.dev'],
+  },
+  {
+    name: 'Lumen Icons',
+    slug: 'lumen-icons',
+    aliases: ['lumen iconos'],
+    verifiedDomains: ['lumen-icons.andersseen.dev'],
   },
   { name: 'ForgeCMS', slug: 'forgecms', aliases: ['forge cms'] },
-  { name: 'Lumen Icons', slug: 'lumen-icons', aliases: ['lumen iconos'] },
-  { name: 'Portfolio', slug: 'portfolio' },
-  { name: 'Blog', slug: 'blog' },
   { name: 'Etym', slug: 'etym', aliases: ['etyma'] },
   { name: 'Ally', slug: 'ally' },
   { name: 'ImageryX', slug: 'imageryx', aliases: ['imageryx'] },
   {
     name: 'Andersseen Dev',
     slug: 'andersseen-dev',
-    aliases: ['andersseen-dev', 'andersseen dev'],
+    aliases: ['andersseen-dev', 'andersseen dev', 'my-blog'],
   },
-  { name: 'Quartz', slug: 'quartz' },
 ];
 
 export function groupDashboardProjects(input: {
@@ -63,21 +78,45 @@ export function groupDashboardProjects(input: {
   const groups: ProjectGroup[] = [];
 
   for (const watched of WATCHED_PROJECTS) {
-    const saved = input.saved.filter((project) =>
-      matchesWatchedProject(watched, project.name),
+    const saved = input.saved.filter(
+      (project) =>
+        !usedSaved.has(project.id) &&
+        matchesWatchedProject(watched, project.name),
     );
-    const pages = input.pages.filter((project) =>
-      matchesWatchedProject(watched, project.name),
+    const pages = input.pages.filter(
+      (project) =>
+        !usedPages.has(project.name) &&
+        matchesWatchedProject(watched, project.name),
     );
-    const workers = input.workers.filter((worker) =>
-      matchesWatchedProject(watched, worker.name),
+    const workers = input.workers.filter(
+      (worker) =>
+        !usedWorkers.has(worker.name) &&
+        matchesWatchedProject(watched, worker.name),
     );
+
+    if (
+      !saved.length &&
+      !pages.length &&
+      !workers.length &&
+      !watched.verifiedDomains?.length
+    ) {
+      continue;
+    }
 
     for (const project of saved) usedSaved.add(project.id);
     for (const project of pages) usedPages.add(project.name);
     for (const worker of workers) usedWorkers.add(worker.name);
 
-    groups.push(toGroup(watched.name, watched.slug, saved, pages, workers));
+    groups.push(
+      toGroup(
+        watched.name,
+        watched.slug,
+        saved,
+        pages,
+        workers,
+        watched.verifiedDomains,
+      ),
+    );
   }
 
   for (const project of input.saved) {
@@ -85,12 +124,25 @@ export function groupDashboardProjects(input: {
 
     const linkedPages =
       project.cfType === 'pages'
-        ? input.pages.filter((candidate) => candidate.name === project.cfName)
+        ? input.pages.filter(
+            (candidate) =>
+              candidate.name === project.cfName &&
+              !usedPages.has(candidate.name),
+          )
         : [];
     const linkedWorkers =
       project.cfType === 'worker'
-        ? input.workers.filter((candidate) => candidate.name === project.cfName)
+        ? input.workers.filter(
+            (candidate) =>
+              candidate.name === project.cfName &&
+              !usedWorkers.has(candidate.name),
+          )
         : [];
+
+    // Saved rows enrich Cloudflare resources with metadata. They are not a
+    // second deployment provider, so an unlinked Vercel/local project does not
+    // belong in this Cloudflare hub.
+    if (!linkedPages.length && !linkedWorkers.length) continue;
 
     for (const page of linkedPages) usedPages.add(page.name);
     for (const worker of linkedWorkers) usedWorkers.add(worker.name);
@@ -179,7 +231,15 @@ function toGroup(
   savedProjects: Project[],
   pages: CloudPagesProject[],
   workers: CloudWorker[],
+  verifiedDomains: readonly string[] = [],
 ): ProjectGroup {
+  const verifiedUrls = verifiedDomains.map((domain) => `https://${domain}`);
+  const publicUrls = uniquePublicUrls([
+    ...verifiedUrls,
+    ...pages.flatMap((project) => resourceUrls(project, null)),
+    ...workers.flatMap((worker) => resourceUrls(null, worker)),
+  ]);
+
   return {
     name,
     slug,
@@ -187,9 +247,18 @@ function toGroup(
     pages,
     workers,
     repoUrl: savedProjects.find((project) => project.repoUrl)?.repoUrl ?? null,
-    url: resourceUrl(pages[0] ?? null, workers[0] ?? null),
+    url: publicUrls[0] ?? null,
+    verifiedUrls,
     lastActivity: lastActivity(pages, workers),
   };
+}
+
+function uniquePublicUrls(urls: readonly string[]): string[] {
+  return [...new Set(urls)].sort(
+    (left, right) =>
+      Number(left.endsWith('.pages.dev')) -
+      Number(right.endsWith('.pages.dev')),
+  );
 }
 
 function matchesWatchedProject(
