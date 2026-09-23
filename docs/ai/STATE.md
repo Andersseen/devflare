@@ -8,22 +8,22 @@
 > to the last ~5 entries, newest first. Update the date. Facts only; no plans
 > you didn't verify.
 
-_Last updated: 2026-09-22_
+_Last updated: 2026-09-23_
 
 ## Branch & repo status
 
-Verified directly against `git log --oneline -15` and `git branch --show-current`
-on 2026-09-22. `gh pr list --state all --limit 15` was attempted but could not
+Verified directly against `git log --oneline -5` and `git branch --show-current`
+on 2026-09-23. `gh pr list --state all --limit 15` was attempted but could not
 reach GitHub from this environment. **This section has drifted before** (see
 the 2026-08-10 / 2026-09-03 / 2026-09-11 lessons) from carrying forward a
 previous write-up's claim instead of re-checking. **Standing rule: before
 writing anything here, run `git log`/`git branch`/`gh pr list` yourself.**
 
-- Current branch is **`main`** at `43c2eb6` (merge of PR #40,
-  `feature/dev-auth-hardening`). The working tree contains the uncommitted
-  Spec 017 custom-domain-link implementation.
-- Newest confirmed history: `43c2eb6` (PR #40 merge), `f89a0e7` (`feat:
-updates`), `ef1662e` (PR #39 merge). GitHub PR state beyond those local log
+- Current branch is **`main`** at `425ec7c` (merge of PR #41,
+  `feature/updates`). The working tree contains the uncommitted Spec 017
+  Worker-public-URL integration.
+- Newest confirmed history: `425ec7c` (PR #41 merge), `d467db4` (`feat:
+updates`), `43c2eb6` (PR #40 merge). GitHub PR state beyond those local log
   entries was not rechecked because the CLI could not reach GitHub.
 - **PR #32 (`feature/012-dev-auth-angular-ui`, "add optional DevAuth Angular
   UI") is CLOSED** as of 2026-09-04T09:15:31Z and superseded by PR #37.
@@ -69,9 +69,11 @@ production` now reports `CLOUDFLARE_API_TOKEN`, `DEV_AUTH_ADMIN_TOKEN` and
   own STATE/context doc for whether it has since merged; not reconfirmed
   from here this session).
 - **Spec 017 is complete locally.** Cloudflare returns `pages.dev` before a
-  custom hostname, so the dashboard now prefers the custom host and the
-  project detail renders every reported Pages URL. Format, lint, test, and
-  serial Nx typechecks pass; see `docs/specs/017-custom-domain-links.md`.
+  custom hostname, so the dashboard prefers the custom host and the project
+  detail renders every reported Pages URL. Worker list/detail API responses
+  now also include a `workers.dev` host only after Cloudflare confirms that
+  specific script is enabled. Format, lint, full tests, and serial Nx
+  typechecks pass; see `docs/specs/017-custom-domain-links.md`.
 
 ## 2026-08-10 — first real browser walkthrough of prod auth, and what it found
 
@@ -669,6 +671,18 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
    reused from it.
 
 ## Session log
+
+- **2026-09-23 — Worker public URLs (Spec 017 completion).** The previous
+  Pages-domain work did not integrate the actual standalone Workers shown in
+  the dashboard. The server now reads the account Workers subdomain and checks
+  each script's enablement before appending its real `workers.dev` hostname to
+  the Worker list and detail response. This gives `cv-builder`,
+  `andersend-web`, ImageryX Workers, and the other enabled scripts usable
+  links without fabricating links for internal scripts such as `buck-auth`.
+  Custom Worker domains remain first. Added two unit cases; DevFlare has 113
+  passing tests and format, lint, serial typechecks, and the full test suite
+  pass. A production build was started but not counted as verification because
+  the terminal session left duplicate build processes; they were stopped.
 
 - **2026-09-22 — Custom deployment-domain links (Spec 017).** A read-only
   Cloudflare query showed that Pages returns its fallback `*.pages.dev` domain

@@ -5,7 +5,7 @@
 | Status  | Done                              |
 | Branch  | `feature/017-custom-domain-links` |
 | Created | 2026-09-22                        |
-| Updated | 2026-09-22                        |
+| Updated | 2026-09-23                        |
 
 ## 1. Summary
 
@@ -34,12 +34,14 @@ others, `my-blog`: `my-blog-6vo.pages.dev`, then `andersseen.dev`.
   links on its project-detail card.
 - Keep the `pages.dev` hostname available as a fallback and do not invent a
   hostname that Cloudflare did not return.
+- Surface a Worker's `workers.dev` URL only when Cloudflare confirms that the
+  individual Worker has its account subdomain enabled.
 - Cover ordering, deduplication, and fallback behaviour with unit tests.
 
 **Non-goals**
 
-- Discover deployments hosted by Vercel or another provider; Portfolio remains
-  absent from Cloudflare data until it is moved or manually represented.
+- Discover deployments hosted by Vercel or another provider; no URL is created
+  for resources Cloudflare does not report as publicly enabled.
 - Guess a Cloudflare resource mapping for a named dashboard project such as
   Lumen Icons. The API currently has no resource named `lumen`; aliases will
   only be added once the owner identifies the matching resource.
@@ -59,14 +61,25 @@ markup. The project detail will use the same helper to render every URL as a
 separate external link; this makes both the custom hostname and `pages.dev`
 fallback visible without duplicating domain-ordering rules in a template.
 
+The Workers API route will fetch the account's Workers subdomain and each
+script's `enabled` state. An enabled script gets its confirmed
+`https://<script>.<account-subdomain>.workers.dev` hostname appended after any
+custom domains. Disabled Workers remain visible as infrastructure but do not
+receive a speculative public URL. The same helper is used by the Worker detail
+route, so the dashboard and detail page agree.
+
 | File                                                           | Change                                                                                   |
 | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | `apps/devflare/src/app/pages/(app)/dashboard-projects.ts`      | Add ordered, deduplicated resource-URL helper; make canonical URL prefer custom hosts.   |
 | `apps/devflare/src/app/pages/(app)/dashboard-projects.spec.ts` | Test custom-host priority, all URL output, duplicate removal, and default-only fallback. |
 | `apps/devflare/src/app/pages/(app)/projects/[slug].page.ts`    | Render all Pages URLs produced by the shared helper.                                     |
+| `apps/devflare/src/server/lib/cloudflare.ts`                   | Read the account and per-script Workers subdomain state; return confirmed public URLs.   |
+| `apps/devflare/src/server/routes/api/v1/cloud/workers/*.ts`    | Add confirmed `workers.dev` URLs to Worker domains in list and detail responses.         |
+| `apps/devflare/src/server/lib/cloudflare.spec.ts`              | Test enabled and disabled Worker subdomain resolution.                                   |
 
-No API, database, authentication, or Cloudflare-permission changes are needed:
-the existing `/api/v1/cloud/pages` response already includes the domains.
+No database, authentication, or Cloudflare-permission changes are needed. The
+existing token's `Workers Scripts:Read` permission covers the read-only
+subdomain endpoints.
 
 ## 5. Constraints
 
@@ -75,6 +88,8 @@ the existing `/api/v1/cloud/pages` response already includes the domains.
 - Use standalone Angular and keep presentation/domain selection in the existing
   pure dashboard helper rather than in a component template.
 - Add no runtime dependencies and make no remote configuration changes.
+- Do not expose a Workers URL merely because the account owns a
+  `workers.dev` subdomain: Cloudflare reports enablement per script.
 - Do not use nested anchors: dashboard cards remain their existing single
   internal link; external host links belong on the project-detail page.
 
@@ -86,6 +101,8 @@ the existing `/api/v1/cloud/pages` response already includes the domains.
 - Manual: run the app, open the `my-blog` project detail, confirm both
   `https://andersseen.dev` and its `pages.dev` fallback are clickable; confirm
   the dashboard card labels `https://andersseen.dev` as the canonical URL.
+- Manual: confirm enabled Workers such as `cv-builder` show a `workers.dev`
+  link, while disabled Workers such as `buck-auth` do not.
 - Run `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`.
 
 ## 7. Tasks
@@ -95,16 +112,25 @@ the existing `/api/v1/cloud/pages` response already includes the domains.
 - [x] 3. Run quality gates (`pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`).
 - [x] 4. Verify the `my-blog` domain order against the connected Cloudflare account and cover the rendered URLs through the shared helper's unit tests.
 - [x] 5. Update `docs/ai/STATE.md` and the index in `docs/specs/README.md`.
+- [x] 6. Integrate confirmed `workers.dev` URLs into Worker list and detail APIs.
+- [x] 7. Test enabled and disabled Worker URL resolution, re-run quality gates,
+     then update the state snapshot.
 
 ## 8. Verification results
 
-`pnpm format:check`, `pnpm lint`, `pnpm test`, and
+Initial Pages-domain verification: `pnpm format:check`, `pnpm lint`, `pnpm test`, and
 `pnpm exec nx run-many -t typecheck --parallel=1 --outputStyle=static` pass on
 2026-09-22. The DevFlare test target has 111 passing tests, including the three
 new URL-selection cases. A read-only Cloudflare API query confirmed that
 `my-blog` returns `my-blog-6vo.pages.dev` before `andersseen.dev`; the new
 ordering correctly chooses the latter as the canonical URL while preserving
 both links.
+
+Worker URL integration verified on 2026-09-23: the account subdomain is read
+once and every listed Worker is checked for its own `enabled` state. The
+DevFlare target has 113 passing tests, including enabled `cv-builder` and
+disabled `buck-auth` cases. `pnpm format:check`, `pnpm lint`, serial Nx
+typechecks, and the full `pnpm test` suite pass.
 
 ## 9. Log / Deviations
 
@@ -118,3 +144,10 @@ both links.
   dropped the previous `project.subdomain` fallback when `domains` was empty.
   Restored it inside the shared helper and added a regression test for that
   exact response shape.
+- **2026-09-23** — The dashboard's apparent missing-project problem was traced
+  to a second gap: it listed only custom Worker domains, while the account has
+  multiple Workers with Cloudflare-confirmed `workers.dev` URLs. Expanded this
+  spec to expose those URLs only when the per-script API says they are enabled.
+- **2026-09-23** — Completed the Worker list and detail integration. Verified
+  custom domains remain first, enabled Workers add their actual `workers.dev`
+  host, and disabled Workers receive no invented URL.

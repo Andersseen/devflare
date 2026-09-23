@@ -1,6 +1,7 @@
 import { createError, defineEventHandler, getRouterParam } from 'h3';
 import { withCloudflare } from '../../../../../lib/cloud-admin';
 import {
+  listWorkersDevDomains,
   listWorkerDomains,
   listWorkerVersions,
   listWorkers,
@@ -32,6 +33,11 @@ export default defineEventHandler((event) =>
     if (!script) {
       throw createError({ statusCode: 404, statusMessage: 'Worker not found' });
     }
+    const workersDevDomains = await listWorkersDevDomains(
+      config,
+      [script],
+      refresh,
+    ).catch(() => new Map<string, string>());
 
     return {
       worker: {
@@ -40,7 +46,8 @@ export default defineEventHandler((event) =>
         modifiedOn: script.modified_on,
         domains: domains
           .filter((domain) => domain.service === name)
-          .map((domain) => domain.hostname),
+          .map((domain) => domain.hostname)
+          .concat(workersDevDomains.get(script.id) ?? []),
       },
       versions: versions.map((version) => ({
         id: version.id,

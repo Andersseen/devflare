@@ -283,6 +283,17 @@ export interface WorkerDomain {
   environment: string;
 }
 
+/** Cloudflare's account-level workers.dev namespace. */
+export interface WorkersSubdomain {
+  subdomain: string;
+}
+
+/** Whether an individual script is publicly reachable at its workers.dev URL. */
+export interface WorkerScriptSubdomain {
+  enabled: boolean;
+  previews_enabled: boolean;
+}
+
 export interface WorkerVersion {
   id: string;
   number?: number;
@@ -408,6 +419,57 @@ export function listWorkerDomains(
   refresh?: boolean,
 ): Promise<WorkerDomain[]> {
   return cfFetch<WorkerDomain[]>(config, '/workers/domains', { refresh });
+}
+
+export function getWorkersSubdomain(
+  config: CloudflareConfig,
+  refresh?: boolean,
+): Promise<WorkersSubdomain> {
+  return cfFetch<WorkersSubdomain>(config, '/workers/subdomain', { refresh });
+}
+
+export function getWorkerScriptSubdomain(
+  config: CloudflareConfig,
+  script: string,
+  refresh?: boolean,
+): Promise<WorkerScriptSubdomain> {
+  return cfFetch<WorkerScriptSubdomain>(
+    config,
+    `/workers/scripts/${encodeURIComponent(script)}/subdomain`,
+    { refresh },
+  );
+}
+
+/**
+ * Returns only workers.dev hostnames that Cloudflare explicitly marks enabled.
+ * A Worker name plus an account namespace is not enough: a script can disable
+ * its public workers.dev route while remaining a valid Worker in the account.
+ */
+export async function listWorkersDevDomains(
+  config: CloudflareConfig,
+  scripts: readonly WorkerScript[],
+  refresh?: boolean,
+): Promise<Map<string, string>> {
+  const { subdomain } = await getWorkersSubdomain(config, refresh);
+  const entries = await Promise.all(
+    scripts.map(async (script): Promise<readonly [string, string] | null> => {
+      const state = await getWorkerScriptSubdomain(
+        config,
+        script.id,
+        refresh,
+      ).catch(() => null);
+
+      return state?.enabled
+        ? ([script.id, `${script.id}.${subdomain}.workers.dev`] as const)
+        : null;
+    }),
+  );
+
+  return new Map(
+    entries.filter(
+      (entry): entry is readonly [string, string] => entry !== null,
+    ),
+  );
 }
 
 export function listWorkerVersions(

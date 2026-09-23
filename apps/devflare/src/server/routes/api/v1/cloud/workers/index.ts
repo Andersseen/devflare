@@ -1,6 +1,7 @@
 import { defineEventHandler } from 'h3';
 import { withCloudflare } from '../../../../../lib/cloud-admin';
 import {
+  listWorkersDevDomains,
   listWorkerDomains,
   listWorkers,
   type WorkerDomain,
@@ -8,7 +9,7 @@ import {
 
 /**
  * GET /api/v1/cloud/workers — every Worker script on the account, each with the
- * custom domains routed to it.
+ * custom domains and confirmed workers.dev URLs routed to it.
  *
  * Domains come from a separate endpoint and a separate token permission, so a
  * failure there degrades to "no domains listed" rather than hiding the Workers
@@ -20,6 +21,11 @@ export default defineEventHandler((event) =>
       listWorkers(config, refresh),
       listWorkerDomains(config, refresh).catch(() => [] as WorkerDomain[]),
     ]);
+    const workersDevDomains = await listWorkersDevDomains(
+      config,
+      scripts,
+      refresh,
+    ).catch(() => new Map<string, string>());
 
     const byService = new Map<string, string[]>();
     for (const domain of domains) {
@@ -29,12 +35,19 @@ export default defineEventHandler((event) =>
     }
 
     const workers = scripts
-      .map((script) => ({
-        name: script.id,
-        createdOn: script.created_on,
-        modifiedOn: script.modified_on,
-        domains: byService.get(script.id) ?? [],
-      }))
+      .map((script) => {
+        const workersDevDomain = workersDevDomains.get(script.id);
+
+        return {
+          name: script.id,
+          createdOn: script.created_on,
+          modifiedOn: script.modified_on,
+          domains: [
+            ...(byService.get(script.id) ?? []),
+            ...(workersDevDomain ? [workersDevDomain] : []),
+          ],
+        };
+      })
       .sort((a, b) => b.modifiedOn.localeCompare(a.modifiedOn));
 
     return { workers };

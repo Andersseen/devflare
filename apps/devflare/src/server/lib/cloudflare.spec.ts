@@ -4,11 +4,13 @@ import {
   clearCloudflareCache,
   CloudflareApiError,
   isCloudflareConfigured,
+  listWorkersDevDomains,
   listR2Objects,
   resolveCloudflareConfig,
   toDeploymentSummary,
   type CloudflareConfig,
   type PagesDeployment,
+  type WorkerScript,
 } from './cloudflare';
 
 /**
@@ -194,6 +196,53 @@ describe('cfFetch', () => {
 
     expect(await cfFetch(CONFIG, '/pages/projects')).toEqual(['after']);
     expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe('listWorkersDevDomains', () => {
+  const SCRIPTS: WorkerScript[] = [
+    {
+      id: 'cv-builder',
+      created_on: '2026-01-01T00:00:00Z',
+      modified_on: '2026-01-01T00:00:00Z',
+    },
+    {
+      id: 'buck-auth',
+      created_on: '2026-01-01T00:00:00Z',
+      modified_on: '2026-01-01T00:00:00Z',
+    },
+  ];
+
+  it('returns a workers.dev hostname only for scripts enabled by Cloudflare', async () => {
+    const fetchMock = stubFetch(
+      ok({ subdomain: 'andriipap01' }),
+      ok({ enabled: true, previews_enabled: true }),
+      ok({ enabled: false, previews_enabled: false }),
+    );
+
+    await expect(listWorkersDevDomains(CONFIG, SCRIPTS)).resolves.toEqual(
+      new Map([['cv-builder', 'cv-builder.andriipap01.workers.dev']]),
+    );
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      'https://api.cloudflare.com/client/v4/accounts/acc-1/workers/subdomain',
+      'https://api.cloudflare.com/client/v4/accounts/acc-1/workers/scripts/cv-builder/subdomain',
+      'https://api.cloudflare.com/client/v4/accounts/acc-1/workers/scripts/buck-auth/subdomain',
+    ]);
+  });
+
+  it('keeps listing when a script subdomain cannot be read', async () => {
+    stubFetch(
+      ok({ subdomain: 'andriipap01' }),
+      new Response(JSON.stringify({ success: false, errors: [] }), {
+        status: 404,
+      }),
+      ok({ enabled: true, previews_enabled: true }),
+    );
+
+    await expect(listWorkersDevDomains(CONFIG, SCRIPTS)).resolves.toEqual(
+      new Map([['buck-auth', 'buck-auth.andriipap01.workers.dev']]),
+    );
   });
 });
 
