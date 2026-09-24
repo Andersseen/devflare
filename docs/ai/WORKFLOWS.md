@@ -12,7 +12,8 @@ cp .env.sample .env        # fill in at least BETTER_AUTH_SECRET
 ```bash
 pnpm dev:all      # auth (:8787) + DevFlare (:4200) + DevTools (:4300)
 pnpm dev:app      # DevFlare only  → http://localhost:4200
-pnpm dev:tools    # DevTools only  → http://localhost:4300 (needs nothing else)
+pnpm dev:tools    # DevTools only  → http://localhost:4300 (local tools need nothing
+                  # else; connected tools need dev:auth + db:migrate:tools:local)
 pnpm dev:auth     # auth only      → http://localhost:8787
 pnpm seed:user    # create test user (auth service must be running)
 ```
@@ -54,7 +55,9 @@ Scoped/faster variants: `nx test devflare`, `nx test devtools`, `nx lint dev-aut
 3. App API change → `curl http://localhost:4200/api/v1/projects -b /tmp/c.txt`
    (cookies from step 2 work through the proxy).
 4. E2E: `nx e2e devflare-e2e` (starts DevFlare itself; the sign-in tests stop at
-   the provider boundary) and `nx e2e devtools-e2e` (starts DevTools; nothing else).
+   the provider boundary) and `nx e2e devtools-e2e` (starts DevTools and
+   migrates its local D1). `DEVTOOLS_E2E_AUTH=1 nx e2e devtools-e2e` adds the
+   full DevAuth round trip — needs `pnpm dev:auth` + `pnpm seed:user`.
 
 ## Database
 
@@ -69,6 +72,10 @@ pnpm db:migrate          # both, production, remote
 - **App DB** (`devflare-db`): migrations in
   `apps/devflare/src/server/db/migrations/`.
 - **Auth DB** (`dev-auth-db*`): migrations in `apps/dev-auth/src/db/migrations/`.
+- **DevTools DB** (`devtools-db`): migrations in
+  `apps/devtools/src/server/db/migrations/`. `pnpm db:migrate:tools:local`
+  locally; `pnpm db:migrate:tools` is production and deliberately **not** part
+  of `db:migrate` until DevTools is deployed.
 
 Migration commands take the **binding** (`DB`), not a database name — under
 `--env production` the bound database is `dev-auth-db-prod`, so a bare

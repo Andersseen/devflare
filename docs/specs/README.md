@@ -55,5 +55,6 @@ the code is the implementation of it.
 | 017 | [Prefer and expose custom deployment domains](017-custom-domain-links.md)                               | Done                                                          |
 | 018 | [Split DevTools out of DevFlare; refocus DevFlare on projects](018-split-devtools-app.md)               | Done (DevTools deployment is follow-up)                       |
 | 019 | [Project resources: explicit ownership of Cloudflare infrastructure](019-project-resources.md)          | Done                                                          |
+| 020 | [DevTools: curated toolkit + connected tools foundation](020-devtools-connected-foundation.md)          | Done (verified locally; deployment is manual follow-up)       |
 
 (Keep this table updated — it's how agents discover active work.)

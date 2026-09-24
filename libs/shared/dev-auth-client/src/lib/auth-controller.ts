@@ -90,12 +90,16 @@ export class AuthControllerRequestError
 
 /**
  * Same-origin return paths only. Absolute URLs and protocol-relative URLs are
- * collapsed to `/` before they can be echoed into a redirecting route.
+ * collapsed to `/` before they can be echoed into a redirecting route — as is
+ * any path containing a backslash or a control character, since URL parsers
+ * read `\` as `/` and drop tabs/newlines (`/\host` → `//host`).
  */
 export function safeReturnTo(value: unknown): string {
   if (typeof value !== 'string') return '/';
   const trimmed = value.trim();
   if (!trimmed.startsWith('/') || trimmed.startsWith('//')) return '/';
+  // eslint-disable-next-line no-control-regex -- control characters are the point
+  if (/[\\\s\u0000-\u001f\u007f]/.test(trimmed)) return '/';
   return trimmed;
 }
 

@@ -29,7 +29,7 @@ app. They are not the same thing.
 | Product                | Path                      | Purpose                                                  | Status                                       |
 | ---------------------- | ------------------------- | -------------------------------------------------------- | -------------------------------------------- |
 | **DevFlare**           | `apps/devflare`           | Personal project hub — projects, where they run, deploys | Live at `devflare.andersseen.dev`            |
-| **DevTools**           | `apps/devtools`           | Browser-first developer utilities, anonymous, static     | Builds and runs locally; not deployed yet    |
+| **DevTools**           | `apps/devtools`           | Curated developer tools: local (in-browser) + connected  | Builds and runs locally; not deployed yet    |
 | **DevAuth**            | `apps/dev-auth` + SDK     | OAuth 2.1 / OIDC identity provider + `@dev-auth/*` SDK   | Live at `auth-devflare.andersseen.dev`       |
 | **Cloudflare Connect** | `apps/cloudflare-connect` | Future delegated Cloudflare authorization broker         | Placeholder only — health endpoint, no OAuth |
 
@@ -45,17 +45,25 @@ Signs in through DevAuth. → [apps/devflare/README.md](apps/devflare/README.md)
 
 Not yet: analytics, logs, health checks or alerts.
 
-### DevTools — browser-first utilities
+### DevTools — curated developer tools
 
-Small tools that run entirely in the tab — no uploads, no account, no server.
-Prerendered to static files, so it costs next to nothing to host.
+Few tools, high quality, ones we actually use. **Local** tools run entirely in
+the tab — no uploads, no account, not even a request to DevTools' server.
+**Connected** tools need a server (storage, or fetching a domain without CORS)
+and sign in through DevAuth; DevTools then decides who may use them. Every
+page is prerendered and served as a static asset.
 → [apps/devtools/README.md](apps/devtools/README.md)
 
-| Category | Tools                                                                           |
-| -------- | ------------------------------------------------------------------------------- |
-| Web      | SEO Simulator · QR Code Studio · URL Shortener (local drafts only)              |
-| Data     | Data Converter (JSON ⇄ CSV)                                                     |
-| Media    | Screen Recorder · Social Card Designer · Cinematic Palette · Background Remover |
+| Category | Local tools                                                                     | Connected tools                |
+| -------- | ------------------------------------------------------------------------------- | ------------------------------ |
+| Web      | SEO Simulator · QR Code Studio · cURL ↔ Fetch                                  | Short Links · Domain Inspector |
+| Security | OAuth / OIDC Inspector · Security Headers                                       |                                |
+| Cloud    | Wrangler Config Doctor                                                          |                                |
+| Data     | Data Converter (JSON ⇄ CSV)                                                     |                                |
+| Media    | Screen Recorder · Social Card Designer · Cinematic Palette · Background Remover |                                |
+
+**DevAuth authenticates, DevTools authorizes**: a DevAuth account alone does
+not unlock connected tools — `DEVTOOLS_ALLOWED_USERS` does.
 
 Image compression and SVG optimisation live in Imageryx, a separate project.
 
@@ -83,7 +91,13 @@ Browser ──► DevFlare (Analog/Nitro Worker)        devflare.andersseen.dev
               │  /api/v1/cloud ── Cloudflare API (owner's account)
               │  /tools/*      ── 302 ──────────► DevTools (when DEVTOOLS_URL is set)
 
-Browser ──► DevTools (static assets only — no Worker, no bindings)
+Browser ──► DevTools (Worker + Static Assets; every page prerendered)
+              │  /api/auth/*   ── OIDC (own client) ► DevAuth
+              │  /api/v1/*     ── connected tools ─► D1  devtools-db
+              │  short links   ── 302 ─────────────► destination
+
+Databases: DevAuth → identity · DevFlare → projects/infra · DevTools → its
+session + short links. No app reads another's database.
 
 DevAuth ──► D1 dev-auth-db-prod (users, sessions, OAuth) · KV (rate limits)
 ```

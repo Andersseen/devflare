@@ -1,10 +1,25 @@
 import { test, expect, type Page } from '@playwright/test';
 
-/** Every migrated tool: path, the card title on the home page, and its h1. */
+/** Every local tool: path, the card title on the home page, and its h1. */
 const TOOLS = [
   { path: '/seo-simulator', card: 'SEO Simulator', heading: 'SEO Simulator' },
   { path: '/qr-generator', card: 'QR Code Studio', heading: 'QR Code Studio' },
-  { path: '/url-shortener', card: 'URL Shortener', heading: 'URL Shortener' },
+  { path: '/curl-converter', card: 'cURL ↔ Fetch', heading: 'cURL ↔ Fetch' },
+  {
+    path: '/oauth-inspector',
+    card: 'OAuth / OIDC Inspector',
+    heading: 'OAuth / OIDC Inspector',
+  },
+  {
+    path: '/security-headers',
+    card: 'Security Headers',
+    heading: 'Security Headers',
+  },
+  {
+    path: '/wrangler-doctor',
+    card: 'Wrangler Config Doctor',
+    heading: 'Wrangler Config Doctor',
+  },
   {
     path: '/data-converter',
     card: 'Data Converter',
@@ -43,22 +58,41 @@ function watch(page: Page) {
 }
 
 test.describe('DevTools home', () => {
-  test('lists every tool by category, with no sign-in', async ({ page }) => {
+  test('separates local and connected tools, without asking who you are', async ({
+    page,
+  }) => {
+    const { apiCalls } = watch(page);
     await page.goto('/');
 
     await expect(page).toHaveTitle(/DevTools/);
-    for (const category of ['Web', 'Data', 'Media']) {
+    for (const section of ['Local', 'Connected']) {
       await expect(
-        page.getByRole('heading', { level: 2, name: category }),
+        page.getByRole('heading', { level: 2, name: section }),
+      ).toBeVisible();
+    }
+    for (const category of ['Web', 'Security', 'Cloud', 'Data', 'Media']) {
+      await expect(
+        page.getByRole('heading', { level: 3, name: category }),
       ).toBeVisible();
     }
     for (const tool of TOOLS) {
       await expect(page.getByRole('link', { name: tool.card })).toBeVisible();
     }
+    for (const name of ['Short Links', 'Domain Inspector']) {
+      await expect(page.getByRole('link', { name })).toBeVisible();
+    }
 
-    // Anonymous by design: nothing in DevTools asks who you are.
-    await expect(page.getByText(/sign in/i)).toHaveCount(0);
+    // Auth stays quiet: no auth UI and not even a session lookup on home.
     await expect(page.locator('dev-auth-user-button')).toHaveCount(0);
+    await expect(page.locator('dev-auth-sign-in')).toHaveCount(0);
+    expect(apiCalls).toEqual([]);
+  });
+
+  test('the old URL Shortener address moves to Short Links', async ({
+    page,
+  }) => {
+    await page.goto('/url-shortener');
+    await page.waitForURL('**/short-links');
   });
 
   test('an unknown path lands on the home page', async ({ page }) => {
@@ -70,7 +104,7 @@ test.describe('DevTools home', () => {
   });
 });
 
-test.describe('every migrated tool', () => {
+test.describe('every local tool', () => {
   for (const tool of TOOLS) {
     test(`${tool.card} opens from the home page`, async ({ page }) => {
       const { errors, apiCalls } = watch(page);
@@ -139,5 +173,107 @@ test.describe('tools work client-side', () => {
       page.getByRole('button', { name: /Download PNG/ }).click(),
     ]);
     expect(download.suggestedFilename()).toBe('qrcode.png');
+  });
+});
+
+test.describe('new local tools work in the tab', () => {
+  test('OAuth Inspector checks a URL, decodes a JWT and derives PKCE', async ({
+    page,
+  }) => {
+    const { apiCalls, errors } = watch(page);
+    await page.goto('/oauth-inspector');
+
+    await page
+      .getByRole('textbox', { name: 'Authorization URL' })
+      .fill(
+        'https://auth.example.com/authorize?client_id=app&response_type=code&redirect_uri=https%3A%2F%2Fapp.example%2Fcb',
+      );
+    await expect(page.getByText('No PKCE.', { exact: false })).toBeVisible();
+
+    await page.getByRole('tab', { name: 'JWT' }).click();
+    const payload = Buffer.from(
+      JSON.stringify({ sub: 'user-1', exp: 1 }),
+    ).toString('base64url');
+    await page
+      .getByRole('textbox', { name: 'Token' })
+      .fill(`eyJhbGciOiJIUzI1NiJ9.${payload}.c2ln`);
+    await expect(page.getByText('not verified')).toBeVisible();
+    await expect(page.getByText(/Expired/)).toBeVisible();
+
+    await page.getByRole('tab', { name: 'PKCE' }).click();
+    await page
+      .getByRole('textbox', { name: 'code_verifier' })
+      .fill('dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk');
+    await expect(
+      page.getByText('E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM'),
+    ).toBeVisible();
+
+    expect(apiCalls).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
+  test('Wrangler Doctor reports drift and generates an Env interface', async ({
+    page,
+  }) => {
+    const { apiCalls } = watch(page);
+    await page.goto('/wrangler-doctor');
+    await page
+      .getByLabel('Wrangler configuration')
+      .fill(
+        [
+          'name = "x"',
+          'main = "src/index.ts"',
+          'compatibility_date = "2026-01-01"',
+          '[[kv_namespaces]]',
+          'binding = "CACHE"',
+          'id = "abc"',
+          '[env.production]',
+          'name = "x"',
+        ].join('\n'),
+      );
+    await expect(
+      page.getByText(
+        /"kv_namespaces" is set at the top level but not in env.production/,
+      ),
+    ).toBeVisible();
+    await expect(page.getByText('CACHE: KVNamespace;')).toBeVisible();
+    expect(apiCalls).toEqual([]);
+  });
+
+  test('Security Headers analyses pasted headers', async ({ page }) => {
+    const { apiCalls } = watch(page);
+    await page.goto('/security-headers');
+    await page
+      .getByLabel('Response headers')
+      .fill(
+        "content-security-policy: script-src 'self' 'unsafe-inline'\nx-frame-options: DENY",
+      );
+    await expect(
+      page.getByText('script-src allows inline scripts'),
+    ).toBeVisible();
+    await expect(page.getByText('X-Frame-Options: DENY')).toBeVisible();
+    expect(apiCalls).toEqual([]);
+  });
+
+  test('cURL ↔ Fetch converts both ways', async ({ page }) => {
+    const { apiCalls } = watch(page);
+    await page.goto('/curl-converter');
+    await page
+      .getByLabel('curl command')
+      .fill(
+        `curl https://api.example.com -H 'Content-Type: application/json' -d '{"a":1}'`,
+      );
+    await expect(page.getByTestId('conversion-output')).toContainText(
+      'body: JSON.stringify(',
+    );
+
+    await page.getByRole('tab', { name: 'Fetch → cURL' }).click();
+    await page
+      .getByLabel('fetch() call')
+      .fill('fetch("https://x.example/a", { method: "DELETE" })');
+    await expect(page.getByTestId('conversion-output')).toHaveText(
+      'curl -X DELETE -L https://x.example/a',
+    );
+    expect(apiCalls).toEqual([]);
   });
 });

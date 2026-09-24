@@ -12,7 +12,8 @@ import { TOOL_CATEGORIES, TOOLS, toolForUrl } from '../tools/tool-registry';
 
 /**
  * DevTools' own chrome: a slim header and, on a tool page, a strip of every
- * other tool. Deliberately not DevFlare's navbar + resizable sidebar — this is
+ * other tool. No sign-in UI here on purpose — auth appears only inside the
+ * connected tools, so browsing local tools is never interrupted. Deliberately not DevFlare's navbar + resizable sidebar — this is
  * a separate product with a flat list of utilities, not a control plane.
  */
 @Component({
@@ -42,8 +43,16 @@ import { TOOL_CATEGORIES, TOOLS, toolForUrl } from '../tools/tool-registry';
           <span
             class="ml-auto hidden items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs text-muted-foreground sm:inline-flex"
           >
-            <lucide-icon name="shield-check" class="h-3.5 w-3.5 text-primary" />
-            Runs in your browser · no account
+            @if (activeTool()?.mode === 'connected') {
+              <lucide-icon name="cloud" class="h-3.5 w-3.5 text-primary" />
+              Connected tool · sign-in required
+            } @else {
+              <lucide-icon
+                name="shield-check"
+                class="h-3.5 w-3.5 text-primary"
+              />
+              Local tools run in your browser · no account
+            }
           </span>
         </div>
 
@@ -76,6 +85,10 @@ import { TOOL_CATEGORIES, TOOLS, toolForUrl } from '../tools/tool-registry';
             <a routerLink="/" class="hover:text-primary">All tools</a>
             <span aria-hidden="true">/</span>
             <span>{{ categoryLabel(tool.category) }}</span>
+            @if (tool.mode === 'connected') {
+              <span aria-hidden="true">/</span>
+              <span>Connected</span>
+            }
           </nav>
         }
         <ng-content />
@@ -86,8 +99,8 @@ import { TOOL_CATEGORIES, TOOLS, toolForUrl } from '../tools/tool-registry';
           class="mx-auto flex max-w-7xl flex-col gap-1 px-4 py-6 text-xs text-muted-foreground sm:flex-row sm:justify-between sm:px-6"
         >
           <p>
-            Files and text you use here stay in this tab. Nothing is uploaded to
-            a DevTools server — there isn't one.
+            Local tools keep what you paste in this tab — nothing is uploaded.
+            Connected tools are marked and use DevTools' own server.
           </p>
           <p>Part of the DevFlare ecosystem.</p>
         </div>

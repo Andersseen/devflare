@@ -1,20 +1,131 @@
-# DevTools — static assets only.
+# DevTools — Cloudflare Worker with Static Assets (spec 020).
 #
-# There is no `main`: no Worker script, no bindings, no D1/KV/R2. Every route
-# is prerendered by `pnpm nx build devtools`, and Cloudflare serves the files
-# directly, which does not bill Worker invocations. Keep it that way — a tool
-# that needs a server belongs in DevFlare, not here (see README.md).
+# Every page is prerendered by `pnpm nx build devtools` and served from Static
+# Assets *before* the Worker runs, so local tools still cost no Worker
+# invocation. The Worker answers only what needs a server: `/api/*` (DevAuth
+# sign-in, connected tools), the public short-link redirect, and unknown paths.
 #
-# Not deployed yet: there is no route/custom domain below and no CI job. Adding
-# one is a deployment follow-up (docs/specs/018-split-devtools-app.md), and
-# once it exists set DEVTOOLS_URL on DevFlare so its old /tools links redirect.
+# No `not_found_handling`: with a Worker present it would answer unknown
+# navigations with index.html and the short-link redirect would never run.
 #
-# Preview locally after a build: `pnpm cf:tools dev`.
+# This same file feeds local dev: Nitro's cloudflare dev plugin hands it to
+# wrangler's getPlatformProxy(), so `pnpm dev:tools` gets a local D1 under
+# .wrangler/state. getPlatformProxy reads the top level (not [env.production]),
+# so the top-level values here are the development ones.
+#
+# Paths are relative to this file and point at the Nitro build output, so
+# `pnpm nx build devtools` must run before `wrangler deploy`.
 
 name = "devtools"
 compatibility_date = "2026-05-23"
+compatibility_flags = ["nodejs_compat"]
+
+main = "../../dist/apps/devtools/analog/server/index.mjs"
 
 [assets]
+binding = "ASSETS"
 directory = "../../dist/apps/devtools/analog/public"
-# Unknown paths get the app shell, whose not-found route sends them home.
-not_found_handling = "single-page-application"
+
+# DevTools' OWN database: connected-tool state (short links) and DevTools'
+# local session. Never DevFlare's `devflare-db` (projects) and never DevAuth's
+# database (identity). Locally the id only keys the miniflare state, so this
+# placeholder is fine; production has its own block below.
+[[d1_databases]]
+binding = "DB"
+database_name = "devtools-db"
+database_id = "00000000-0000-4000-8000-000000000020"
+migrations_dir = "src/server/db/migrations"
+
+# Workers Rate Limiting bindings (src/server/lib/rate-limit.ts). Counters are
+# per Cloudflare location and approximate — a brake on abuse, not an exact
+# quota. `namespace_id` must be unique within the account; these three are
+# only used here. `period` may only be 10 or 60.
+[[ratelimits]]
+name = "AUTH_RATE_LIMITER"
+namespace_id = "2001"
+simple = { limit = 20, period = 60 }
+
+[[ratelimits]]
+name = "MUTATION_RATE_LIMITER"
+namespace_id = "2002"
+simple = { limit = 60, period = 60 }
+
+[[ratelimits]]
+name = "INSPECT_RATE_LIMITER"
+namespace_id = "2003"
+simple = { limit = 10, period = 60 }
+
+[vars]
+# DevTools is its own registered OAuth client of DevAuth — never DevFlare's.
+# These three must line up with the `devtools-dev` entry in
+# apps/dev-auth/wrangler.toml's OAUTH_CLIENTS. DEV_AUTH_CLIENT_SECRET is a
+# secret: apps/devtools/.dev.vars locally, `wrangler secret put` when deployed,
+# and it must equal OAUTH_CLIENT_SECRETS["devtools-dev"] on the DevAuth side.
+DEV_AUTH_URL = "http://localhost:8787"
+DEV_AUTH_CLIENT_ID = "devtools-dev"
+DEV_AUTH_REDIRECT_URI = "http://localhost:4300/api/auth/callback"
+
+# DevAuth authenticates; DevTools authorizes. Comma-separated DevAuth user ids
+# (`sub`) and/or emails allowed to use connected tools. Empty = nobody. Locally
+# both the seeded test user and the owner — the same pair as dev-auth's
+# ADMIN_EMAILS. Prefer user ids in production (see src/server/lib/authorization.ts).
+DEVTOOLS_ALLOWED_USERS = "test@devflare.com,andriipap01@gmail.com"
+
+# Where short links are served. Host + path prefix: the redirect middleware
+# answers requests on exactly this host under exactly this prefix. Locally it
+# sits under /api because the Analog dev server forwards only /api/* to Nitro.
+SHORT_LINK_BASE_URL = "http://localhost:4300/api/go"
+
+[observability]
+enabled = true
+
+# ---------------------------------------------------------------------------
+# Production — NOT deployed yet. Before the first `pnpm deploy:tools`, see
+# DEPLOY.md › DevTools: create the D1 database and paste its id below, register
+# the `devtools` client at DevAuth, put the secret, and attach the domains.
+# ---------------------------------------------------------------------------
+[env.production]
+name = "devtools"
+
+# Attaching a custom domain creates DNS records on deploy, so these stay
+# commented until the owner decides to go live (DEPLOY.md › DevTools).
+# [[env.production.routes]]
+# pattern = "devtools.andersseen.dev"
+# custom_domain = true
+#
+# [[env.production.routes]]
+# pattern = "go.andersseen.dev"
+# custom_domain = true
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "devtools-db"
+# Placeholder: replace with the id printed by `wrangler d1 create devtools-db`.
+database_id = "00000000-0000-4000-8000-000000000020"
+migrations_dir = "src/server/db/migrations"
+
+[[env.production.ratelimits]]
+name = "AUTH_RATE_LIMITER"
+namespace_id = "2001"
+simple = { limit = 20, period = 60 }
+
+[[env.production.ratelimits]]
+name = "MUTATION_RATE_LIMITER"
+namespace_id = "2002"
+simple = { limit = 60, period = 60 }
+
+[[env.production.ratelimits]]
+name = "INSPECT_RATE_LIMITER"
+namespace_id = "2003"
+simple = { limit = 10, period = 60 }
+
+[env.production.vars]
+DEV_AUTH_URL = "https://auth-devflare.andersseen.dev"
+DEV_AUTH_CLIENT_ID = "devtools"
+DEV_AUTH_REDIRECT_URI = "https://devtools.andersseen.dev/api/auth/callback"
+# Set to the owner's DevAuth user id (`sub`) before going live. Empty = nobody.
+DEVTOOLS_ALLOWED_USERS = ""
+SHORT_LINK_BASE_URL = "https://go.andersseen.dev"
+
+[env.production.observability]
+enabled = true

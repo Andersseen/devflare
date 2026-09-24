@@ -7,6 +7,7 @@ import {
   inject,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { QrGenerator } from '../tools/qr-generator.service';
 import { LucideAngularModule } from 'lucide-angular';
 import {
@@ -202,7 +203,12 @@ export default class QrGeneratorPage {
   @ViewChild('qrCanvas') canvas!: ElementRef<HTMLCanvasElement>;
 
   mode = signal<'text' | 'wifi'>('text');
-  text = signal('https://devflare.app');
+  // `?text=` lets another tool (Short Links) open a code here instead of
+  // drawing its own.
+  text = signal(
+    inject(ActivatedRoute).snapshot.queryParamMap.get('text') ??
+      'https://devflare.app',
+  );
   wifiSSID = signal('');
   wifiPassword = signal('');
   wifiEncryption = signal<'WPA' | 'WEP' | 'nopass'>('WPA');

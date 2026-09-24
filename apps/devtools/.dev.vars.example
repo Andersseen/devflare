@@ -1,0 +1,7 @@
+# Copy to apps/devtools/.dev.vars (gitignored). Local development only;
+# deployed values are set with `wrangler secret put --env production`.
+
+# Secret of DevTools' OAuth client at DevAuth. Must equal
+# OAUTH_CLIENT_SECRETS["devtools-dev"] in apps/dev-auth/.dev.vars.
+# Generate one with: openssl rand -base64 32
+DEV_AUTH_CLIENT_SECRET=generate-a-long-random-string

@@ -18,12 +18,12 @@ the 2026-08-10 / 2026-09-03 / 2026-09-11 lessons) from carrying forward a
 previous write-up's claim instead of re-checking. **Standing rule: before
 writing anything here, run `git log`/`git branch`/`gh pr list` yourself.**
 
-- Work branch **`feature/project-resources`**, created from `main` at
-  `900ca8c` (merge of PR #44, `feature/split-devtools-app` — spec 018, merged
-  2026-09-24T07:12Z). Spec 019 (project resources) is on this branch, not yet
-  merged or deployed at the time of writing.
-- Newest merged PRs: #44 (spec 018), #43, #42, #41 (`feature/updates`), #40
-  (`feature/dev-auth-hardening`), #39, #38, #37. PR #32 CLOSED.
+- Work branch **`feature/dev-tooling`**, from `main` at `6630900` (merge of
+  PR #45, spec 019). It carries `ed80713` (Agentyx skills) and, **uncommitted**,
+  spec 020 (DevTools connected foundation). No PR yet.
+- Newest merged PRs: #45 (spec 019, 2026-09-24T12:31Z), #44 (spec 018), #43,
+  #42, #41 (`feature/updates`), #40 (`feature/dev-auth-hardening`), #39, #38,
+  #37. PR #32 CLOSED.
 - **PR #32 (`feature/012-dev-auth-angular-ui`, "add optional DevAuth Angular
   UI") is CLOSED** as of 2026-09-04T09:15:31Z and superseded by PR #37.
 - **PR #38 (`feature/dev-auth-sdk-polish`, MERGED 2026-09-12)** —
@@ -479,8 +479,9 @@ The repo now holds four products; see
 the "Product map" in ARCHITECTURE.md.
 
 - **DevTools** (`apps/devtools`, :4300) owns all 8 browser utilities, moved
-  with `git mv` (pages + services + papaparse shim). Anonymous, static
-  (`static: true`, 9 prerendered routes), own shell and teal accent. A build
+  with `git mv` (pages + services + papaparse shim). At the split: anonymous,
+  static (`static: true`, 9 prerendered routes), own shell and teal accent —
+  superseded by spec 020 above. A build
   hook fails the build if a prerendered route has no `<h1>` — verified with a
   deliberate `window` access. `wrangler.toml` is assets-only; **no domain, no
   deploy job yet**.
@@ -496,7 +497,37 @@ the "Product map" in ARCHITECTURE.md.
 - Design tokens moved to `libs/shared/ui/src/styles/theme.css`; both apps
   import them and override only the accent.
 
-## Project resources (spec 019, branch `feature/project-resources`)
+## DevTools: local + connected tools (spec 020, `feature/dev-tooling`, uncommitted)
+
+See [docs/specs/020-devtools-connected-foundation.md](../specs/020-devtools-connected-foundation.md)
+and [apps/devtools/README.md](../../apps/devtools/README.md).
+
+- DevTools moved from `static: true` to **Worker + Static Assets** (Nitro
+  `cloudflare-module`). All 13 pages are still prerendered and served from
+  Assets; the Worker answers `/api/*`, the short-link host and unknown paths.
+  Worker bundle 749 KiB gzip (`wrangler deploy --dry-run`).
+- Registry: categories `web | security | cloud | data | media`, `mode:
+local | connected`. New local tools: OAuth / OIDC Inspector (URL checks,
+  JWT decode never "verified", PKCE), Wrangler Config Doctor (rules pinned to
+  Wrangler's schema by tests), Security Headers (shared analyzer), cURL ↔
+  Fetch (shell lexer + acorn). Connected: Short Links (replaces the
+  draft-only URL Shortener; `/url-shortener` redirects), Domain Inspector
+  (DoH + SSRF-safe probe).
+- DevTools is its own DevAuth client (`devtools-dev` local / `devtools`
+  prod, registered in `apps/dev-auth/wrangler.toml`), own `dt_session`, own
+  D1 `devtools-db` (`app_user`, `app_session`, `short_link`). Authorization:
+  `DEVTOOLS_ALLOWED_USERS` (empty in production = nobody until set).
+- Nx: `domain:devtools` may now depend on `domain:dev-auth-sdk`.
+- SDK fix found in the security pass: `safeReturnTo` in `@dev-auth/core` and
+  `@dev-auth/client` accepted `/\host` and `/<tab>/host`, which browsers
+  resolve to `//host` (open redirect after sign-in, DevFlare included). Now
+  rejected; needs an SDK release to reach external consumers.
+- **Not deployed.** Production D1 id is a placeholder, domains are commented
+  out, `OAUTH_CLIENT_SECRETS["devtools"]` is not set — merging deploys
+  DevAuth with the new `devtools` entry, which it drops with a logged error
+  until the secret exists. Manual steps: DEPLOY.md › DevTools.
+
+## Project resources (spec 019, merged in PR #45)
 
 See [docs/specs/019-project-resources.md](../specs/019-project-resources.md).
 
@@ -726,6 +757,23 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
 
 ## Session log
 
+- **2026-09-24 — Spec 020: DevTools curated toolkit + connected foundation.**
+  Branch `feature/dev-tooling`, uncommitted. Verified: `pnpm check` green
+  (format; lint 13 projects; typecheck 10; test 10 — DevTools 249, was 23;
+  build DevFlare + DevTools with all 13 DevTools routes prerendered);
+  `@dev-auth/core` + `@dev-auth/client` 39 after the `safeReturnTo` fix;
+  DevAuth `registered-clients.spec.ts` parses the real `OAUTH_CLIENTS` of
+  every environment. devtools-e2e 114 passed / 6 skipped on chromium,
+  firefox, webkit; with DevAuth running + seeded user and
+  `DEVTOOLS_E2E_AUTH=1`, the signed-in round trip passed on chromium (sign in
+  → create → public 302 → edit → disable 410 → delete 404; Domain Inspector
+  UI with a mocked API). Migration `0000_init` applied on local D1. Built
+  Worker checked with `wrangler dev`: assets before Worker, dedicated
+  short-link host 302/410/404/405 with `no-store`, `/api` passes through,
+  production error bodies without stacks. Not done: deploy (manual, see
+  DEPLOY.md › DevTools), a real Domain Inspector fetch in a deployed Worker,
+  an e2e for the "access denied" state (unit-tested policy only).
+
 - **2026-09-24 — Agentyx integration (Claude + Codex skills).** On `main`,
   uncommitted. `.agentyx.json` + `pnpm dlx @agentyx/cli install`: 37 skills into
   `.claude/skills` and `.agents/skills`, context7 added to
@@ -774,237 +822,3 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
   and duplicate saved links. DevFlare has 117 passing tests; format, lint, all
   nine typecheck targets, the full test suite, and the production build pass.
   This is local, uncommitted work and has not been deployed.
-
-- **2026-09-23 — Route-only Cloudflare domain integration (Spec 017).** The
-  dashboard incorrectly assumed the Pages and Worker-domain APIs enumerate all
-  public Cloudflare URLs. Direct production reads proved that Volt UI, Lumen
-  Icons, and Angular Movement are live at their `andersseen.dev` hostnames,
-  while the configured token is denied `Workers Routes:Read`. Added explicit,
-  verified route-only domains to those dashboard groups, made them live rather
-  than planned, rendered the links on project detail pages, and omitted empty
-  watched placeholders. `my-blog` is now grouped once under Andersseen Dev,
-  whose canonical URL is `https://andersseen.dev`. Tests: 115 passing;
-  DevFlare lint/typecheck/format all pass. This is local, uncommitted work; it
-  has not been deployed.
-
-- **2026-09-23 — Worker public URLs (Spec 017 completion).** The previous
-  Pages-domain work did not integrate the actual standalone Workers shown in
-  the dashboard. The server now reads the account Workers subdomain and checks
-  each script's enablement before appending its real `workers.dev` hostname to
-  the Worker list and detail response. This gives `cv-builder`,
-  `andersend-web`, ImageryX Workers, and the other enabled scripts usable
-  links without fabricating links for internal scripts such as `buck-auth`.
-  Custom Worker domains remain first. Added two unit cases; DevFlare has 113
-  passing tests and format, lint, serial typechecks, and the full test suite
-  pass. A production build was started but not counted as verification because
-  the terminal session left duplicate build processes; they were stopped.
-
-- **2026-09-22 — Custom deployment-domain links (Spec 017).** A read-only
-  Cloudflare query showed that Pages returns its fallback `*.pages.dev` domain
-  first — for `my-blog`, `my-blog-6vo.pages.dev` precedes `andersseen.dev`.
-  The shared URL helper now orders custom domains before fallbacks, removes
-  duplicate hosts, retains every URL, and uses the project's explicit
-  `subdomain` when `domains` is empty. Dashboard cards therefore present a
-  custom domain as canonical; project detail cards render all available Pages
-  links. Added three focused unit cases. Full format/lint/test gates passed;
-  `pnpm typecheck`'s concurrent shortcut printed bare `tsc` help, while all
-  nine equivalent targets passed serially. Portfolio remains unlisted because
-  it is hosted on Vercel; Lumen still needs an explicit mapping to a real
-  Cloudflare resource before it can be grouped.
-
-- **2026-09-12** — DevAuth SDK polish + npm publishing
-  (`feature/dev-auth-sdk-polish`, off `main` @ `5f271c6`, merged as PR #38).
-  Two parts, both requested mid-session by the owner after live-testing
-  PR #37's merged SDK and finding it visibly broken in several ways.
-  **Part 1 — real bugs in the dogfooded SDK**, each root-caused rather than
-  dismissed as stale state (the owner explicitly called out prior
-  "it's just cache" claims that turned out wrong): the `/dev-auth-sdk`
-  showcase page had no navbar/sidebar at all — it lived outside the `(app)`
-  route group, a routing bug, not styling; `.dev-auth-card` had no width of
-  its own, so the loading-state skeletons collapsed to slivers inside any
-  centered ancestor (the standard way to center a login card); `.dev-auth-panel`
-  (the account menu) had no background/border/shadow of its own — genuinely
-  transparent, with page content visible through it; a consumer-slotted
-  `menu-actions` item (e.g. DevFlare's own "Settings" link) never received
-  the component's own menu-item styling, unlike "Sign out". Also: the
-  dashboard's "Add Metadata" card moved above the project list, and a real
-  collapsed-sidebar padding bug in `sidebar.component.ts` (unrelated to the
-  SDK — the nav/link padding stacked with `VoltSidebarContent`'s own
-  internal padding, leaving ~0px for a 20px icon). **Part 2 — npm
-  publishing**: `@dev-auth/core`/`@dev-auth/angular`/`@dev-auth/elements`
-  are now real, independently-versioned, publishable packages (`nx release`,
-  a new `workflow_dispatch`-triggered `.github/workflows/publish.yml`) —
-  full design and the four CI-pipeline bugs found only by dry-running it
-  (not by reading docs) are in
-  [docs/specs/015-dev-auth-npm-publishing.md](../specs/015-dev-auth-npm-publishing.md).
-  One of those bugs was found post-merge: after PR #38 landed the owner
-  asked why no GitHub Release appeared, which led to discovering the CI
-  workflow's split `nx release version`/`nx release publish` subcommands
-  never generate a changelog or create a release at all — only the combined
-  `nx release` command does all four phases (version, changelog, GitHub
-  Release, publish) together. Fixed as a follow-up commit on a new branch
-  off `main` (PR #38 had already merged by the time this was found).
-  Root `package.json` flipped to `"private": true"` (was `false`, a footgun
-  once a publish pipeline existed). Full repo `pnpm format:check && pnpm
-lint && pnpm typecheck && pnpm test` and `nx run-many -t build` across the
-  app + all three libraries green; local `nx release`/`npm pack` dry runs
-  clean. Not yet: the owner adding the `NPM_TOKEN` GitHub Environment
-  secret, or a first real publish (see spec 015 §7 for the remaining
-  checklist).
-
-- **2026-09-11 (later)** — DevAuth Elements: the first framework-agnostic
-  visual SDK layer (`feature/dev-auth-elements`, off `main`, uncommitted).
-  Full account: [docs/specs/014-dev-auth-elements.md](../specs/014-dev-auth-elements.md)
-  and the "DevAuth Elements" section above. Read PR #32 (open, unmerged
-  Angular UI) as prior art rather than merging it — mined its identity-
-  fallback algorithms and accessibility contract, replaced its two Angular-
-  only dependencies (`quartz-headless`, `lucide-angular`) with native code
-  and `@andersseen/web-components`. Verified real facts before designing
-  around them rather than trusting the task brief's framing: read
-  `and-dropdown`'s and `and-menu-list`'s actual compiled source (changed the
-  menu-primitive plan once `and-dropdown` turned out to have no body slot);
-  confirmed `@flowview/dom`/`reactive`/`vite*` aren't installed anywhere in
-  this repo, so Flowview's role here is the same server-string-render
-  pattern `apps/dev-auth` already uses, not the DOM-runtime the brief
-  assumed; confirmed `@andersseen/web-components` wasn't an npm dependency
-  anywhere (CDN-only) and added it for real. Relocated the framework-
-  agnostic half of `@dev-auth/angular`'s session client into the new package and put
-  `@dev-auth/angular`'s `DevAuth` service on top of it via a new `DEV_AUTH_CONTROLLER`
-  injection token, so DevFlare's Angular signals and the new elements share
-  one `/api/auth/session` fetch instance instead of running two. Dogfooded
-  in DevFlare (`login.page.ts`, `navbar.component.ts`, `app.config.ts`) and
-  verified the complete real flow live: hosted-login → callback →
-  authenticated navbar → accessible menu (focus-in-on-open, Escape-closes-
-  and-restores-focus) → logout → guard redirect back to `/login`. 64 new
-  tests in the library, `auth`'s 11 tests rewritten against the new
-  controller boundary, `devflare-e2e`'s `auth.spec.ts` updated (21 tests,
-  Chromium/Firefox/WebKit). `pnpm format:check && pnpm lint && pnpm
-typecheck && pnpm test` green. Merged as PR #37 on 2026-09-11T21:09Z.
-  Recommended follow-up (still open): close PR #32 (superseded), crediting
-  its reused concepts, and pick a second real consumer (Imageryx, paused
-  pending the `@dev-auth` npm scope — see the 2026-09-12 entry above this
-  one) to prove `dev-auth-elements` actually portable outside DevFlare.
-
-- **2026-09-11** — DevAuth modular architecture foundation
-  (`feature/dev-auth-modular-architecture`, off `main`, uncommitted). Task
-  was explicitly architecture-only: draw boundaries between DevAuth Identity
-  (`apps/dev-auth`), the DevAuth Consumer SDK (`libs/shared/dev-auth-core` +
-  `libs/shared/dev-auth-angular`), and a future separate Cloudflare Connect service —
-  no feature code, no UI, no OAuth broker implementation. Full account:
-  [docs/specs/013-dev-auth-modular-architecture.md](../specs/013-dev-auth-modular-architecture.md).
-  Git safety first: working tree was clean on `main`, so the "unrelated
-  active DevFlare work" the task warned about turned out to already be
-  merged (PR #34) rather than sitting dirty — but a real piece of unrelated,
-  unmerged, in-flight work was found by checking remote branches/open PRs
-  that a `git status`-only check would have missed: **PR #32**
-  (`feature/012-dev-auth-angular-ui`, open) already implements the DevAuth
-  UI layer this task said not to build, under `libs/shared/auth-ui`
-  depending on `@dev-auth/angular`. That finding drove two decisions: rejected
-  renaming `@dev-auth/angular` (would conflict with that branch on merge) and did
-  not scaffold `libs/shared/auth-ui` (a real implementation already exists
-  there). Dependency audit (grep + reading the actual files, not assumed):
-  `apps/dev-auth` imports nothing else in the repo; `@dev-auth/core` is
-  genuinely framework-agnostic OIDC (not hardcoded to dev-auth's issuer) and
-  is already reused by DevFlare's _unrelated_ Cloudflare-OAuth-for-its-own-
-  account code (`cloudflare-oauth.ts`) for generic PKCE primitives only —
-  legitimate today, flagged as a future naming smell once Cloudflare Connect
-  is a real separate deployable; `@dev-auth/angular` is not an OAuth client at all,
-  just an Angular facade over a consumer app's own session cookie. Added a
-  `domain:*` Nx tag dimension (additive to the existing `scope:`/`type:`
-  one) with `depConstraints` in `eslint.config.mjs` enforcing `dev-auth` ↛
-  `dev-auth-sdk`/`devflare`/`cloudflare-connect`, `dev-auth-sdk` ↛
-  `devflare`/`cloudflare-connect`, `cloudflare-connect` ↛
-  `dev-auth`/`devflare` — verified live by temporarily adding a real
-  violating import to `apps/dev-auth/src/index.ts`, confirming
-  `nx run dev-auth:lint` failed with the expected
-  `@nx/enforce-module-boundaries` error, then reverting it (not left behind
-  as a committed test — the lint rule itself is the ongoing check). Also
-  closed a pre-existing gap: `scope:backend` had no `depConstraints` rule at
-  all before this. New minimal `apps/cloudflare-connect` (Hono/Workers,
-  mirroring `apps/dev-auth`'s project shape): `GET /health`, no bindings, no
-  OAuth code, 2 smoke tests, README covering responsibility/non-
-  responsibilities/dependencies/deployment/data/security ownership/consumer
-  examples. Produced a file-by-file migration map for
-  `apps/devflare/src/server/lib/cloudflare-{oauth,oauth-client,connection}.ts`
-  and `cloudflare.ts` (protocol-level vs. DevFlare-persistence-specific vs.
-  needs-redesign-before-extraction) — none of it moved, per task scope.
-  Verified: `npx nx run-many -t lint,typecheck,test --projects=dev-auth,
-devflare,devflare-e2e,auth,core,dev-auth-core,ui,deploy,cloudflare-connect`
-  all green (dev-auth/devflare/auth/deploy test counts unchanged from
-  before; 2 new cloudflare-connect tests). This section and PR/merge state
-  above were corrected against `git log`/`gh pr list` directly, catching two
-  more stale "uncommitted" claims (PRs #31, #34) — see spec 013 §10. Not
-  committed — pending the owner's decision on branch/commit/PR.
-
-- **2026-09-10** — Image-domain tooling (compression, format conversion, SVG
-  optimization) moved to Imageryx; the DevFlare duplicates were removed.
-  This was the first consolidation slice of an explicit product-boundary
-  decision: Imageryx owns image/media tooling, DevFlare stays generic
-  developer/control-plane tools. Cross-repo session — both repos are local
-  siblings under `Web/Projects/`, so this covers both, unlike this
-  session's usual single-repo scope.
-  **On Imageryx** (`feat/image-optimization-consolidation`, off `main`, not
-  yet committed): compression/format now flow through the existing
-  preset/provider architecture rather than a new tool — `CloudflareImagesProvider`
-  was rewired from a scaffolded-but-wrong API (`cf.image`/`/cdn-cgi/image/`,
-  zone-based) onto the real Workers Images Binding (`env.IMAGES`), now a
-  genuinely working provider instead of one whose `transform()` always
-  threw; SVG optimization is a new fourth `BuiltinTransformationProvider`
-  (real, local, deterministic, via `svgo/browser` — verified running
-  inside actual workerd, not just Node) that `selectTransformationProvider()`
-  always routes `outputFormat: "svg"` presets to, regardless of the
-  deployment's configured provider. Two new system presets ("Web
-  Optimized", "SVG Optimized"), a D1 migration widening two `CHECK`
-  constraints (empirically verified against seeded data — no cascade
-  delete, still rejects invalid values — and independently reviewed), and
-  a real bug an integration test caught before it shipped: the deployment's
-  configured provider was silently overriding the new svg-routing rule on
-  every non-mock deployment until `requestVariant()` was fixed to stop
-  treating it as an implicit preference for svg presets. `pnpm check`
-  green across all 41 tasks; a live Cloudinary integration test happened
-  to run for real (credentials were present locally) alongside the new
-  SVG one. Full account in that repo's `context.md`, new "Image
-  optimization consolidation" section.
-  **On DevFlare** (this repo, `feature/remove-duplicate-image-tools`, not
-  yet committed): removed `image-compressor`/`svg-optimizer` — both page
-  components, both `@org/core` services, their barrel exports, and their
-  `TOOLS` registry entries — and the now-orphaned `browser-image-compression`
-  dependency. `bg-remover` deliberately stays (separate architecture
-  decision, out of scope here); no other generic tool touched. The
-  DevFlare SVG optimizer turned out to be a naive regex minifier that
-  also stripped `<title>`/`<desc>` (real accessibility content, not just
-  cruft) and rendered pasted SVG through `[innerHTML]` with zero
-  sanitization — both defects are moot now that the page is gone, not
-  fixed in place. Replaced the two removed cards with one "Imageryx" card
-  linking to `https://imageryx-dashboard.pages.dev`; `ToolGridComponent`
-  needed a small addition to support an external (non-`routerLink`) card,
-  since nothing there did before. `pnpm format:check`/`lint`/`typecheck`/
-  `test`/`build:prod` all green; did not visually walk `/tools` in a
-  browser — the `ui-check` skill that would normally do that is reserved
-  for explicit user invocation and its workflow may not be replicated by
-  other means, so this is unverified in a live browser. Neither repo's
-  branch has been committed, pushed, or PR'd — pending the owner's
-  decision, per this session's standing git-safety rule (never commit
-  without being asked).
-
-- **2026-09-03 (later)** — Built the first headless DevAuth consumer SDK. Step
-  0 of this task was to close spec 011 first; it turned out already merged
-  (PR #30) — the earlier same-day log entry below still said "uncommitted"
-  because STATE hadn't been updated after the merge, which is itself the
-  lesson: verify `git log`/`git branch` against this file rather than trusting
-  it. Full account in "DevAuth consumer SDK" above; short version: extracted
-  `apps/devflare/src/server/lib/oidc.ts`'s already-portable protocol code into
-  a new `libs/shared/dev-auth-core` (`@dev-auth/core`) — discovery, PKCE,
-  state/nonce, code exchange, userinfo, typed errors, 36 tests — and
-  discovered `libs/shared/dev-auth-angular` (`@dev-auth/angular`) already _was_ the Angular
-  consumer-session adapter the task wanted, just hardcoded to `/api/auth`;
-  generalized it (`provideDevAuth({basePath?})`, `Auth`→`DevAuth`,
-  `loading`→`isLoading`, `signIn`→`login`) instead of building a second
-  package. DevFlare's login/callback routes now run on the new client with
-  identical external behavior (redirects, error codes) to before. One real
-  integration gap found and fixed: Nitro's server bundle doesn't inherit
-  `nxViteTsPaths()`, so the first server-side `@org/*` import needed an
-  explicit `nitro.alias` entry. `pnpm check` green; live Playwright pass of
-  logout → login → dev-auth → callback → session → dashboard → logout, plus
-  both callback error paths. Not committed — pending the owner's decision on
-  branch/commit/PR.

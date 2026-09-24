@@ -10,6 +10,9 @@ describe('safeReturnTo', () => {
   it.each([
     ['an absolute URL', 'https://attacker.test/'],
     ['a protocol-relative URL', '//attacker.test/'],
+    ['a backslash that browsers read as a slash', '/\\attacker.test/'],
+    ['a tab the URL parser drops', '/\t/attacker.test/'],
+    ['a newline the URL parser drops', '/\n/attacker.test/'],
     ['a bare path', 'projects'],
     ['a non-string', 42],
     ['nothing', undefined],

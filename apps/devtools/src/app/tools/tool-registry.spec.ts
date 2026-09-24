@@ -1,7 +1,14 @@
-import { TOOL_CATEGORIES, TOOLS, toolForUrl, toolsIn } from './tool-registry';
+import {
+  TOOL_CATEGORIES,
+  TOOLS,
+  toolForUrl,
+  toolsIn,
+  toolsWithMode,
+} from './tool-registry';
 
-/** Page files that are routes but not tools. */
-const NON_TOOL_PAGES = ['(home)', '[...not-found]'];
+/** Page files that are routes but not tools. `url-shortener` only redirects
+ * to `short-links`, which replaced it (spec 020). */
+const NON_TOOL_PAGES = ['(home)', '[...not-found]', 'url-shortener'];
 
 const pageFiles = Object.keys(import.meta.glob('../pages/*.page.ts')).map(
   (file) => file.replace('../pages/', '').replace('.page.ts', ''),
@@ -37,6 +44,19 @@ describe('tool registry', () => {
   it('puts every tool in exactly one category', () => {
     const grouped = TOOL_CATEGORIES.flatMap((category) => toolsIn(category.id));
     expect(grouped).toHaveLength(TOOLS.length);
+  });
+
+  it('marks exactly the server-backed tools as connected', () => {
+    expect(toolsWithMode('connected').map((tool) => tool.path)).toEqual([
+      'short-links',
+      'domain-inspector',
+    ]);
+    expect(toolsWithMode('local')).toHaveLength(TOOLS.length - 2);
+  });
+
+  it('keeps "connected" a mode, never a category', () => {
+    expect(TOOL_CATEGORIES.map((c) => c.id)).not.toContain('connected');
+    expect(toolsIn('web', 'connected')).toHaveLength(2);
   });
 
   it('resolves the tool owning a URL', () => {
