@@ -29,8 +29,8 @@ How it works. Include, as applicable:
 - **Files to create/modify** (be exact — this is the map weaker models follow):
   | File | Change |
   | ---- | ------ |
-  | `apps/devflare/src/app/pages/tools/x.page.ts` | new page component |
-  | `libs/shared/core/src/lib/services/tools/x.service.ts` | new service + export from index.ts |
+  | `apps/devtools/src/app/pages/x.page.ts` | new page component |
+  | `apps/devtools/src/app/tools/x.service.ts` | new service + registry entry |
 - **API changes**: method, path, request/response shape, auth requirement.
 - **DB changes**: table/columns + where the schema lives (app: `initDatabase()`;
   auth: new migration file).

@@ -1,0 +1,42 @@
+@import 'tailwindcss';
+
+/*
+ * Volt design system. Required, not cosmetic: it carries an `@source` pointing
+ * at the compiled component bundle so Tailwind emits the utility classes used
+ * inside Volt's templates. See apps/devflare/src/styles.css for the long form.
+ */
+@import '@voltui/components/themes.css';
+
+/* Shared ecosystem tokens (typography, surfaces, borders, dark mode). */
+@import '../../../libs/shared/ui/src/styles/theme.css';
+
+/*
+ * DevTools identity. Same foundation as DevFlare, different accent: teal
+ * instead of indigo, so the two products are recognisably related but never
+ * mistaken for one another.
+ */
+:root {
+  --primary: #0d9488;
+  --primary-foreground: #ffffff;
+  --accent: #f0fdfa;
+  --accent-foreground: #0f766e;
+  --ring: #0d9488;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary: #14b8a6;
+    --primary-foreground: #042f2e;
+    --accent: rgba(20, 184, 166, 0.16);
+    --accent-foreground: #5eead4;
+    --ring: #14b8a6;
+  }
+}
+
+html,
+body {
+  display: block;
+  min-height: 100%;
+  background-color: var(--background);
+  color: var(--foreground);
+}

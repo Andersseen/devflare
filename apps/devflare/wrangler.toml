@@ -85,6 +85,14 @@ CLOUDFLARE_OAUTH_REDIRECT_URI = "http://localhost:4200/api/v1/cloud/connect/call
 # SECRET_ENCRYPTION_KEY (`openssl rand -base64 32`) — without the latter the
 # tokens have nowhere safe to live and connecting is refused up front.
 
+# Where the standalone DevTools app (apps/devtools) lives. DevFlare's old
+# /tools/* URLs redirect there (src/server/routes/tools). Local only for now:
+# there is deliberately no production value until DevTools has a deployment —
+# unset, old tool links fall back to DevFlare's home. The navbar's DevTools
+# link is the build-time VITE_DEVTOOLS_URL (same value), because it is in the
+# client bundle.
+DEVTOOLS_URL = "http://localhost:4300"
+
 [observability]
 enabled = true
 

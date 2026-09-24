@@ -25,6 +25,7 @@ import {
   type Project,
 } from '@org/core';
 import { CloudGate } from './cloud/cloud-gate';
+import { DeploymentStatus } from './cloud/deployment-status';
 import {
   groupDashboardProjects,
   type ProjectGroup,
@@ -45,6 +46,7 @@ import {
     VoltInput,
     VoltLabel,
     CloudGate,
+    DeploymentStatus,
   ],
   template: `
     <div class="space-y-6">
@@ -52,14 +54,15 @@ import {
         class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"
       >
         <div>
-          <h1 class="text-3xl font-bold tracking-tight">
-            Deployment Dashboard
-          </h1>
+          <h1 class="text-3xl font-bold tracking-tight">Projects</h1>
           <p class="mt-1 text-muted-foreground">
+            Your applications — where they run, where the code lives, and what
+            shipped last.
+          </p>
+          <p class="mt-2 text-sm text-muted-foreground">
+            {{ groups().length }} projects · {{ liveCount() }} live
             @if (connectedAccount(); as account) {
-              {{ account }} projects, URLs and Cloudflare activity
-            } @else {
-              Your projects, URLs and Cloudflare activity
+              · on {{ account }}
             }
           </p>
         </div>
@@ -88,44 +91,160 @@ import {
         <volt-error>{{ statusError() }}</volt-error>
       }
 
-      <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div class="rounded-md border border-border bg-card p-4">
-          <p class="text-sm text-muted-foreground">Projects</p>
-          <p class="mt-1 text-2xl font-semibold">{{ groups().length }}</p>
-        </div>
-        <div class="rounded-md border border-border bg-card p-4">
-          <p class="text-sm text-muted-foreground">Live URLs</p>
-          <p class="mt-1 text-2xl font-semibold">{{ liveCount() }}</p>
-        </div>
-        <div class="rounded-md border border-border bg-card p-4">
-          <p class="text-sm text-muted-foreground">Pages</p>
-          <p class="mt-1 text-2xl font-semibold">
-            {{ cloud.projects().length }}
-          </p>
-        </div>
-        <div class="rounded-md border border-border bg-card p-4">
-          <p class="text-sm text-muted-foreground">Workers</p>
-          <p class="mt-1 text-2xl font-semibold">
-            {{ cloud.workers().length }}
-          </p>
-        </div>
-      </div>
-
       <app-cloud-gate [status]="status()">
         @if (cloud.error()) {
           <volt-error>{{ cloud.error() }}</volt-error>
         }
       </app-cloud-gate>
 
-      <volt-card>
-        <volt-card-content class="space-y-4 p-5">
-          <div>
-            <h2 class="text-base font-semibold">Add Metadata</h2>
-            <p class="mt-1 text-sm text-muted-foreground">
-              Save GitHub URLs or link a name to a specific Pages project or
-              Worker.
-            </p>
-          </div>
+      @if (loading() && !groups().some(groupHasCloudResource)) {
+        <div class="flex items-center justify-center py-12">
+          <lucide-icon
+            name="loader"
+            class="h-8 w-8 animate-spin text-muted-foreground"
+          />
+        </div>
+      } @else {
+        <section
+          class="grid gap-4 md:grid-cols-2 2xl:grid-cols-3"
+          aria-label="Projects"
+          [moveStagger]="45"
+        >
+          @for (group of groups(); track group.slug) {
+            <a
+              [routerLink]="['/projects', group.slug]"
+              [move]="'fade-up'"
+              moveDuration="260"
+              class="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <volt-card
+                class="h-full transition-colors hover:border-primary/60"
+              >
+                <volt-card-content class="flex h-full flex-col gap-4 p-5">
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                      <h2 class="truncate text-lg font-semibold">
+                        {{ group.name }}
+                      </h2>
+                      <div
+                        class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground"
+                      >
+                        @if (group.workers.length) {
+                          <span class="inline-flex items-center gap-1">
+                            <lucide-icon name="zap" class="h-3.5 w-3.5" />
+                            {{ group.workers.length }}
+                            {{
+                              group.workers.length === 1 ? 'Worker' : 'Workers'
+                            }}
+                          </span>
+                        }
+                        @if (group.pages.length) {
+                          <span class="inline-flex items-center gap-1">
+                            <lucide-icon name="globe" class="h-3.5 w-3.5" />
+                            {{ group.pages.length }} Pages
+                            {{
+                              group.pages.length === 1 ? 'project' : 'projects'
+                            }}
+                          </span>
+                        }
+                        @if (!group.pages.length && !group.workers.length) {
+                          <volt-badge variant="secondary">
+                            {{ group.url ? 'live' : 'planned' }}
+                          </volt-badge>
+                        }
+                      </div>
+                    </div>
+                    <lucide-icon
+                      name="chevron-right"
+                      class="h-5 w-5 shrink-0 text-muted-foreground"
+                    />
+                  </div>
+
+                  <div class="space-y-2 text-sm">
+                    @if (group.url) {
+                      <span
+                        class="flex min-w-0 items-center gap-2 text-primary"
+                      >
+                        <lucide-icon
+                          name="external-link"
+                          class="h-4 w-4 shrink-0"
+                        />
+                        <span class="truncate">{{ group.url }}</span>
+                      </span>
+                    } @else {
+                      <p class="text-muted-foreground">
+                        No public URL found yet.
+                      </p>
+                    }
+
+                    @if (repoLabel(group); as label) {
+                      <span
+                        class="flex min-w-0 items-center gap-2 text-muted-foreground"
+                      >
+                        <lucide-icon name="github" class="h-4 w-4 shrink-0" />
+                        <span class="truncate">{{ label }}</span>
+                      </span>
+                    }
+                  </div>
+
+                  <div
+                    class="mt-auto flex min-w-0 flex-wrap items-center gap-2 border-t border-border pt-3 text-sm text-muted-foreground"
+                  >
+                    @if (group.latestDeployment; as latest) {
+                      <app-deployment-status
+                        [status]="latest.deployment.status"
+                        [stage]="latest.deployment.stage"
+                      />
+                      <span class="min-w-0 truncate">
+                        deployed {{ relative(latest.deployment.createdOn) }}
+                        @if (latest.deployment.branch) {
+                          from {{ latest.deployment.branch }}
+                        }
+                      </span>
+                    } @else if (group.lastActivity) {
+                      <span>updated {{ relative(group.lastActivity) }}</span>
+                    } @else {
+                      <span>No deployment activity reported</span>
+                    }
+                  </div>
+                </volt-card-content>
+              </volt-card>
+            </a>
+          } @empty {
+            @if (!loading()) {
+              <p
+                class="rounded-md border border-border p-6 text-muted-foreground md:col-span-2 2xl:col-span-3"
+              >
+                No projects yet. Connect Cloudflare, or link a repository to a
+                Pages project or Worker below.
+              </p>
+            }
+          }
+        </section>
+      }
+
+      <!--
+        Secondary: most projects are found from Cloudflare on their own. This
+        only adds a repository link or ties a name to a specific resource.
+      -->
+      <details class="group rounded-md border border-border bg-card">
+        <summary
+          class="flex cursor-pointer list-none items-center justify-between gap-3 p-4 text-sm font-medium"
+        >
+          <span class="inline-flex items-center gap-2">
+            <lucide-icon name="plus" class="h-4 w-4" />
+            Link a repository or resource to a project
+          </span>
+          <lucide-icon
+            name="chevron-right"
+            class="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-90"
+          />
+        </summary>
+        <div class="space-y-4 border-t border-border p-4">
+          <p class="text-sm text-muted-foreground">
+            Save a GitHub URL, or tie a project name to a specific Pages project
+            or Worker when its name does not match on its own.
+          </p>
           <form
             class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_minmax(0,1fr)_auto]"
             (submit)="onCreate($event)"
@@ -186,123 +305,8 @@ import {
           @if (createError()) {
             <volt-error>{{ createError() }}</volt-error>
           }
-        </volt-card-content>
-      </volt-card>
-
-      @if (loading() && !groups().some(groupHasCloudResource)) {
-        <div class="flex items-center justify-center py-12">
-          <lucide-icon
-            name="loader"
-            class="h-8 w-8 animate-spin text-muted-foreground"
-          />
         </div>
-      } @else {
-        <section
-          class="grid gap-4 md:grid-cols-2 2xl:grid-cols-3"
-          [moveStagger]="45"
-        >
-          @for (group of groups(); track group.slug) {
-            <a
-              [routerLink]="['/projects', group.slug]"
-              [move]="'fade-up'"
-              moveDuration="260"
-              class="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <volt-card
-                class="h-full transition-colors hover:border-primary/60"
-              >
-                <volt-card-content class="flex h-full flex-col gap-4 p-5">
-                  <div class="flex items-start justify-between gap-3">
-                    <div class="min-w-0">
-                      <h2 class="truncate text-lg font-semibold">
-                        {{ group.name }}
-                      </h2>
-                      <div
-                        class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground"
-                      >
-                        @if (group.pages.length) {
-                          <span class="inline-flex items-center gap-1">
-                            <lucide-icon name="globe" class="h-3.5 w-3.5" />
-                            {{ group.pages.length }} Pages
-                          </span>
-                        }
-                        @if (group.workers.length) {
-                          <span class="inline-flex items-center gap-1">
-                            <lucide-icon name="zap" class="h-3.5 w-3.5" />
-                            {{ group.workers.length }} Workers
-                          </span>
-                        }
-                        @if (
-                          !group.pages.length &&
-                          !group.workers.length &&
-                          !group.url
-                        ) {
-                          <volt-badge variant="secondary">planned</volt-badge>
-                        } @else if (
-                          !group.pages.length && !group.workers.length
-                        ) {
-                          <volt-badge variant="secondary">live</volt-badge>
-                        }
-                        @if (group.lastActivity) {
-                          <span
-                            >updated {{ relative(group.lastActivity) }}</span
-                          >
-                        }
-                      </div>
-                    </div>
-                    <lucide-icon
-                      name="chevron-right"
-                      class="h-5 w-5 shrink-0 text-muted-foreground"
-                    />
-                  </div>
-
-                  <div class="space-y-2 text-sm">
-                    @if (group.url) {
-                      <span
-                        class="flex min-w-0 items-center gap-2 text-primary"
-                      >
-                        <lucide-icon
-                          name="external-link"
-                          class="h-4 w-4 shrink-0"
-                        />
-                        <span class="truncate">{{ group.url }}</span>
-                      </span>
-                    } @else {
-                      <p class="text-muted-foreground">
-                        No public URL found yet.
-                      </p>
-                    }
-
-                    @if (repoLabel(group); as label) {
-                      <span
-                        class="flex min-w-0 items-center gap-2 text-muted-foreground"
-                      >
-                        <lucide-icon name="github" class="h-4 w-4 shrink-0" />
-                        <span class="truncate">{{ label }}</span>
-                      </span>
-                    }
-                  </div>
-
-                  <div class="mt-auto grid grid-cols-2 gap-3 text-sm">
-                    <div
-                      class="rounded-md border border-border bg-muted/30 p-3"
-                    >
-                      <p class="text-xs text-muted-foreground">Pages</p>
-                      <p class="mt-1 font-medium">{{ group.pages.length }}</p>
-                    </div>
-                    <div
-                      class="rounded-md border border-border bg-muted/30 p-3"
-                    >
-                      <p class="text-xs text-muted-foreground">Workers</p>
-                      <p class="mt-1 font-medium">{{ group.workers.length }}</p>
-                    </div>
-                  </div>
-                </volt-card-content>
-              </volt-card>
-            </a>
-          }
-        </section>
-      }
+      </details>
     </div>
   `,
 })

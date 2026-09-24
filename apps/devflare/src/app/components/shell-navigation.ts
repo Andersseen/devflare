@@ -6,131 +6,30 @@ import { filter, map } from 'rxjs';
 /**
  * Single source of truth for the app shell's navigation.
  *
- * The top navbar exposes the two top-level sections; the sidebar only renders
- * the groups of the section you are currently in. Keeping both driven by this
- * file is what stops the sidebar from growing back into one flat 14-item list.
+ * DevFlare is a personal project hub: Projects is the product, Cloud is the
+ * raw infrastructure behind it, and Settings (profile, integrations, identity
+ * administration) is pinned to the sidebar footer rather than competing with
+ * either. The top navbar exposes the sections; the sidebar renders only the
+ * groups of the section you are in.
+ *
+ * Browser utilities are not here on purpose — they are the separate DevTools
+ * app (apps/devtools), reached through the single DEVTOOLS_LINK below.
  */
 
 /** Keep in sync with the `version` field in the root package.json. */
 export const APP_VERSION = '0.1.0';
 
 /**
- * A `Tool`/`ShellNavItem.link` is almost always an internal route, meant for
- * `routerLink` — except the small number that point at another product
- * entirely (e.g. Imageryx). `routerLink` treats any string as a set of
- * internal path segments, so an absolute URL passed to it silently becomes a
- * broken nested route (`/tools/https://...`) instead of an external
- * navigation. Every renderer of `Tool`/`ShellNavItem` links must branch on
- * this before choosing `routerLink` vs a plain `href`.
+ * Where the standalone DevTools app lives, for the one product-level link
+ * DevFlare shows. Build-time (`VITE_DEVTOOLS_URL`) because the link is in the
+ * client bundle; in development it defaults to the local `pnpm dev:tools`
+ * port. With no value in a production build the link is simply not rendered —
+ * no DevTools domain is assumed. The server-side `/tools/*` redirects read the
+ * runtime `DEVTOOLS_URL` var instead (see server/lib/legacy-tools.ts).
  */
-export function isExternalLink(link: string): boolean {
-  return /^https?:\/\//.test(link);
-}
-
-export interface Tool {
-  title: string;
-  description: string;
-  link: string;
-  icon: string;
-  colorClass: string;
-  bgClass: string;
-  /** Shorter label used in the sidebar; falls back to `title`. */
-  navLabel?: string;
-}
-
-export const TOOLS: Tool[] = [
-  {
-    title: 'QR Code Studio',
-    navLabel: 'QR Generator',
-    description:
-      'Generate customizable QR codes for URLs, text, and Wi-Fi networks.',
-    link: '/tools/qr-generator',
-    icon: 'qr-code',
-    colorClass: 'text-pink-500',
-    bgClass: 'bg-pink-500/10',
-  },
-  {
-    title: 'SEO Simulator',
-    description:
-      'Preview how your pages appear on Google, Twitter, and Facebook.',
-    link: '/tools/seo-simulator',
-    icon: 'search',
-    colorClass: 'text-sky-500',
-    bgClass: 'bg-sky-500/10',
-  },
-  {
-    title: 'Data Converter',
-    description: 'Convert between JSON and CSV formats instantly.',
-    link: '/tools/converter',
-    icon: 'arrow-right-left',
-    colorClass: 'text-cyan-500',
-    bgClass: 'bg-cyan-500/10',
-  },
-  {
-    title: 'Screen Recorder',
-    description:
-      'Record your screen directly from the browser without plugins.',
-    link: '/tools/recorder',
-    icon: 'video',
-    colorClass: 'text-red-500',
-    bgClass: 'bg-red-500/10',
-  },
-  {
-    title: 'Social Card Designer',
-    description:
-      'Create beautiful Open Graph images for your social media posts.',
-    link: '/tools/og-generator',
-    icon: 'globe',
-    colorClass: 'text-purple-500',
-    bgClass: 'bg-purple-500/10',
-  },
-  {
-    title: 'Cinematic Palette',
-    description: 'Extract dominant colors and create cinematic compositions.',
-    link: '/tools/palette',
-    icon: 'brush',
-    colorClass: 'text-fuchsia-500',
-    bgClass: 'bg-fuchsia-500/10',
-  },
-  {
-    title: 'Background Remover',
-    description: 'Remove image backgrounds using AI completely client-side.',
-    link: '/tools/bg-remover',
-    icon: 'paint-bucket',
-    colorClass: 'text-emerald-600',
-    bgClass: 'bg-emerald-600/10',
-  },
-  {
-    title: 'URL Shortener',
-    description:
-      'Shorten long links and keep track of them with custom aliases.',
-    link: '/tools/shortener',
-    icon: 'link',
-    colorClass: 'text-indigo-500',
-    bgClass: 'bg-indigo-500/10',
-  },
-];
-
-export const PLATFORM_CARDS: Tool[] = [
-  {
-    title: 'Deployment Dashboard',
-    description:
-      'Track your projects, live URLs, Cloudflare deploys and Workers.',
-    link: '/',
-    icon: 'folder-open',
-    colorClass: 'text-primary',
-    bgClass: 'bg-primary/10',
-  },
-  {
-    title: 'Cloud',
-    description:
-      'See the Workers, Pages and storage on your Cloudflare account.',
-    link: '/cloud',
-    icon: 'cloud',
-    colorClass: 'text-orange-500',
-    bgClass: 'bg-orange-500/10',
-  },
-];
+export const DEVTOOLS_LINK: string | null =
+  (import.meta.env['VITE_DEVTOOLS_URL'] as string | undefined) ||
+  (import.meta.env.DEV ? 'http://localhost:4300' : null);
 
 export interface ShellNavItem {
   label: string;
@@ -156,63 +55,36 @@ export interface ShellSection {
 
 export const SHELL_SECTIONS: ShellSection[] = [
   {
-    id: 'deployment',
-    label: 'Deployment',
+    id: 'projects',
+    label: 'Projects',
     link: '/',
-    matches: ['/', '/deploy', '/projects', '/cloud', '/settings'],
+    matches: ['/', '/projects', '/deploy', '/settings'],
     groups: [
       {
-        label: 'Platform',
+        label: 'Hub',
         items: [
           {
-            label: 'Dashboard',
+            label: 'Projects',
             link: '/',
-            icon: 'layout-dashboard',
+            icon: 'folder-open',
             exact: true,
           },
         ],
       },
+    ],
+  },
+  {
+    id: 'cloud',
+    label: 'Cloud',
+    link: '/cloud',
+    matches: ['/cloud'],
+    groups: [
       {
         label: 'Cloudflare',
         items: [
-          { label: 'Cloud', link: '/cloud', icon: 'cloud', exact: true },
+          { label: 'Overview', link: '/cloud', icon: 'cloud', exact: true },
           { label: 'Buckets', link: '/cloud/buckets', icon: 'hard-drive' },
           { label: 'Storage', link: '/cloud/storage', icon: 'database' },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'devtools',
-    label: 'DevTools',
-    link: '/tools',
-    matches: ['/tools'],
-    groups: [
-      {
-        label: 'Tools',
-        items: TOOLS.map((tool) => ({
-          label: tool.navLabel ?? tool.title,
-          link: tool.link,
-          icon: tool.icon,
-        })),
-      },
-    ],
-  },
-  {
-    id: 'dev-auth-sdk',
-    label: 'DevAuth SDK',
-    link: '/dev-auth-sdk',
-    matches: ['/dev-auth-sdk'],
-    groups: [
-      {
-        label: 'DevAuth SDK',
-        items: [
-          {
-            label: 'Components',
-            link: '/dev-auth-sdk',
-            icon: 'user',
-            exact: true,
-          },
         ],
       },
     ],

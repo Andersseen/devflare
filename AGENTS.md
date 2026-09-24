@@ -13,11 +13,15 @@ This is the entry point for AI coding agents. Read this first, then load only th
 
 ## What this is (one paragraph)
 
-DevFlare is a developer-tools web platform: an AnalogJS (Angular 21) app with ~10
-browser-based utilities (QR codes, image compression, palette extraction, …) plus
-projects/deployments management, plus `dev-auth`: a standalone OAuth 2.1 / OIDC
-**identity provider** (Hono + better-auth + Cloudflare D1/Workers) that DevFlare
-and other apps in other repositories all authenticate against. Nx 22 monorepo, pnpm.
+The DevFlare repo is an Nx 22 / pnpm monorepo of four products: **DevFlare**
+(`apps/devflare`, AnalogJS/Angular 21) — a personal **project hub** over the
+owner's Cloudflare account; **DevTools** (`apps/devtools`) — anonymous,
+prerendered **browser utilities** (QR, SEO preview, JSON⇄CSV, …); **DevAuth**
+(`apps/dev-auth`) — a standalone OAuth 2.1 / OIDC **identity provider** (Hono +
+better-auth + D1) that DevFlare and apps in other repositories authenticate
+against, plus its `@dev-auth/*` SDK; and **Cloudflare Connect**
+(`apps/cloudflare-connect`) — a not-yet-implemented placeholder. "DevFlare"
+alone means the hub app, not the repo.
 
 ## Hard rules
 
@@ -29,8 +33,9 @@ dev-auth-elements:build:flow` respectively (pure npm — `@flowview/compiler`;
    no Rust binary).
 2. **Standalone Angular only** — no NgModules. Pages use `export default class`.
 3. **Signals over RxJS** for component state. `inject()` over constructor injection.
-4. **Business logic lives in `libs/shared/core`** (`@org/core`) services; page
-   components stay thin (UI + wiring).
+4. **Business logic lives in services**, not pages: DevFlare's in
+   `libs/shared/core` (`@org/core`), DevTools' colocated in
+   `apps/devtools/src/app/tools/`. Page components stay thin (UI + wiring).
 5. **Server routes**: h3 `defineEventHandler`, auth via `getAppSession` +
    `requireAuth` (`apps/devflare/src/server/lib/session.ts`), SQL via `db.sql`
    tagged templates (never string concatenation).
@@ -43,20 +48,25 @@ dev-auth-elements:build:flow` respectively (pure npm — `@flowview/compiler`;
    (see the "How to update" section inside it).
 9. **dev-auth serves more than DevFlare.** Register a consumer app in
    `OAUTH_CLIENTS`; never add a DevFlare-specific assumption to the provider.
+10. **Keep the products apart.** Browser utilities go in DevTools, never back
+    into DevFlare; DevTools gets no auth, server routes or bindings; apps never
+    import each other (Nx `domain:*` tags). See
+    [spec 018](docs/specs/018-split-devtools-app.md).
 
 ## Quick reference
 
 - Package manager: **pnpm** (never npm/yarn). Node ≥ 22.
-- Run everything: `pnpm dev:all` → app on :4200, auth on :8787.
+- Run everything: `pnpm dev:all` → DevFlare :4200, DevTools :4300, auth :8787.
 - Test user: `test@devflare.com` / `TestPass123` (create with `pnpm seed:user`).
 - TS path aliases: `@org/core`, `@org/ui`, `@dev-auth/angular`, `@org/deploy`,
   `@dev-auth/client`, `@dev-auth/core`, `@dev-auth/elements` (see
   `tsconfig.base.json`).
-- Main app routes: AnalogJS file-based routing from
-  `apps/devflare/src/app/pages/**/*.page.ts`. Use route groups for layouts:
-  `(app).page.ts` wraps authenticated app routes, `tools.page.ts` wraps public
-  tool routes. Put guards/redirects in `routeMeta`; do not recreate a manual
-  `app.routes.ts`.
+- DevFlare routes: AnalogJS file-based routing from
+  `apps/devflare/src/app/pages/**/*.page.ts`. `(app).page.ts` wraps the
+  authenticated app routes. Put guards/redirects in `routeMeta`; do not
+  recreate a manual `app.routes.ts`.
+- DevTools routes: `apps/devtools/src/app/pages/<slug>.page.ts`, registered in
+  `apps/devtools/src/app/tools/tool-registry.ts` (use the `new-tool` skill).
 - Main app API: `apps/devflare/src/server/routes/api/**` (Nitro/h3 file-based).
 - Auth service: `apps/dev-auth/src/index.ts` (Hono on Cloudflare Workers).
 - Branch workflow: `feature/*` branches → PR to `main`. Commit style: `feat: …`, `fix: …`.

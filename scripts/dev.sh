@@ -1,8 +1,8 @@
 #!/bin/bash
-# Launch dev-auth and devflare in the same terminal (cross-platform)
+# Launch dev-auth, devflare and devtools in the same terminal (cross-platform)
 # Uses concurrently for colored, labeled output
 
-echo "🚀 Starting both services..."
+echo "🚀 Starting all three services..."
 echo ""
 
 pnpm dev:all

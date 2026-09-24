@@ -1,0 +1,10 @@
+{
+  "name": "devtools-e2e",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/devtools-e2e/src",
+  "implicitDependencies": ["devtools"],
+  "tags": ["scope:frontend", "domain:devtools"],
+  "// targets": "to see all targets run: nx show project devtools-e2e --web",
+  "targets": {}
+}

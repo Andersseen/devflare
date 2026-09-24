@@ -1,5 +1,9 @@
 # cloudflare-connect
 
+> **Purpose: future delegated Cloudflare authorization broker.** Not
+> implemented. One of four products in this repository; see the root
+> [README](../../README.md).
+
 Architectural placeholder for **Cloudflare Connect** — a future, separately
 deployable service that answers _"which Cloudflare resources has this user
 authorized an application to access?"_. It does not exist yet as a working

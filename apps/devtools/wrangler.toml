@@ -1,0 +1,20 @@
+# DevTools — static assets only.
+#
+# There is no `main`: no Worker script, no bindings, no D1/KV/R2. Every route
+# is prerendered by `pnpm nx build devtools`, and Cloudflare serves the files
+# directly, which does not bill Worker invocations. Keep it that way — a tool
+# that needs a server belongs in DevFlare, not here (see README.md).
+#
+# Not deployed yet: there is no route/custom domain below and no CI job. Adding
+# one is a deployment follow-up (docs/specs/018-split-devtools-app.md), and
+# once it exists set DEVTOOLS_URL on DevFlare so its old /tools links redirect.
+#
+# Preview locally after a build: `pnpm cf:tools dev`.
+
+name = "devtools"
+compatibility_date = "2026-05-23"
+
+[assets]
+directory = "../../dist/apps/devtools/analog/public"
+# Unknown paths get the app shell, whose not-found route sends them home.
+not_found_handling = "single-page-application"

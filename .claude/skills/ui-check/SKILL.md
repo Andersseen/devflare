@@ -21,7 +21,8 @@ guessing from the HTML.
 ## 1. Start the app
 
 ```bash
-pnpm dev:app
+pnpm dev:app      # DevFlare  → :4200
+pnpm dev:tools    # DevTools  → :4300 (separate app, no sign-in)
 ```
 
 Run it in the background. Wait for the port rather than sleeping:
@@ -41,13 +42,14 @@ dev-auth on :8787. Test account: `test@devflare.com` / `TestPass123`
 
 Minimum set — add any route the change actually touched:
 
-| Route                 | What must be true                              |
-| --------------------- | ---------------------------------------------- |
-| `/`                   | Hero + card grid; sidebar shows Platform group |
-| `/tools`              | Tool grid; sidebar switches to the Tools group |
-| `/tools/qr-generator` | Canonical two-column tool page                 |
-| `/settings`           | Volt tabs, form fields                         |
-| `/login`              | Renders standalone, without the app shell      |
+| Route                         | What must be true                             |
+| ----------------------------- | --------------------------------------------- |
+| `/`                           | Projects grid; sidebar shows the Hub group    |
+| `/cloud`                      | Raw infrastructure; sidebar switches to Cloud |
+| DevTools `:4300/`             | Separate app: tool grid by category, no login |
+| DevTools `:4300/qr-generator` | Canonical two-column tool page                |
+| `/settings`                   | Volt tabs, form fields                        |
+| `/login`                      | Renders standalone, without the app shell     |
 
 At each route take a screenshot and **look at it**. Then check the console:
 

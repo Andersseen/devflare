@@ -2,8 +2,9 @@
 
 # DevFlare
 
-**Developer tools, reimagined.**
-A suite of browser-first developer utilities — no uploads, no accounts, no server round-trips.
+**A Cloudflare-focused personal developer platform.**
+One monorepo, four products: a project hub, browser utilities, an identity
+provider, and a future Cloudflare authorization service.
 
 [![CI](https://github.com/Andersseen/devflare/actions/workflows/ci.yml/badge.svg)](https://github.com/Andersseen/devflare/actions/workflows/ci.yml)
 [![Deploy](https://github.com/Andersseen/devflare/actions/workflows/deploy.yml/badge.svg)](https://github.com/Andersseen/devflare/actions/workflows/deploy.yml)
@@ -12,80 +13,103 @@ A suite of browser-first developer utilities — no uploads, no accounts, no ser
 [![AnalogJS](https://img.shields.io/badge/AnalogJS-2.4-ff4081)](https://analogjs.org)
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-f38020?logo=cloudflare&logoColor=white)](https://workers.cloudflare.com)
 
-[**Live app**](https://devflare.andersseen.dev) · [Volt UI](https://volt-ui.andersseen.dev) · [Agent docs](AGENTS.md) · [Deployment](DEPLOY.md)
+[**DevFlare**](https://devflare.andersseen.dev) · [Volt UI](https://volt-ui.andersseen.dev) · [Agent docs](AGENTS.md) · [Deployment](DEPLOY.md)
 
-<img src=".github/assets/screenshot-dashboard-dark.png#gh-dark-mode-only" alt="DevFlare dashboard — navbar with Deployment and DevTools sections, contextual sidebar, and the tool grid" width="100%">
-<img src=".github/assets/screenshot-dashboard-light.png#gh-light-mode-only" alt="DevFlare dashboard — navbar with Deployment and DevTools sections, contextual sidebar, and the tool grid" width="100%">
+<img src=".github/assets/screenshot-devflare-projects.png" alt="DevFlare's Projects page: one card per application with its live URL, Pages and Worker counts, and latest deployment status" width="100%">
 
 </div>
 
 ---
 
-## What this is
+## What is in this repository
 
-DevFlare is a developer-tools platform where **every tool runs entirely in your
-browser**. Image compression, QR generation, background removal and colour
-extraction never leave the tab — there is no upload step and no processing
-server to trust.
+"DevFlare repo" is this monorepo. "DevFlare" on its own means the project-hub
+app. They are not the same thing.
 
-Around those tools sits a small platform layer: authentication, projects and
-deployments, backed by a standalone auth microservice. The whole thing runs on
-Cloudflare Workers.
+| Product                | Path                      | Purpose                                                  | Status                                       |
+| ---------------------- | ------------------------- | -------------------------------------------------------- | -------------------------------------------- |
+| **DevFlare**           | `apps/devflare`           | Personal project hub — projects, where they run, deploys | Live at `devflare.andersseen.dev`            |
+| **DevTools**           | `apps/devtools`           | Browser-first developer utilities, anonymous, static     | Builds and runs locally; not deployed yet    |
+| **DevAuth**            | `apps/dev-auth` + SDK     | OAuth 2.1 / OIDC identity provider + `@dev-auth/*` SDK   | Live at `auth-devflare.andersseen.dev`       |
+| **Cloudflare Connect** | `apps/cloudflare-connect` | Future delegated Cloudflare authorization broker         | Placeholder only — health endpoint, no OAuth |
 
-## Tools
+Each app has its own README defining what it is and is not.
 
-All client-side. Open one and it works offline after first load.
+### DevFlare — personal project hub
 
-| Tool                     | What it does                                             |
-| ------------------------ | -------------------------------------------------------- |
-| **Image Compressor**     | Optimize PNG, JPEG and WEBP locally with Web Workers     |
-| **QR Code Studio**       | Customizable QR codes for URLs, text and Wi-Fi networks  |
-| **SVG Optimizer**        | Minify and clean up SVG markup                           |
-| **SEO Simulator**        | Preview how pages appear on Google, Twitter and Facebook |
-| **Data Converter**       | Convert between JSON and CSV                             |
-| **Screen Recorder**      | Record your screen from the browser, no plugins          |
-| **Social Card Designer** | Generate Open Graph images for social posts              |
-| **Cinematic Palette**    | Extract dominant colours and build palettes              |
-| **Background Remover**   | AI background removal, fully client-side                 |
-| **URL Shortener**        | Short links with custom aliases                          |
+Every project at a glance: its live URL, its repository, the Cloudflare Pages
+projects and Workers behind it, and what deployed last. Open a project for its
+resources, deployment history, redeploy, and links to roll back. A **Cloud**
+section keeps the raw, account-wide view of Workers, Pages, D1, KV and R2.
+Signs in through DevAuth. → [apps/devflare/README.md](apps/devflare/README.md)
 
-<img src=".github/assets/screenshot-qr-generator.png" alt="QR Code Studio: live preview, styling controls and PNG export, with the DevTools sidebar listing every tool" width="100%">
+Not yet: analytics, logs, health checks or alerts.
+
+### DevTools — browser-first utilities
+
+Small tools that run entirely in the tab — no uploads, no account, no server.
+Prerendered to static files, so it costs next to nothing to host.
+→ [apps/devtools/README.md](apps/devtools/README.md)
+
+| Category | Tools                                                                           |
+| -------- | ------------------------------------------------------------------------------- |
+| Web      | SEO Simulator · QR Code Studio · URL Shortener (local drafts only)              |
+| Data     | Data Converter (JSON ⇄ CSV)                                                     |
+| Media    | Screen Recorder · Social Card Designer · Cinematic Palette · Background Remover |
+
+Image compression and SVG optimisation live in Imageryx, a separate project.
+
+<img src=".github/assets/screenshot-devtools.png" alt="DevTools home: tools grouped into Web, Data and Media, with a 'Runs in your browser · no account' badge" width="100%">
+
+### DevAuth — identity provider
+
+A standalone OAuth 2.1 / OIDC provider (Hono + better-auth + D1) that DevFlare
+and applications in other repositories sign in against, plus the published
+`@dev-auth/core`, `@dev-auth/client`, `@dev-auth/angular` and
+`@dev-auth/elements` SDK packages. → [apps/dev-auth/README.md](apps/dev-auth/README.md)
+
+### Cloudflare Connect — not built yet
+
+The boundary for a future service that answers "which Cloudflare resources may
+this app touch?". Today DevFlare holds its own single-tenant Cloudflare
+connection. → [apps/cloudflare-connect/README.md](apps/cloudflare-connect/README.md)
 
 ## Architecture
 
 ```
-Browser ──► devflare (Analog/Nitro Worker)
-              │  /api/auth/*  ── proxy ──────────► dev-auth (Hono Worker)
-              │  /api/v1/*    ── h3 handlers ───► D1  devflare-db
-              │
-              └─ session: server calls dev-auth /get-session with the request cookies
+Browser ──► DevFlare (Analog/Nitro Worker)        devflare.andersseen.dev
+              │  /api/auth/*   ── OIDC ─────────► DevAuth (Hono Worker)
+              │  /api/v1/*     ── h3 handlers ──► D1  devflare-db
+              │  /api/v1/cloud ── Cloudflare API (owner's account)
+              │  /tools/*      ── 302 ──────────► DevTools (when DEVTOOLS_URL is set)
 
-dev-auth ──► D1  dev-auth-db-prod   (users, sessions — Drizzle schema)
-         ──► KV                     (rate limiting)
+Browser ──► DevTools (static assets only — no Worker, no bindings)
+
+DevAuth ──► D1 dev-auth-db-prod (users, sessions, OAuth) · KV (rate limits)
 ```
 
-Two databases on purpose: auth data lives in the auth service, app data lives in
-the app. They share nothing but a `userId` string.
+DevFlare and DevTools never import each other; shared code goes through
+`libs/shared/*`. Full map and dependency rules:
+[docs/ai/ARCHITECTURE.md](docs/ai/ARCHITECTURE.md).
 
-| Environment | App                       | Auth                           |
-| ----------- | ------------------------- | ------------------------------ |
-| Production  | `devflare.andersseen.dev` | `auth-devflare.andersseen.dev` |
-| Local       | `localhost:4200`          | `localhost:8787`               |
+| Environment | DevFlare                  | DevTools         | DevAuth                        |
+| ----------- | ------------------------- | ---------------- | ------------------------------ |
+| Production  | `devflare.andersseen.dev` | — (not deployed) | `auth-devflare.andersseen.dev` |
+| Local       | `localhost:4200`          | `localhost:4300` | `localhost:8787`               |
 
 ## Tech stack
 
 | Layer          | Technology                                                                                    |
 | -------------- | --------------------------------------------------------------------------------------------- |
-| Meta-framework | [AnalogJS 2.4](https://analogjs.org) (Vite + Nitro, SSR)                                      |
+| Meta-framework | [AnalogJS 2.4](https://analogjs.org) (Vite + Nitro; SSR for DevFlare, prerender for DevTools) |
 | UI             | [Angular 21](https://angular.dev) — standalone, zoneless, signals                             |
 | Components     | [Volt UI](https://volt-ui.andersseen.dev) (`@voltui/components`)                              |
-| Styling        | [Tailwind CSS 4](https://tailwindcss.com)                                                     |
+| Styling        | [Tailwind CSS 4](https://tailwindcss.com), shared tokens in `libs/shared/ui`                  |
 | Monorepo       | [Nx 22](https://nx.dev) + [pnpm](https://pnpm.io)                                             |
 | Auth           | [better-auth](https://better-auth.com) on [Hono](https://hono.dev)                            |
 | Data           | [Cloudflare D1](https://developers.cloudflare.com/d1/) via [db0](https://github.com/unjs/db0) |
 | Hosting        | [Cloudflare Workers](https://workers.cloudflare.com) + Static Assets                          |
 | Testing        | [Vitest](https://vitest.dev) + [Playwright](https://playwright.dev)                           |
-| Monitoring     | [Sentry](https://sentry.io)                                                                   |
 
 ## Quick start
 
@@ -95,91 +119,69 @@ the app. They share nothing but a `userId` string.
 pnpm install
 cp .env.sample .env       # fill in your values
 pnpm db:migrate:local     # set up the local D1 databases
-pnpm dev:all              # app on :4200, auth on :8787
+pnpm dev:all              # DevAuth :8787 · DevFlare :4200 · DevTools :4300
 pnpm seed:user            # in another terminal
 ```
 
 Open <http://localhost:4200> and sign in with `test@devflare.com` /
-`TestPass123`.
+`TestPass123`. DevTools at <http://localhost:4300> needs no account and no
+other service.
 
-Local data lives in wrangler's miniflare state under `apps/*/.wrangler/` — both
-databases are real D1, just running locally, so there is no separate dev
-database engine to keep in sync.
-
-<details>
-<summary>Other ways to start the dev servers</summary>
-
-```bash
-./scripts/dev-macos.sh    # macOS: separate Terminal windows
-pnpm dev:auth             # just the auth service  → :8787
-pnpm dev:app              # just the app           → :4200
-```
-
-</details>
-
-<details>
-<summary>Hitting the auth service directly</summary>
-
-```bash
-curl -X POST http://localhost:8787/api/auth/sign-in/email \
-  -H "Content-Type: application/json" \
-  -H "Origin: http://localhost:8787" \
-  -d '{"email":"test@devflare.com","password":"TestPass123"}' \
-  -c cookies.txt
-
-curl http://localhost:8787/api/auth/get-session -b cookies.txt
-```
-
-</details>
+| Script           | Starts                |
+| ---------------- | --------------------- |
+| `pnpm dev:all`   | All three             |
+| `pnpm dev:auth`  | DevAuth only → :8787  |
+| `pnpm dev:app`   | DevFlare only → :4200 |
+| `pnpm dev:tools` | DevTools only → :4300 |
 
 ## Scripts
 
 Everything runs from the repo root — the Cloudflare scripts wrap
 `wrangler --cwd`, so there is never a `cd`.
 
-| Script                  | Description                                   |
-| ----------------------- | --------------------------------------------- |
-| `pnpm dev:all`          | App + auth service together                   |
-| `pnpm check`            | format → lint → typecheck → test → build      |
-| `pnpm db:migrate:local` | Apply D1 migrations locally                   |
-| `pnpm db:migrate`       | Apply D1 migrations to production             |
-| `pnpm deploy:dry`       | Build and validate both Workers, ship nothing |
-| `pnpm deploy:all`       | Deploy auth, then app                         |
-| `pnpm cf:tail:app`      | Live production logs                          |
-| `pnpm cf:app <args>`    | Escape hatch → `wrangler --cwd apps/devflare` |
+| Script                  | Description                                             |
+| ----------------------- | ------------------------------------------------------- |
+| `pnpm check`            | format → lint → typecheck → test → build                |
+| `pnpm build`            | Build DevFlare and DevTools (`build:app`/`build:tools`) |
+| `pnpm db:migrate:local` | Apply D1 migrations locally                             |
+| `pnpm db:migrate`       | Apply D1 migrations to production                       |
+| `pnpm deploy:dry`       | Build and validate DevAuth + DevFlare, ship nothing     |
+| `pnpm deploy:all`       | Deploy DevAuth, then DevFlare                           |
+| `pnpm cf:tail:app`      | Live DevFlare production logs                           |
+| `pnpm cf:app <args>`    | Escape hatch → `wrangler --cwd apps/devflare`           |
+| `pnpm cf:tools <args>`  | Escape hatch → `wrangler --cwd apps/devtools`           |
 
-Run `pnpm check` before opening a PR — CI runs exactly that, plus E2E.
+Run `pnpm check` before opening a PR — CI runs the same gates plus E2E.
 
 ## Repository layout
 
 ```
 devflare/
 ├── apps/
-│   ├── devflare/           # Analog app + Nitro server routes → Cloudflare Worker
-│   │   ├── src/app/
-│   │   │   ├── pages/      # Route components (*.page.ts, default export)
-│   │   │   └── components/ # Shell: navbar, sidebar, shell-navigation, tool-grid
-│   │   ├── src/server/     # h3 API routes, D1 access, migrations
-│   │   └── wrangler.toml
-│   ├── dev-auth/           # Auth microservice: Hono + better-auth + D1
-│   │   ├── src/pages/      # Auth UI, compiled from .flow templates
-│   │   └── wrangler.toml
-│   └── devflare-e2e/       # Playwright E2E
-├── libs/shared/
-│   ├── core/               # @org/core — all business logic lives here
-│   ├── dev-auth-angular/   # @dev-auth/angular — Angular session adapter + guards
-│   ├── dev-auth-core/      # @dev-auth/core — framework-agnostic OAuth/OIDC client
-│   ├── dev-auth-elements/  # @dev-auth/elements — <dev-auth-sign-in>/<dev-auth-user-button>
-│   └── ui/                 # @org/ui
-└── docs/ai/                # Architecture, conventions, workflows, state
+│   ├── devflare/            # Project hub: Analog app + Nitro server → Worker
+│   ├── devflare-e2e/        # Playwright E2E for DevFlare
+│   ├── devtools/            # Browser utilities: Analog, prerendered → static assets
+│   ├── devtools-e2e/        # Playwright E2E for DevTools
+│   ├── dev-auth/            # Identity provider: Hono + better-auth + D1
+│   └── cloudflare-connect/  # Placeholder for the Cloudflare authorization broker
+├── libs/
+│   ├── shared/core/         # @org/core — DevFlare platform services
+│   ├── shared/ui/           # @org/ui — shared primitives + design tokens (theme.css)
+│   ├── shared/dev-auth-*/   # @dev-auth/* — DevAuth consumer SDK (published to npm)
+│   └── deploy/              # @org/deploy — DevFlare's Pages direct-upload helpers
+└── docs/
+    ├── ai/                  # Architecture, conventions, workflows, state
+    └── specs/               # Spec-driven development records
 ```
 
 ## Conventions
 
 - **Standalone Angular only** — no NgModules. Pages use `export default class`.
 - **Signals over RxJS** for component state; `inject()` over constructor injection.
-- **Business logic lives in `@org/core`** — page components stay thin.
-- **Tools run in the browser.** A tool never gets a server route.
+- **Business logic out of pages** — DevFlare's in `@org/core`, DevTools' in
+  colocated services under `apps/devtools/src/app/tools`.
+- **Tools run in the browser.** A DevTools utility never gets a server route.
+- **Apps never import apps.** Enforced by Nx `domain:*` tags.
 - Server routes use h3 `defineEventHandler`, with `db.sql` tagged templates —
   never string-concatenated SQL.
 
@@ -187,7 +189,8 @@ Full detail in [AGENTS.md](AGENTS.md) and [docs/ai/CONVENTIONS.md](docs/ai/CONVE
 
 ## Deployment
 
-Push to `main` deploys both Workers via GitHub Actions. Manual:
+Push to `main` deploys DevAuth and DevFlare via GitHub Actions. DevTools has
+build and preview configuration but no domain or deploy job yet. Manual:
 
 ```bash
 pnpm deploy:dry     # validate first

@@ -21,7 +21,9 @@ import { DeploymentStatus } from './deployment-status';
 
 /**
  * What is actually running on the account: every Worker and every Pages
- * project, newest activity first.
+ * project, newest activity first. This is the raw, account-wide view; the
+ * Projects page shows the same resources organised by application, and is
+ * where DevFlare starts.
  *
  * Read-only, and deliberately not a mirror — the server holds a 60s memo and
  * Cloudflare stays the source of truth, so Reload means reload.
@@ -47,10 +49,12 @@ import { DeploymentStatus } from './deployment-status';
           <h1 class="text-3xl font-bold tracking-tight">Cloud</h1>
           <p class="text-muted-foreground mt-1">
             @if (connectedAccount(); as account) {
-              Everything you have deployed on {{ account }}
+              All infrastructure on {{ account }}, unsorted.
             } @else {
-              Everything you have deployed on Cloudflare
+              All infrastructure on your Cloudflare account, unsorted.
             }
+            <a routerLink="/" class="text-primary hover:underline">Projects</a>
+            groups it by application.
           </p>
         </div>
         <div class="flex items-center gap-2">

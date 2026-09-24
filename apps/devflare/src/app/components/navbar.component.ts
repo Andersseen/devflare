@@ -3,7 +3,11 @@ import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { VoltSidebarService } from '@voltui/components';
 import { DevAuth } from '@dev-auth/angular';
-import { injectActiveSection, SHELL_SECTIONS } from './shell-navigation';
+import {
+  DEVTOOLS_LINK,
+  injectActiveSection,
+  SHELL_SECTIONS,
+} from './shell-navigation';
 
 @Component({
   selector: 'app-navbar',
@@ -59,6 +63,19 @@ import { injectActiveSection, SHELL_SECTIONS } from './shell-navigation';
       </nav>
 
       <div class="ml-auto flex items-center gap-2">
+        <!-- The one product-level link to the separate DevTools app. Its
+             individual tools are deliberately not listed anywhere in DevFlare. -->
+        @if (devtoolsLink) {
+          <a
+            [href]="devtoolsLink"
+            target="_blank"
+            rel="noreferrer"
+            class="hidden h-8 items-center gap-1.5 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:inline-flex"
+          >
+            DevTools
+            <lucide-icon name="external-link" class="h-3.5 w-3.5" />
+          </a>
+        }
         <dev-auth-user-button
           [style.--dev-auth-surface]="'var(--popover)'"
           [style.--dev-auth-foreground]="'var(--popover-foreground)'"
@@ -87,4 +104,5 @@ export class NavbarComponent {
   protected readonly auth = inject(DevAuth);
   protected readonly sections = SHELL_SECTIONS;
   protected readonly activeSection = injectActiveSection();
+  protected readonly devtoolsLink = DEVTOOLS_LINK;
 }

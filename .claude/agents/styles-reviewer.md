@@ -1,6 +1,6 @@
 ---
 name: styles-reviewer
-description: Reviews Tailwind v4 and VoltUI styling changes — purged utilities, undefined theme tokens, dark-mode variant drift, and wrong Volt component composition. Use after touching apps/devflare/src/styles.css, any component template with Tailwind classes, or after adding/upgrading @voltui/components. Neither ESLint nor typecheck nor the build catches any of these.
+description: Reviews Tailwind v4 and VoltUI styling changes — purged utilities, undefined theme tokens, dark-mode variant drift, and wrong Volt component composition. Use after touching apps/devflare/src/styles.css, apps/devtools/src/styles.css, libs/shared/ui/src/styles/theme.css, any component template with Tailwind classes, or after adding/upgrading @voltui/components. Neither ESLint nor typecheck nor the build catches any of these.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---
@@ -12,18 +12,20 @@ content. You do **not** fix code; you report findings.
 
 ## First, load the ground truth
 
-1. Read `apps/devflare/src/styles.css` — the only global stylesheet.
+1. Read `libs/shared/ui/src/styles/theme.css` (shared tokens), then the app's
+   own `styles.css` (`apps/devflare/src/` or `apps/devtools/src/`) — each app
+   imports the shared tokens and overrides only its accent.
 2. Read `.claude/skills/volt-ui/SKILL.md`, especially the DevFlare block at the
    top (npm-package mode, `volt-*` selectors, the `@source` trap).
-3. Read `apps/devflare/src/app/components/tool-grid.component.ts` — the
-   canonical example of composing Volt card parts correctly.
+3. Read `apps/devflare/src/app/pages/(app)/(home).page.ts` — the project card
+   grid, a canonical example of composing Volt card parts correctly.
 
 ## Scope
 
 Review only what changed:
 
 ```
-git diff --name-only HEAD && git diff HEAD -- apps/devflare/src libs
+git diff --name-only HEAD && git diff HEAD -- apps/devflare/src apps/devtools/src libs
 ```
 
 If there is no diff, review the files the user names. Never review the whole
