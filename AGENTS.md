@@ -69,4 +69,7 @@ dev-auth-elements:build:flow` respectively (pure npm — `@flowview/compiler`;
   `apps/devtools/src/app/tools/tool-registry.ts` (use the `new-tool` skill).
 - Main app API: `apps/devflare/src/server/routes/api/**` (Nitro/h3 file-based).
 - Auth service: `apps/dev-auth/src/index.ts` (Hono on Cloudflare Workers).
+- Generic agent skills (Claude + Codex) are installed by Agentyx from
+  `.agentyx.json` — don't hand-edit them; see
+  [WORKFLOWS › Agent tooling](docs/ai/WORKFLOWS.md#agent-tooling-agentyx).
 - Branch workflow: `feature/*` branches → PR to `main`. Commit style: `feat: …`, `fix: …`.

@@ -726,6 +726,14 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
 
 ## Session log
 
+- **2026-09-24 — Agentyx integration (Claude + Codex skills).** On `main`,
+  uncommitted. `.agentyx.json` + `pnpm dlx @agentyx/cli install`: 37 skills into
+  `.claude/skills` and `.agents/skills`, context7 added to
+  `.codex/config.toml`; `.mcp.json`/`.claude/settings.json` reverted (the
+  bootstrap hook resolves the wrong npm package). `.agentyx.lock.json` added to
+  `.prettierignore`. Verified: `agentyx doctor` (77 managed files, 2 expected
+  pending updates), `pnpm format:check` green. Details in WORKFLOWS › Agent
+  tooling.
 - **2026-09-24 — Spec 019: project resources (explicit ownership).** Branch
   `feature/project-resources` from `900ca8c`. Verified: `pnpm check` green
   (format, lint 13 projects, typecheck 10, test 10, build DevFlare + DevTools);

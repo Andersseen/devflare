@@ -96,6 +96,28 @@ pnpm cf:tail:app      # live logs
 output. Full production setup (resources, secrets, domains): see
 [/DEPLOY.md](../../DEPLOY.md).
 
+## Agent tooling (Agentyx)
+
+Generic engineering skills for Claude Code and Codex come from the owner's
+[Agentyx](https://github.com/Andersseen/agentyx) CLI, configured in
+`.agentyx.json` (packs: technical, typescript, angular, efficiency, agentic,
+testing, security, git, data; `rtk` enabled; targets `claude`, `codex`).
+
+- Installed output: `.claude/skills/<skill>/` (Claude) and `.agents/skills/`
+  (Codex), tracked by `.agentyx.lock.json`. **Never hand-edit a managed skill**
+  — change `.agentyx.json`, then `pnpm dlx @agentyx/cli install --prune`.
+- Repo-specific skills (`new-tool`, `new-migration`, `deploy-preflight`,
+  `ui-check`, `wrap-session`, …) are NOT managed by Agentyx; they and
+  `AGENTS.md` win over any generic Agentyx skill when they disagree.
+- Check health with `pnpm dlx @agentyx/cli doctor`.
+- The `session-doctor-bootstrap` hook is deliberately **not** kept in
+  `.claude/settings.json`: it runs `npx --no-install agentyx`, which needs
+  `@agentyx/cli` as a devDependency (the bare `agentyx` npm name is an unrelated
+  package). `doctor` therefore reports "2 to update" — expected. An `install`
+  re-adds the hook and reorders `.mcp.json`; revert those two files after it.
+- The Agentyx `code-review` skill shares its name with Claude Code's built-in
+  `/code-review`.
+
 ## Troubleshooting quick hits
 
 | Symptom                                | Likely cause / fix                                                                                                                                                                                                               |
