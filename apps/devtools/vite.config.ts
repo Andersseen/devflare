@@ -35,10 +35,13 @@ function failRouteWithoutHeading(route: PrerenderRoute): void {
 }
 
 /**
- * DevTools ships as static files only: every route is prerendered at build time
- * and there is no server bundle, no API and no binding. That is what keeps it
- * free to host — and prerendering doubles as the SSR safety net, because a tool
- * that touches `window`/`document` during render fails this build.
+ * DevTools is a Cloudflare Worker with Static Assets (spec 020). Every page —
+ * local tools and the shells of the connected ones — is still prerendered at
+ * build time and served from Static Assets before the Worker runs, so a local
+ * tool costs no Worker invocation. The Worker only answers `/api/*`, the
+ * short-link redirect and unknown paths. Prerendering doubles as the SSR
+ * safety net: a tool that touches `window`/`document` during render fails
+ * this build.
  */
 export default defineConfig(() => {
   return {
@@ -82,12 +85,18 @@ export default defineConfig(() => {
     },
     plugins: [
       analog({
-        static: true,
         prerender: {
           routes: ['/', ...TOOLS.map((tool) => `/${tool.path}`)],
           postRenderingHooks: [failRouteWithoutHeading],
         },
         nitro: {
+          // Same deploy target as DevFlare: a Worker with Static Assets.
+          preset: 'cloudflare-module',
+          // REQUIRED for local dev — without it Nitro filters out the
+          // `cloudflare-dev` preset, the wrangler getPlatformProxy() plugin
+          // never loads and every D1 query fails with "binding `DB` not
+          // found". Same reasoning as apps/devflare/vite.config.ts.
+          compatibilityDate: '2026-05-23',
           // Turns a route marked by failRouteWithoutHeading into a failed
           // build rather than a logged warning.
           prerender: {
@@ -100,6 +109,12 @@ export default defineConfig(() => {
             // worker, which desyncs Rollup's CommonJS transform. See
             // shims/papaparse.server.mjs.
             papaparse: resolve(__dirname, 'shims/papaparse.server.mjs'),
+            // Nitro's server bundle does not go through nxViteTsPaths(), so
+            // the one SDK package the server imports needs an explicit alias.
+            '@dev-auth/core': resolve(
+              __dirname,
+              '../../libs/shared/dev-auth-core/src/index.ts',
+            ),
           },
         },
       }),

@@ -60,6 +60,21 @@
 - Errors: `throw createError({ statusCode, statusMessage })`.
 - New API routes go under `src/server/routes/api/v1/…` (file path = URL path).
 
+## Server code (apps/devtools/src/server)
+
+Same h3 + `db.sql` rules, with DevTools' own guards (spec 020):
+
+- Connected endpoints: `const user = await requireAllowedUser(event)` from
+  `lib/http.ts` — 401 when anonymous, 403 when not in `DEVTOOLS_ALLOWED_USERS`.
+  Signed in is never enough on its own.
+- Mutations first call `assertSameOriginJson(event)` (CSRF) and
+  `enforceRateLimit(event, '<LIMITER>', user.id)`.
+- Decisions live in h3-free modules under `lib/` (tested over the real
+  migrations with `db/sqlite-test-db.ts`); routes stay thin adapters.
+- Anything that fetches a user-supplied URL goes through
+  `lib/domain-inspector/probe.ts` — never a bare `fetch(userInput)`.
+- Local tools never call the server. If a tool can run in the browser, it does.
+
 ## dev-auth (apps/dev-auth)
 
 - Page HTML lives in `.flow` templates; the compiled `.flow.js` is **generated —
@@ -109,7 +124,11 @@
 
 - NgModules, constructor injection, `any` types to silence errors.
 - New global state libraries (NgRx etc.) — signals + services suffice.
-- Server-side calls to third-party APIs from tool pages (tools are client-side).
-- Tool code in DevFlare or `@org/core`, or DevAuth/D1/KV/R2 in DevTools.
+- Server-side calls to third-party APIs from local tool pages. (Connected
+  DevTools tools may fetch server side, through the SSRF-safe probe only.)
+- Tool code in DevFlare or `@org/core`.
+- DevAuth, D1 or any server call from a **local** DevTools tool, or from the
+  DevTools shell (only `connected` tools may use them).
+- Generic filler tools in DevTools (Base64, UUID, lorem ipsum, hash, regex…).
 - Hand-written SQL string concatenation.
 - Editing generated `.flow.js`, `dist/`, or `.nx/` content.

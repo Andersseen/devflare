@@ -6,8 +6,9 @@ disable-model-invocation: true
 
 # New tool
 
-Adds a client-side tool to **DevTools** (`apps/devtools`) — the standalone,
-anonymous, static app. DevFlare (`apps/devflare`) is the project hub and must
+Adds a **local** (client-side) tool to **DevTools** (`apps/devtools`).
+Connected tools — ones that genuinely need DevTools' server — are rare and
+are designed by hand (spec 020), not scaffolded. DevFlare (`apps/devflare`) is the project hub and must
 not grow tools again (docs/specs/018-split-devtools-app.md).
 
 **3 new files** (service, spec, page) plus **2 registration edits** (registry,
@@ -15,7 +16,8 @@ icon). The registrations are the ones that get forgotten — and
 `tool-registry.spec.ts` fails the test run if a page and the registry disagree.
 
 Before adding one, check the brief still wants it: DevTools deliberately does
-not clone generic utilities (JWT decoders, Base64, cron, regex, hashes…), and
+not clone generic utilities (Base64, UUID, cron, regex, hashes, lorem ipsum…;
+JWT decoding lives inside the OAuth / OIDC Inspector), and
 image-asset tools belong to Imageryx, not here.
 
 ## Arguments
@@ -30,7 +32,8 @@ Derive:
 - `ClassName` — PascalCase service name, named after the tool, **no `Service`
   suffix** (`JsonFormatter` — match `QrGenerator`)
 - `Title` — display name for the UI (`JSON Formatter`)
-- `category` — one of `web`, `data`, `media` (see `TOOL_CATEGORIES`)
+- `category` — one of `web`, `security`, `cloud`, `data`, `media` (see
+  `TOOL_CATEGORIES`); `mode` is always `'local'` for a scaffolded tool
 - `icon` — a valid [lucide](https://lucide.dev/icons) icon name (`braces`)
 
 If any of these is unclear, ask once, then build everything without stopping again.
@@ -57,8 +60,10 @@ the tool actually needs.
 Read `docs/ai/CONVENTIONS.md` and `apps/devtools/README.md` first. In short:
 standalone components, signals only, `inject()` as `#private` fields,
 `export default class` for pages, inline Tailwind template. All tool logic
-runs **in the browser**: no server route, no API call to a DevFlare backend, no
-DevAuth, no D1/KV/R2. Every page must have an `<h1>` and must not touch
+runs **in the browser**: no server route, no request to DevTools' API, no
+DevAuth, no D1/KV/R2 — and nothing from `src/app/connected/`. Treat pasted
+input as sensitive: no logging, and use `<app-secret-notice>` when users are
+likely to paste tokens. Every page must have an `<h1>` and must not touch
 `window`/`document`/`navigator` during render — the build prerenders every
 tool and fails if a page throws.
 
@@ -92,7 +97,8 @@ routes prerendered by `vite.config.ts`:
   path: '<slug>',
   title: '<Title>',
   description: '<one sentence, ends with a period>',
-  category: '<web|data|media>',
+  category: '<web|security|cloud|data|media>',
+  mode: 'local',
   icon: '<icon>',
   colorClass: 'text-<color>-500',
   bgClass: 'bg-<color>-500/10',

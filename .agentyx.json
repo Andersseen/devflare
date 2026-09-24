@@ -1,0 +1,16 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Andersseen/agentyx/main/packages/core/schema/agentyx.schema.json",
+  "packs": [
+    "technical",
+    "typescript",
+    "angular",
+    "efficiency",
+    "agentic",
+    "testing",
+    "security",
+    "git",
+    "data"
+  ],
+  "enable": ["rtk"],
+  "targets": ["claude", "codex"]
+}

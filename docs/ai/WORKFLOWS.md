@@ -12,7 +12,8 @@ cp .env.sample .env        # fill in at least BETTER_AUTH_SECRET
 ```bash
 pnpm dev:all      # auth (:8787) + DevFlare (:4200) + DevTools (:4300)
 pnpm dev:app      # DevFlare only  → http://localhost:4200
-pnpm dev:tools    # DevTools only  → http://localhost:4300 (needs nothing else)
+pnpm dev:tools    # DevTools only  → http://localhost:4300 (local tools need nothing
+                  # else; connected tools need dev:auth + db:migrate:tools:local)
 pnpm dev:auth     # auth only      → http://localhost:8787
 pnpm seed:user    # create test user (auth service must be running)
 ```
@@ -54,7 +55,9 @@ Scoped/faster variants: `nx test devflare`, `nx test devtools`, `nx lint dev-aut
 3. App API change → `curl http://localhost:4200/api/v1/projects -b /tmp/c.txt`
    (cookies from step 2 work through the proxy).
 4. E2E: `nx e2e devflare-e2e` (starts DevFlare itself; the sign-in tests stop at
-   the provider boundary) and `nx e2e devtools-e2e` (starts DevTools; nothing else).
+   the provider boundary) and `nx e2e devtools-e2e` (starts DevTools and
+   migrates its local D1). `DEVTOOLS_E2E_AUTH=1 nx e2e devtools-e2e` adds the
+   full DevAuth round trip — needs `pnpm dev:auth` + `pnpm seed:user`.
 
 ## Database
 
@@ -69,6 +72,10 @@ pnpm db:migrate          # both, production, remote
 - **App DB** (`devflare-db`): migrations in
   `apps/devflare/src/server/db/migrations/`.
 - **Auth DB** (`dev-auth-db*`): migrations in `apps/dev-auth/src/db/migrations/`.
+- **DevTools DB** (`devtools-db`): migrations in
+  `apps/devtools/src/server/db/migrations/`. `pnpm db:migrate:tools:local`
+  locally; `pnpm db:migrate:tools` is production and deliberately **not** part
+  of `db:migrate` until DevTools is deployed.
 
 Migration commands take the **binding** (`DB`), not a database name — under
 `--env production` the bound database is `dev-auth-db-prod`, so a bare
@@ -95,6 +102,28 @@ pnpm cf:tail:app      # live logs
 `main` and `[assets]` at `dist/`, so deploying without a fresh build ships stale
 output. Full production setup (resources, secrets, domains): see
 [/DEPLOY.md](../../DEPLOY.md).
+
+## Agent tooling (Agentyx)
+
+Generic engineering skills for Claude Code and Codex come from the owner's
+[Agentyx](https://github.com/Andersseen/agentyx) CLI, configured in
+`.agentyx.json` (packs: technical, typescript, angular, efficiency, agentic,
+testing, security, git, data; `rtk` enabled; targets `claude`, `codex`).
+
+- Installed output: `.claude/skills/<skill>/` (Claude) and `.agents/skills/`
+  (Codex), tracked by `.agentyx.lock.json`. **Never hand-edit a managed skill**
+  — change `.agentyx.json`, then `pnpm dlx @agentyx/cli install --prune`.
+- Repo-specific skills (`new-tool`, `new-migration`, `deploy-preflight`,
+  `ui-check`, `wrap-session`, …) are NOT managed by Agentyx; they and
+  `AGENTS.md` win over any generic Agentyx skill when they disagree.
+- Check health with `pnpm dlx @agentyx/cli doctor`.
+- The `session-doctor-bootstrap` hook is deliberately **not** kept in
+  `.claude/settings.json`: it runs `npx --no-install agentyx`, which needs
+  `@agentyx/cli` as a devDependency (the bare `agentyx` npm name is an unrelated
+  package). `doctor` therefore reports "2 to update" — expected. An `install`
+  re-adds the hook and reorders `.mcp.json`; revert those two files after it.
+- The Agentyx `code-review` skill shares its name with Claude Code's built-in
+  `/code-review`.
 
 ## Troubleshooting quick hits
 

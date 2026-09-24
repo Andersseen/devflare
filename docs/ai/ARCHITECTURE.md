@@ -1,6 +1,6 @@
 # ARCHITECTURE — System map
 
-> Verified against the code on 2026-09-24. If something here contradicts the code,
+> Verified against the code on 2026-09-24 (after spec 020). If something here contradicts the code,
 > the code wins — and update this file.
 
 ## Product map
@@ -17,8 +17,8 @@ DEVFLARE REPO
 │       profile, integrations and (admin-only) DevAuth administration.
 │
 ├── DevTools app        apps/devtools            domain:devtools
-│   └── Generic browser utilities. Anonymous, prerendered, static assets
-│       only — no Worker script, no bindings, no DevAuth.
+│   └── Curated developer tools. Local tools: anonymous, in-browser.
+│       Connected tools: Worker + own D1, DevAuth sign-in (spec 020).
 │
 ├── DevAuth             apps/dev-auth            domain:dev-auth
 │   └── Identity (OAuth 2.1 / OIDC)   + SDK libs  domain:dev-auth-sdk
@@ -35,9 +35,9 @@ design tokens in src/styles/theme.css)    domain:shared
 - **DevTools must not depend on DevFlare application internals**, and
   **DevFlare must not depend on DevTools application internals.** Nx already
   forbids importing an app project; the `domain:*` rules add that
-  `domain:devtools` may depend only on `domain:devtools` + `domain:shared`
-  (so not `@org/core`, not the DevAuth SDK), and `domain:devflare` has no
-  `domain:devtools` in its allow-list.
+  `domain:devtools` may depend only on `domain:devtools`, `domain:dev-auth-sdk`
+  and `domain:shared` (so not `@org/core`, not the DevAuth app), and
+  `domain:devflare` has no `domain:devtools` in its allow-list.
 - Reusable code shared by both goes into a `domain:shared` library. Today that
   is only the design tokens (`libs/shared/ui/src/styles/theme.css`); each app
   keeps its own shell/navigation so the two can evolve independently.
@@ -62,7 +62,12 @@ Browser ──► devflare (Analog/Nitro Worker, :4200 dev)
               │        this is a Cloudflare Connect migration candidate, not identity)
               │  /tools, /tools/* ── 302 to DevTools when DEVTOOLS_URL is set, else /
 
-devtools (static assets, :4300 dev) — prerendered HTML + JS, no server at all
+devtools (Worker + Static Assets, :4300 dev) — every page prerendered and served
+         from Assets before the Worker runs; the Worker answers only:
+              │  /api/auth/*  ── OIDC as its OWN DevAuth client (devtools[-dev])
+              │  /api/v1/*    ── connected tools (short links, domain inspector)
+              │                  ──► Cloudflare D1 `devtools-db` · Rate Limiting bindings
+              │  short-link host (SHORT_LINK_BASE_URL) ── 302 to the destination
 
 dev-auth (Hono Worker, :8787) — OAuth 2.1 / OIDC identity provider
          ──► Cloudflare D1 (users/sessions/issued tokens/JWKS, Drizzle schema)
@@ -123,15 +128,19 @@ dimension): `dev-auth` cannot import `dev-auth-sdk`, `devflare`, or
 `cloudflare-connect`; `dev-auth-sdk` cannot import `devflare` or
 `cloudflare-connect`; `cloudflare-connect` cannot import `dev-auth` or
 `devflare`. `devflare` (or any future consumer app) may depend on both SDKs
-— composition belongs to the consumer, not to either service. `devtools` may
-depend on neither: it is anonymous by design and only reaches `domain:shared`.
+— composition belongs to the consumer, not to either service. `devtools` is a
+consumer too (spec 020), for its connected tools only: `@dev-auth/core` on the
+server, `@dev-auth/angular` + `@dev-auth/elements` in the connected pages. Its
+local tools never load them.
 
 `apps/devflare/src/server/lib/cloudflare-{oauth,oauth-client,connection}.ts`
 are today's working (DevFlare-only, single-tenant) Cloudflare OAuth code —
 **not yet Cloudflare Connect**. Spec 013 has the file-by-file migration map
 for what moves there eventually and what needs redesigning first.
 
-Two databases, on purpose: **auth data** lives in dev-auth's D1
+Three databases, on purpose — DevAuth → identity, DevFlare → projects and
+infrastructure metadata, DevTools → its own session and short links
+(`devtools-db`). **Auth data** lives in dev-auth's D1
 (`dev-auth-db-prod`); **app data** (projects, deployments) plus DevFlare's own
 `app_user`/`app_session` live in the app's own D1 (`devflare-db`). They only share
 the user id — which is the `sub` claim dev-auth issues, so rows written before the
@@ -222,25 +231,48 @@ dogfoods instead. See
 - **UI stack**: `@voltui/components` (`<volt-card>`, `<volt-button>`, `<volt-tabs>`,
   … imported as standalone classes), Tailwind CSS 4, `lucide-angular` icons.
 
-## apps/devtools (browser utilities)
+## apps/devtools (curated tools: local + connected)
 
-- **Build**: Analog with `static: true`. `vite.config.ts` prerenders `/` plus
-  every entry of `src/app/tools/tool-registry.ts`, and a post-render hook fails
-  the build if a prerendered route has no `<h1>` (i.e. the page threw during
-  render — Angular otherwise logs the error and ships a 200). Output:
-  `dist/apps/devtools/analog/public`, served by `wrangler.toml` as assets only.
-- **Routing**: flat file-based routes, one `pages/<slug>.page.ts` per tool
-  (`/qr-generator`, `/data-converter`, …), `(home).page.ts`, not-found → `/`.
-- **Shell**: `components/shell.component.ts` rendered by `AppComponent` —
-  header, tool strip on tool pages, footer. No sidebar, no auth.
+- **Build**: Analog + Nitro `cloudflare-module` (spec 020; was `static: true`).
+  `vite.config.ts` still prerenders `/` plus every entry of
+  `src/app/tools/tool-registry.ts` — connected pages too, as shells — and a
+  post-render hook fails the build if a prerendered route has no `<h1>`.
+  Output: `dist/apps/devtools/analog/{public,server}`; `wrangler.toml` serves
+  `public` as Static Assets (matched before the Worker) and the server bundle
+  as the Worker. No `not_found_handling`, or the redirect would never run.
+- **Modes**: every registry entry is `mode: 'local' | 'connected'`, independent
+  of `category` (`web | security | cloud | data | media`). Local pages make no
+  request to DevTools' server; `src/app/connected/` (DevAuth wiring, API
+  client) is imported only by connected pages.
+- **Routing**: flat file-based routes, one `pages/<slug>.page.ts` per tool,
+  `(home).page.ts`, not-found → `/`, `url-shortener` → `/short-links`.
+- **Shell**: `components/shell.component.ts` — header, tool strip, footer. No
+  auth UI; `components/connected-gate.component.ts` wraps connected tools
+  (sign-in / access denied / tool).
 - **Logic**: colocated services in `src/app/tools/*.service.ts` with specs.
+  `security-headers.analyzer.ts` is plain TS shared with the server.
+- **Server** (`src/server/`, h3, file-based):
+  - `lib/oidc.ts`, `lib/session-store.ts` + `lib/session.ts` — DevTools' own
+    `dt_session` (hashed in D1), created only by `api/auth/callback`.
+  - `lib/authorization.ts` — `DEVTOOLS_ALLOWED_USERS` allowlist (ids/emails,
+    empty = nobody); `lib/http.ts` — `requireAllowedUser` (401/403),
+    same-origin + JSON CSRF check, rate limiting via `[[ratelimits]]`.
+  - `lib/short-links/` — validation, owner-scoped store, redirect decision;
+    `middleware/short-link-redirect.ts` answers the `SHORT_LINK_BASE_URL`
+    host/prefix before the renderer (302 / 410 / 404, `no-store`).
+  - `lib/domain-inspector/` — target rules, public-IP ranges, DoH, and a probe
+    that re-validates and re-resolves every redirect hop (SSRF).
+  - Everything under `lib/` is h3-free and unit-tested; SQL runs against the
+    real migrations on `node:sqlite` (`db/sqlite-test-db.ts`).
+- **DB**: `devtools-db` (binding `DB`), migrations in `src/server/db/migrations/`:
+  `app_user`, `app_session`, `short_link`.
 - **Browser-only deps and prerender**: `colorthief` resolves to its ESM build
-  everywhere (its Node `main` cannot be constructed); `papaparse` is stubbed
-  for the prerender bundle only (`shims/papaparse.server.mjs`).
+  everywhere; `papaparse` is stubbed for the server bundle
+  (`shims/papaparse.server.mjs`).
 - **Route mapping from DevFlare**: `/tools` → `/`; `/tools/<slug>` → `/<slug>`;
   the old nav aliases `/tools/converter`, `/tools/recorder`,
   `/tools/shortener` → `/data-converter`, `/screen-recorder`, `/url-shortener`
-  (those three links were broken in DevFlare — there were no such pages).
+  (which now forwards to `/short-links`).
 
 ## apps/dev-auth (identity provider)
 
@@ -291,5 +323,6 @@ dogfoods instead. See
   `apps/devflare-e2e`, `apps/devtools-e2e` and `apps/dev-auth/e2e`.
 - **Deploy targets**: dev-auth → Cloudflare Worker (`auth-devflare.andersseen.dev`);
   devflare → Cloudflare Worker + Static Assets (`devflare.andersseen.dev`);
-  devtools → static assets only, not deployed yet (no domain, no CI job).
+  devtools → Cloudflare Worker + Static Assets, **not deployed yet** (no
+  domain, no CI deploy job; manual steps in DEPLOY.md › DevTools).
   Full guide: [/DEPLOY.md](../../DEPLOY.md).

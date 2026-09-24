@@ -3,6 +3,7 @@ import {
   createAuthController,
   signInUrl,
   AuthControllerRequestError,
+  safeReturnTo,
 } from './auth-controller';
 
 const AUTH_USER = {
@@ -255,5 +256,23 @@ describe('createAuthController', () => {
 
     expect(error).toBeInstanceOf(Error);
     expect(error.code).toBe('x');
+  });
+});
+
+describe('safeReturnTo', () => {
+  it('keeps same-origin paths', () => {
+    expect(safeReturnTo(' /short-links?tab=1 ')).toBe('/short-links?tab=1');
+  });
+
+  it.each([
+    'https://attacker.test/',
+    '//attacker.test/',
+    '/\\attacker.test/',
+    '/\t/attacker.test/',
+    '/\n/attacker.test/',
+    'relative',
+    42,
+  ])('collapses %j to the root', (value) => {
+    expect(safeReturnTo(value)).toBe('/');
   });
 });

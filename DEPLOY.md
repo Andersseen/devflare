@@ -1,6 +1,8 @@
 # Production Deployment Guide
 
-Everything runs on Cloudflare. Two Workers, two D1 databases.
+Everything runs on Cloudflare. Two deployed Workers, two D1 databases — plus
+DevTools, a third Worker that is configured but not deployed yet (see
+[DevTools](#devtools)).
 
 ## Architecture
 
@@ -258,6 +260,48 @@ curl -H "Authorization: Bearer $ADMIN_SECRET" \
 - [ ] `ENVIRONMENT=production` is set
 - [ ] `ADMIN_SECRET` is set for protected endpoints
 - [ ] GitHub secrets are set (if using OAuth)
+
+## DevTools
+
+DevTools (`apps/devtools`, spec 020) is a Worker with Static Assets: every
+page is prerendered and served from Assets; the Worker handles `/api/*`, the
+short-link redirect and unknown paths. **It is not deployed yet, and no
+workflow deploys it** — every step below is manual and deliberate. Nothing
+here creates DNS records until step 6.
+
+1. **D1** — `pnpm cf:tools d1 create devtools-db`, then paste the printed
+   id into `[[env.production.d1_databases]]` in `apps/devtools/wrangler.toml`
+   (it is a placeholder today). This database is DevTools' own; never point
+   it at `devflare-db` or DevAuth's database.
+2. **DevAuth client** — `devtools` is already listed in DevAuth's production
+   `OAUTH_CLIENTS` with the exact redirect URI
+   `https://devtools.andersseen.dev/api/auth/callback`. Add its secret to
+   DevAuth's `OAUTH_CLIENT_SECRETS` (the JSON object gains a `"devtools"`
+   key; re-put the whole value) and redeploy DevAuth. Until then DevAuth
+   drops only that entry, with a logged error; other clients are unaffected.
+3. **DevTools secret** — `pnpm cf:tools secret put DEV_AUTH_CLIENT_SECRET --env production`
+   with the same value.
+4. **Allowed users** — set `DEVTOOLS_ALLOWED_USERS` in
+   `[env.production.vars]` to the owner's DevAuth user id (`sub`, visible in
+   DevFlare → Settings → Identity → Users). Empty means nobody can use
+   connected tools. Prefer ids over emails: DevAuth does not verify email
+   addresses yet.
+5. **Short-link host** — `SHORT_LINK_BASE_URL` is `https://go.andersseen.dev`.
+   Tool paths and system names are reserved slugs, so the host can share the
+   Worker with DevTools.
+6. **Domains** — uncomment the two `[[env.production.routes]]` blocks
+   (`devtools.andersseen.dev`, `go.andersseen.dev`, `custom_domain = true`).
+   Deploying with them creates the DNS records.
+7. **Deploy** — `pnpm deploy:tools` (build → migrate → deploy). Dry run
+   first: `pnpm nx build devtools && pnpm cf:tools deploy --env production --dry-run`.
+8. **DevFlare** — set `DEVTOOLS_URL` (runtime var) and `VITE_DEVTOOLS_URL`
+   (build time) to `https://devtools.andersseen.dev` so its legacy `/tools/*`
+   links and navbar point there.
+
+Verify: `/` and a tool page load as static files; `/short-links` shows the
+DevAuth sign-in; after signing in as an allowed user a link can be created and
+`https://go.andersseen.dev/<slug>` answers 302; a non-allowed account sees
+"No access to connected tools".
 
 ## Troubleshooting
 

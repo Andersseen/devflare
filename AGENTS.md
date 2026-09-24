@@ -16,7 +16,9 @@ This is the entry point for AI coding agents. Read this first, then load only th
 The DevFlare repo is an Nx 22 / pnpm monorepo of four products: **DevFlare**
 (`apps/devflare`, AnalogJS/Angular 21) — a personal **project hub** over the
 owner's Cloudflare account; **DevTools** (`apps/devtools`) — anonymous,
-prerendered **browser utilities** (QR, SEO preview, JSON⇄CSV, …); **DevAuth**
+**curated developer tools**, mostly local/in-browser (OAuth inspector, Wrangler
+doctor, cURL⇄fetch, …) plus a few connected ones (short links, domain
+inspector) behind DevAuth; **DevAuth**
 (`apps/dev-auth`) — a standalone OAuth 2.1 / OIDC **identity provider** (Hono +
 better-auth + D1) that DevFlare and apps in other repositories authenticate
 against, plus its `@dev-auth/*` SDK; and **Cloudflare Connect**
@@ -48,10 +50,14 @@ dev-auth-elements:build:flow` respectively (pure npm — `@flowview/compiler`;
    (see the "How to update" section inside it).
 9. **dev-auth serves more than DevFlare.** Register a consumer app in
    `OAUTH_CLIENTS`; never add a DevFlare-specific assumption to the provider.
-10. **Keep the products apart.** Browser utilities go in DevTools, never back
-    into DevFlare; DevTools gets no auth, server routes or bindings; apps never
-    import each other (Nx `domain:*` tags). See
-    [spec 018](docs/specs/018-split-devtools-app.md).
+10. **Keep the products apart.** Developer utilities go in DevTools, never back
+    into DevFlare; apps never import each other (Nx `domain:*` tags); each app
+    owns its own D1. See [spec 018](docs/specs/018-split-devtools-app.md).
+11. **DevTools: local stays local.** A tool is `local` (browser only, no
+    request to any server, no sign-in) unless it genuinely needs a server;
+    only `connected` tools use DevTools' Worker, DevAuth and D1. DevAuth
+    authenticates, DevTools authorizes (`DEVTOOLS_ALLOWED_USERS`, checked
+    server side). See [spec 020](docs/specs/020-devtools-connected-foundation.md).
 
 ## Quick reference
 
@@ -69,4 +75,7 @@ dev-auth-elements:build:flow` respectively (pure npm — `@flowview/compiler`;
   `apps/devtools/src/app/tools/tool-registry.ts` (use the `new-tool` skill).
 - Main app API: `apps/devflare/src/server/routes/api/**` (Nitro/h3 file-based).
 - Auth service: `apps/dev-auth/src/index.ts` (Hono on Cloudflare Workers).
+- Generic agent skills (Claude + Codex) are installed by Agentyx from
+  `.agentyx.json` — don't hand-edit them; see
+  [WORKFLOWS › Agent tooling](docs/ai/WORKFLOWS.md#agent-tooling-agentyx).
 - Branch workflow: `feature/*` branches → PR to `main`. Commit style: `feat: …`, `fix: …`.

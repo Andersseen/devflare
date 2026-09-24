@@ -31,8 +31,18 @@ OAUTH_CLIENTS = '''[
     "name": "DevFlare (local)",
     "type": "web",
     "redirectURIs": ["http://localhost:4200/api/auth/callback"]
+  },
+  {
+    "clientId": "devtools-dev",
+    "name": "DevTools (local)",
+    "type": "web",
+    "redirectURIs": ["http://localhost:4300/api/auth/callback"]
   }
 ]'''
+# DevTools (apps/devtools, spec 020) is a separate consumer with its own client
+# id and secret — never DevFlare's. Its secret goes in OAUTH_CLIENT_SECRETS
+# under "devtools-dev" and must equal DEV_AUTH_CLIENT_SECRET in
+# apps/devtools/.dev.vars.
 
 # Who may administer the client registry locally. Empty means nobody — see the
 # production block for why this one fails closed where SIGNUP_ALLOWLIST does not.
@@ -108,8 +118,17 @@ OAUTH_CLIENTS = '''[
     "name": "DevFlare",
     "type": "web",
     "redirectURIs": ["https://devflare.andersseen.dev/api/auth/callback"]
+  },
+  {
+    "clientId": "devtools",
+    "name": "DevTools",
+    "type": "web",
+    "redirectURIs": ["https://devtools.andersseen.dev/api/auth/callback"]
   }
 ]'''
+# DevTools (spec 020) needs OAUTH_CLIENT_SECRETS["devtools"] before this
+# deploys; until then the provider drops that one entry with a logged error and
+# every other client keeps working (see src/oauth-clients.ts).
 # Imageryx was previously a config-listed client here (clientId "imageryx",
 # same shape as devflare above). Deliberately removed: its OAUTH_CLIENT_SECRETS
 # value was never durably recorded anywhere retrievable, and a config-owned
