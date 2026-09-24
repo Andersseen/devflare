@@ -20,6 +20,7 @@ import {
   formatRelative,
   type CloudWorkerDetail,
 } from '@org/core';
+import { ResourceOwner } from '../resource-owner';
 
 /**
  * One Worker: its domains and the versions uploaded to it.
@@ -30,6 +31,7 @@ import {
 @Component({
   selector: 'app-cloud-worker-detail-page',
   imports: [
+    ResourceOwner,
     RouterLink,
     LucideAngularModule,
     VoltCard,
@@ -54,6 +56,11 @@ import {
           <h1 class="text-3xl font-bold tracking-tight truncate">
             {{ name() }}
           </h1>
+          <app-resource-owner
+            class="mt-2 block"
+            [type]="'worker'"
+            [resourceId]="name()"
+          />
           @if (detail(); as loaded) {
             <div
               class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-sm text-muted-foreground"

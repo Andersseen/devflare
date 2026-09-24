@@ -1,4 +1,5 @@
 import { Injectable, signal } from '@angular/core';
+import type { CloudInventory } from './project-resources';
 
 /**
  * The browser half of the Cloud section.
@@ -215,6 +216,14 @@ function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : 'Something went wrong';
 }
 
+async function section<T>(load: Promise<T[]>): Promise<CloudStorageSection<T>> {
+  try {
+    return { items: await load, error: null };
+  } catch (error) {
+    return { items: [], error: messageOf(error) };
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Presentation helpers — pure, and the part worth testing.
 // ---------------------------------------------------------------------------
@@ -288,6 +297,7 @@ export class CloudflareAccount {
   private readonly projectsSignal = signal<CloudPagesProject[]>([]);
   private readonly loadingSignal = signal(false);
   private readonly errorSignal = signal('');
+  private readonly inventorySignal = signal<CloudInventory | null>(null);
 
   /** Null until asked, so the shell can stay quiet rather than flicker. */
   readonly status = this.statusSignal.asReadonly();
@@ -295,6 +305,8 @@ export class CloudflareAccount {
   readonly projects = this.projectsSignal.asReadonly();
   readonly loading = this.loadingSignal.asReadonly();
   readonly error = this.errorSignal.asReadonly();
+  /** Null until `loadInventory` has run. */
+  readonly inventory = this.inventorySignal.asReadonly();
 
   async loadStatus(): Promise<CloudStatus> {
     const status = await request<CloudStatus>('/status');
@@ -442,6 +454,54 @@ export class CloudflareAccount {
 
   loadStorage(refresh = false): Promise<CloudStorage> {
     return request<CloudStorage>(`/storage${refresh ? '?refresh=1' : ''}`);
+  }
+
+  /**
+   * The whole account, one section per product (spec 019): what project
+   * resources are resolved against and what "Link resource" offers.
+   *
+   * Each product is fetched and fails on its own. A token that can read
+   * Workers but not R2 yields Workers plus `r2.error`, never an empty R2 list —
+   * "no buckets" and "cannot see buckets" must not look the same.
+   *
+   * Also refreshes the Workers/Pages signals the Cloud overview reads, so the
+   * two views never disagree after a reload.
+   */
+  async loadInventory(refresh = false): Promise<CloudInventory> {
+    const query = refresh ? '?refresh=1' : '';
+
+    const [worker, pages, storage, r2] = await Promise.all([
+      section(
+        request<{ workers: CloudWorker[] }>(`/workers${query}`).then(
+          (payload) => payload.workers,
+        ),
+      ),
+      section(
+        request<{ projects: CloudPagesProject[] }>(`/pages${query}`).then(
+          (payload) => payload.projects,
+        ),
+      ),
+      this.loadStorage(refresh).catch(
+        (error: unknown): CloudStorage => ({
+          d1: { items: [], error: messageOf(error) },
+          kv: { items: [], error: messageOf(error) },
+        }),
+      ),
+      section(this.loadBuckets(refresh)),
+    ]);
+
+    if (!worker.error) this.workersSignal.set(worker.items);
+    if (!pages.error) this.projectsSignal.set(pages.items);
+
+    const inventory: CloudInventory = {
+      worker,
+      pages,
+      d1: storage.d1,
+      kv: storage.kv,
+      r2,
+    };
+    this.inventorySignal.set(inventory);
+    return inventory;
   }
 
   /**

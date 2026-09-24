@@ -173,10 +173,16 @@ dogfoods instead. See
   (raw infrastructure) and `settings.page.ts`. `/login` is outside the shell.
   `/dev-auth-sdk` is an internal SDK showcase, not in navigation. Pages are
   single-file standalone components with **default export**.
-- **Projects model**: `pages/(app)/dashboard-projects.ts` groups Cloudflare
-  Pages projects + Workers (+ saved metadata from D1) into project groups:
-  URL, repository, resources, last activity and latest Pages deployment. The
-  detail page adds history from `GET /api/v1/cloud/pages/:name`.
+- **Projects model** (spec 019): a project owns N resources through
+  persisted `project_resource` links (`Project 1 ── N ProjectResource`,
+  types pages/worker/d1/r2/kv, keyed by the stable Cloudflare id). **DevFlare
+  owns project ↔ infrastructure relationships; Cloudflare owns runtime
+  truth.** `@org/core`'s `project-resources.ts` resolves each link against
+  `CloudflareAccount.loadInventory()` as available / missing / unverifiable;
+  `ProjectHub` loads both. `pages/(app)/dashboard-projects.ts` builds the
+  views: saved projects (explicit links) plus "discovered" groups of unowned
+  Workers/Pages from name heuristics — suggestions only, never ownership.
+  Cloud lists/detail pages show the owner via `cloud/resource-owner.ts`.
 - **Layout**: `src/app/components/layout.component.ts` + `sidebar.component.ts`,
   driven by `shell-navigation.ts` (sections: Projects, Cloud; Settings pinned
   in the sidebar footer; one external DevTools link from `VITE_DEVTOOLS_URL`,
@@ -193,7 +199,12 @@ dogfoods instead. See
     DevFlare's own session.
   - `api/auth/session.ts` / `logout.ts` / `user.ts` — read, end, and edit the
     local session/profile. No call leaves the Worker.
-  - `api/v1/projects/index.ts` + `[id].ts` — projects CRUD, auth-gated.
+  - `api/v1/projects/index.ts` + `[id].ts` — projects CRUD, auth-gated;
+    `[id]/resources/index.ts` (list, verified link) and
+    `[id]/resources/[resourceId].delete.ts` (unlink). Thin adapters: the
+    decisions live in h3-free `lib/project-service.ts` (+ `project-store.ts`
+    SQL, `resource-verification.ts`), tested over the real migrations on
+    `node:sqlite` via `db/sqlite-test-db.ts`.
   - `api/health.ts`, `api/v1/hello.ts`.
 - **Server auth**: `src/server/lib/session.ts` → `getAppSession(event)` (looks up
   the hashed `df_session` cookie in D1) and `requireAuth(session)` (throws 401).
@@ -201,7 +212,9 @@ dogfoods instead. See
   h3 import, so it is unit-testable (`oidc.spec.ts`).
 - **Server DB**: `src/server/db/index.ts` — db0 + the `cloudflare-d1` connector,
   bound as `DB` in `apps/devflare/wrangler.toml`. Tables `projects`,
-  `deployments`, `app_user` and `app_session`. The binding is resolved lazily from `globalThis.__env__`, which
+  `project_resource`, `deployments`, `app_user`, `app_session`,
+  `cloudflare_connection` and `cloudflare_oauth_client`. D1 enforces
+  foreign keys. The binding is resolved lazily from `globalThis.__env__`, which
   Nitro sets per request in production and, in dev, from wrangler's
   `getPlatformProxy()` (local miniflare under `.wrangler/state`) — so there is a
   single code path. Schema lives in `src/server/db/migrations/`; apply it with
