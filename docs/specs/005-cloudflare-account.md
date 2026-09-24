@@ -7,6 +7,10 @@
 | Created | 2026-08-13                       |
 | Updated | 2026-08-14                       |
 
+> **Superseded in part by [spec 019](019-project-resources.md):** the single
+> `cfType`/`cfName` link below was migrated into the `project_resource` table
+> (many resources per project) and the two columns were dropped in migration 0005. The rest of this spec still describes the Cloud section.
+
 ## 1. Summary
 
 DevFlare gains a **Cloud** section that reads the owner's real Cloudflare account

@@ -18,6 +18,7 @@ import {
 import { CloudflareAccount, formatRelative } from '@org/core';
 import { CloudGate } from './cloud-gate';
 import { DeploymentStatus } from './deployment-status';
+import { ResourceOwner } from './resource-owner';
 
 /**
  * What is actually running on the account: every Worker and every Pages
@@ -31,6 +32,7 @@ import { DeploymentStatus } from './deployment-status';
 @Component({
   selector: 'app-cloud-page',
   imports: [
+    ResourceOwner,
     RouterLink,
     LucideAngularModule,
     VoltCard,
@@ -163,6 +165,12 @@ import { DeploymentStatus } from './deployment-status';
                               }
                             </div>
                           }
+                          <app-resource-owner
+                            class="mt-1 block"
+                            [type]="'worker'"
+                            [resourceId]="worker.name"
+                            [compact]="true"
+                          />
                         </div>
                         <span
                           class="text-sm text-muted-foreground whitespace-nowrap"
@@ -236,6 +244,12 @@ import { DeploymentStatus } from './deployment-status';
                               </span>
                             }
                           </div>
+                          <app-resource-owner
+                            class="mt-1 block"
+                            [type]="'pages'"
+                            [resourceId]="project.name"
+                            [compact]="true"
+                          />
                         </div>
                         <span
                           class="text-sm text-muted-foreground whitespace-nowrap"

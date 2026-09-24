@@ -18,11 +18,11 @@ the 2026-08-10 / 2026-09-03 / 2026-09-11 lessons) from carrying forward a
 previous write-up's claim instead of re-checking. **Standing rule: before
 writing anything here, run `git log`/`git branch`/`gh pr list` yourself.**
 
-- Work branch **`feature/split-devtools-app`**, created from `main` at
-  `0395b2c` (merge of PR #43, `feature/updates`, which carried the Spec 017
-  dashboard work). Spec 018 (DevTools split) is on this branch, **uncommitted**
-  at the time of writing — not merged, not deployed.
-- Newest merged PRs: #43, #42, #41 (`feature/updates`), #40
+- Work branch **`feature/project-resources`**, created from `main` at
+  `900ca8c` (merge of PR #44, `feature/split-devtools-app` — spec 018, merged
+  2026-09-24T07:12Z). Spec 019 (project resources) is on this branch, not yet
+  merged or deployed at the time of writing.
+- Newest merged PRs: #44 (spec 018), #43, #42, #41 (`feature/updates`), #40
   (`feature/dev-auth-hardening`), #39, #38, #37. PR #32 CLOSED.
 - **PR #32 (`feature/012-dev-auth-angular-ui`, "add optional DevAuth Angular
   UI") is CLOSED** as of 2026-09-04T09:15:31Z and superseded by PR #37.
@@ -74,7 +74,9 @@ production` now reports `CLOUDFLARE_API_TOKEN`, `DEV_AUTH_ADMIN_TOKEN` and
   specific script is enabled. It also explicitly presents verified live
   Cloudflare-routed domains that the current token cannot list as Pages or
   Worker custom domains: Volt UI, Lumen Icons, and Angular Movement. Empty
-  watched placeholders, Portfolio, and unlinked saved metadata are omitted.
+  watched placeholders and Portfolio are omitted. (Superseded by spec 019:
+  saved projects are now always listed, and name grouping only produces
+  "discovered" suggestions.)
   A live account reconciliation confirms all 10 Pages projects and all 16
   Workers appear exactly once. DevFlare has 117 passing tests; format, lint,
   serial typechecks, the full test suite, and production build pass. See
@@ -470,7 +472,7 @@ Key decisions and the traps behind them:
   `apps/devflare/shims/papaparse.server.mjs`, which throws if SSR ever calls it.
 - `better-sqlite3` and the tracked, empty `data/devflare.db` are removed.
 
-## Product split (spec 018, branch `feature/split-devtools-app`)
+## Product split (spec 018, merged in PR #44)
 
 The repo now holds four products; see
 [docs/specs/018-split-devtools-app.md](../specs/018-split-devtools-app.md) and
@@ -493,6 +495,29 @@ the "Product map" in ARCHITECTURE.md.
   both cross-app directions (verified by a deliberate bad import).
 - Design tokens moved to `libs/shared/ui/src/styles/theme.css`; both apps
   import them and override only the accent.
+
+## Project resources (spec 019, branch `feature/project-resources`)
+
+See [docs/specs/019-project-resources.md](../specs/019-project-resources.md).
+
+- A project owns N Cloudflare resources (pages, worker, d1, r2, kv) via the
+  `project_resource` table (migration `0005`), keyed by the stable id
+  (script / Pages / bucket name, D1 uuid, KV id). One owner per resource
+  (unique index). `projects.cfType`/`cfName` are migrated into it and dropped.
+- Links are verified against the connected account before they are written
+  (`not-found` 422 vs `unverifiable` 403/503); only Cloud admins can link,
+  anyone can unlink their own. Resolution states in the UI: available /
+  missing / unverifiable — nothing is hidden, nothing unknown shows as "0".
+- Dashboard: saved projects (counts from explicit links) + "Discovered in
+  Cloudflare" (unowned Workers/Pages grouped by the old name heuristic,
+  "Save as project"). Project page: Overview, Resources (link panel,
+  suggestions, unlink), Deployments of owned Pages, Actions (edit, delete).
+  Cloud lists/detail pages show the owning project or "Link to project".
+- **Production migration runs on merge** (`deploy.yml` applies D1 migrations
+  before the app deploy). Run the preflight duplicate query in spec 019 §6
+  first: a resource claimed by two legacy projects makes 0005 fail (and roll
+  back). Between the migration and the new Worker going live (the build
+  step), the old Worker cannot PATCH links — a few minutes.
 
 ## UI shell (merged; nav superseded by spec 018)
 
@@ -700,6 +725,21 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
    reused from it.
 
 ## Session log
+
+- **2026-09-24 — Spec 019: project resources (explicit ownership).** Branch
+  `feature/project-resources` from `900ca8c`. Verified: `pnpm check` green
+  (format, lint 13 projects, typecheck 10, test 10, build DevFlare + DevTools);
+  unit tests DevFlare 191 (was 129 — migrations on `node:sqlite`, project API
+  service over the real migrations, verification, grouping, UI components),
+  core 19 (was 8), DevTools 23 unchanged; devflare-e2e 45/45 on chromium,
+  firefox and webkit (new `project-resources.spec.ts`: link → dashboard count
+  → unlink, multi-kind link, R2 permission). Migration 0005 applied on local
+  D1 via wrangler/miniflare over legacy rows (links moved, trimmed, columns
+  dropped, FKs on) and over a duplicate claim (fails, rolls back, nothing
+  recorded). Not done: production migration (runs on merge), a signed-in
+  browser walk against the live account. Found and fixed on the way: deleting
+  a project with DevFlare-made deployments failed on the `deployments` FK;
+  `aria-label` on `<volt-button>` does not reach the inner `<button>`.
 
 - **2026-09-24 — Spec 018: DevTools split + DevFlare project-hub refocus.**
   See "Product split" above. Verified: `pnpm check` green (format, lint 13

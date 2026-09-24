@@ -9,6 +9,7 @@ import {
 } from '@voltui/components';
 import { CloudflareAccount, formatRelative, type CloudBucket } from '@org/core';
 import { CloudGate } from './cloud-gate';
+import { ResourceOwner } from './resource-owner';
 
 /**
  * The R2 buckets on the account, each one a way in.
@@ -21,6 +22,7 @@ import { CloudGate } from './cloud-gate';
 @Component({
   selector: 'app-cloud-buckets-page',
   imports: [
+    ResourceOwner,
     RouterLink,
     LucideAngularModule,
     VoltCard,
@@ -96,6 +98,12 @@ import { CloudGate } from './cloud-gate';
                           created {{ relative(bucket.createdAt) }}
                         </span>
                       </a>
+                      <app-resource-owner
+                        class="-mt-1 block pb-3 pl-7"
+                        [type]="'r2'"
+                        [resourceId]="bucket.name"
+                        [compact]="true"
+                      />
                     </li>
                   }
                 </ul>

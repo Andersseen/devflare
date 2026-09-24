@@ -1,36 +1,36 @@
-import { defineEventHandler, readBody, createError } from 'h3';
-import { getAppSession, requireAuth } from '../../../../lib/session';
-import { db } from '../../../../db';
-import { rowsOf, type ProjectRow } from '../../../../lib/project-rows';
+import {
+  createError,
+  defineEventHandler,
+  readBody,
+  setResponseStatus,
+} from 'h3';
+import { answer, callerOf } from '../../../../lib/project-http';
+import {
+  createProjectFor,
+  listProjectsFor,
+} from '../../../../lib/project-service';
 
+/**
+ * GET  /api/v1/projects — the caller's projects, each with `resources[]`.
+ * POST /api/v1/projects — create one from `{ name, repoUrl? }`.
+ *
+ * Creating a project asks for nothing about infrastructure (spec 019);
+ * resources are linked afterwards through ./[id]/resources.
+ */
 export default defineEventHandler(async (event) => {
-  const session = await getAppSession(event);
+  const caller = await callerOf(event);
 
   if (event.method === 'GET') {
-    const user = requireAuth(session);
-    const projects = rowsOf<ProjectRow>(
-      await db.sql`SELECT * FROM projects WHERE userId = ${user.id} ORDER BY createdAt DESC`,
-    );
-    return { projects };
+    return answer(async () => ({ projects: await listProjectsFor(caller) }));
   }
 
   if (event.method === 'POST') {
-    const user = requireAuth(session);
     const body = await readBody(event);
-
-    if (!body?.name || typeof body.name !== 'string') {
-      throw createError({ statusCode: 400, statusMessage: 'Name is required' });
-    }
-
-    const id = crypto.randomUUID();
-    const createdAt = new Date().toISOString();
-
-    await db.sql`INSERT INTO projects (id, userId, name, repoUrl, createdAt) VALUES (${id}, ${user.id}, ${body.name}, ${body.repoUrl ?? null}, ${createdAt})`;
-
-    const project = rowsOf<ProjectRow>(
-      await db.sql`SELECT * FROM projects WHERE id = ${id}`,
-    )[0];
-    return { project };
+    return answer(async () => {
+      const project = await createProjectFor(caller, body);
+      setResponseStatus(event, 201);
+      return { project };
+    });
   }
 
   throw createError({ statusCode: 405, statusMessage: 'Method Not Allowed' });

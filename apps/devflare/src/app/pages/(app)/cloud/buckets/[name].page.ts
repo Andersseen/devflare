@@ -23,6 +23,7 @@ import {
   type CloudObject,
 } from '@org/core';
 import { CloudGate } from '../cloud-gate';
+import { ResourceOwner } from '../resource-owner';
 
 /** One level of the path, and the prefix that gets you back to it. */
 interface Crumb {
@@ -46,6 +47,7 @@ interface Crumb {
 @Component({
   selector: 'app-cloud-bucket-page',
   imports: [
+    ResourceOwner,
     RouterLink,
     LucideAngularModule,
     VoltCard,
@@ -66,6 +68,11 @@ interface Crumb {
           <h1 class="text-3xl font-bold tracking-tight truncate mt-1">
             {{ name() }}
           </h1>
+          <app-resource-owner
+            class="mt-2 block"
+            [type]="'r2'"
+            [resourceId]="name()"
+          />
 
           <!-- Breadcrumb. Every crumb is a prefix, so it is a plain link. -->
           <nav class="flex flex-wrap items-center gap-1 text-sm mt-2">

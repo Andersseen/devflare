@@ -5,11 +5,11 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { NgTemplateOutlet } from '@angular/common';
+import { Router, RouterLink } from '@angular/router';
 import { MOVEMENT_DIRECTIVES } from 'angular-movement';
 import { LucideAngularModule } from 'lucide-angular';
 import {
-  VoltBadge,
   VoltButton,
   VoltCard,
   VoltCardContent,
@@ -20,24 +20,36 @@ import {
 } from '@voltui/components';
 import {
   CloudflareAccount,
+  ProjectHub,
   Projects,
+  countLabel,
   formatRelative,
-  type Project,
+  resourceCounts,
 } from '@org/core';
 import { CloudGate } from './cloud/cloud-gate';
 import { DeploymentStatus } from './cloud/deployment-status';
 import {
-  groupDashboardProjects,
-  type ProjectGroup,
+  buildProjectViews,
+  repoLabel,
+  slugFromName,
+  unresolvedCount,
+  type ProjectView,
 } from './dashboard-projects';
 
+/**
+ * Projects — where DevFlare starts (spec 019).
+ *
+ * Saved projects first: what each owns is its explicit resource links, counted
+ * on the card. Below them, Workers and Pages nobody owns yet, grouped by name —
+ * suggestions to save, never presented as ownership.
+ */
 @Component({
   selector: 'app-projects-page',
   imports: [
+    NgTemplateOutlet,
     RouterLink,
     MOVEMENT_DIRECTIVES,
     LucideAngularModule,
-    VoltBadge,
     VoltButton,
     VoltCard,
     VoltCardContent,
@@ -49,18 +61,20 @@ import {
     DeploymentStatus,
   ],
   template: `
-    <div class="space-y-6">
+    <div class="space-y-8">
       <div
         class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"
       >
         <div>
           <h1 class="text-3xl font-bold tracking-tight">Projects</h1>
           <p class="mt-1 text-muted-foreground">
-            Your applications — where they run, where the code lives, and what
-            shipped last.
+            Your applications — what they own, where they run, and what shipped
+            last.
           </p>
           <p class="mt-2 text-sm text-muted-foreground">
-            {{ groups().length }} projects · {{ liveCount() }} live
+            {{ views().projects.length }}
+            {{ views().projects.length === 1 ? 'project' : 'projects' }} ·
+            {{ liveCount() }} live
             @if (connectedAccount(); as account) {
               · on {{ account }}
             }
@@ -74,30 +88,94 @@ import {
               Connect
             </volt-button>
           }
-          @if (status()?.configured) {
-            <volt-button variant="outline" size="sm" (click)="reload()">
-              <lucide-icon
-                name="refresh-cw"
-                class="mr-1 h-4 w-4"
-                [class.animate-spin]="loading()"
-              />
-              Reload
-            </volt-button>
-          }
+          <volt-button variant="outline" size="sm" (click)="reload()">
+            <lucide-icon
+              name="refresh-cw"
+              class="mr-1 h-4 w-4"
+              [class.animate-spin]="hub.loading()"
+            />
+            Reload
+          </volt-button>
         </div>
       </div>
 
-      @if (statusError()) {
-        <volt-error>{{ statusError() }}</volt-error>
+      @if (hub.error()) {
+        <volt-error>{{ hub.error() }}</volt-error>
       }
 
-      <app-cloud-gate [status]="status()">
-        @if (cloud.error()) {
-          <volt-error>{{ cloud.error() }}</volt-error>
-        }
-      </app-cloud-gate>
+      <!-- Creating a project asks for nothing about infrastructure. -->
+      <details
+        class="group rounded-md border border-border bg-card"
+        [open]="creating()"
+        (toggle)="onToggle($event)"
+      >
+        <summary
+          class="flex cursor-pointer list-none items-center justify-between gap-3 p-4 text-sm font-medium"
+        >
+          <span class="inline-flex items-center gap-2">
+            <lucide-icon name="plus" class="h-4 w-4" />
+            New project
+          </span>
+          <lucide-icon
+            name="chevron-right"
+            class="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-90"
+          />
+        </summary>
+        <div class="space-y-4 border-t border-border p-4">
+          <p class="text-sm text-muted-foreground">
+            A name is enough. Link Workers, Pages, databases and buckets from
+            the project page afterwards.
+          </p>
+          <form
+            class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_auto]"
+            (submit)="onCreate($event)"
+          >
+            <volt-form-field>
+              <volt-label>Name</volt-label>
+              <volt-input
+                type="text"
+                placeholder="Ally"
+                [(value)]="newName"
+                autocomplete="off"
+                aria-label="Project name"
+              />
+            </volt-form-field>
+            <volt-form-field>
+              <volt-label>Repository URL (optional)</volt-label>
+              <volt-input
+                type="text"
+                placeholder="github.com/andersseen/ally"
+                [(value)]="newRepoUrl"
+                autocomplete="off"
+                aria-label="Repository URL"
+              />
+            </volt-form-field>
+            <div class="flex items-end">
+              <volt-button
+                type="submit"
+                variant="solid"
+                [disabled]="isCreating() || !newName().trim()"
+              >
+                @if (isCreating()) {
+                  <lucide-icon
+                    name="loader"
+                    class="mr-1 h-4 w-4 animate-spin"
+                  />
+                  Creating
+                } @else {
+                  <lucide-icon name="plus" class="mr-1 h-4 w-4" />
+                  Create project
+                }
+              </volt-button>
+            </div>
+          </form>
+          @if (createError()) {
+            <volt-error>{{ createError() }}</volt-error>
+          }
+        </div>
+      </details>
 
-      @if (loading() && !groups().some(groupHasCloudResource)) {
+      @if (hub.loading() && !hub.projects()) {
         <div class="flex items-center justify-center py-12">
           <lucide-icon
             name="loader"
@@ -110,281 +188,229 @@ import {
           aria-label="Projects"
           [moveStagger]="45"
         >
-          @for (group of groups(); track group.slug) {
-            <a
-              [routerLink]="['/projects', group.slug]"
-              [move]="'fade-up'"
-              moveDuration="260"
-              class="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <volt-card
-                class="h-full transition-colors hover:border-primary/60"
-              >
-                <volt-card-content class="flex h-full flex-col gap-4 p-5">
-                  <div class="flex items-start justify-between gap-3">
-                    <div class="min-w-0">
-                      <h2 class="truncate text-lg font-semibold">
-                        {{ group.name }}
-                      </h2>
-                      <div
-                        class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground"
-                      >
-                        @if (group.workers.length) {
-                          <span class="inline-flex items-center gap-1">
-                            <lucide-icon name="zap" class="h-3.5 w-3.5" />
-                            {{ group.workers.length }}
-                            {{
-                              group.workers.length === 1 ? 'Worker' : 'Workers'
-                            }}
-                          </span>
-                        }
-                        @if (group.pages.length) {
-                          <span class="inline-flex items-center gap-1">
-                            <lucide-icon name="globe" class="h-3.5 w-3.5" />
-                            {{ group.pages.length }} Pages
-                            {{
-                              group.pages.length === 1 ? 'project' : 'projects'
-                            }}
-                          </span>
-                        }
-                        @if (!group.pages.length && !group.workers.length) {
-                          <volt-badge variant="secondary">
-                            {{ group.url ? 'live' : 'planned' }}
-                          </volt-badge>
-                        }
-                      </div>
-                    </div>
-                    <lucide-icon
-                      name="chevron-right"
-                      class="h-5 w-5 shrink-0 text-muted-foreground"
-                    />
-                  </div>
-
-                  <div class="space-y-2 text-sm">
-                    @if (group.url) {
-                      <span
-                        class="flex min-w-0 items-center gap-2 text-primary"
-                      >
-                        <lucide-icon
-                          name="external-link"
-                          class="h-4 w-4 shrink-0"
-                        />
-                        <span class="truncate">{{ group.url }}</span>
-                      </span>
-                    } @else {
-                      <p class="text-muted-foreground">
-                        No public URL found yet.
-                      </p>
-                    }
-
-                    @if (repoLabel(group); as label) {
-                      <span
-                        class="flex min-w-0 items-center gap-2 text-muted-foreground"
-                      >
-                        <lucide-icon name="github" class="h-4 w-4 shrink-0" />
-                        <span class="truncate">{{ label }}</span>
-                      </span>
-                    }
-                  </div>
-
-                  <div
-                    class="mt-auto flex min-w-0 flex-wrap items-center gap-2 border-t border-border pt-3 text-sm text-muted-foreground"
-                  >
-                    @if (group.latestDeployment; as latest) {
-                      <app-deployment-status
-                        [status]="latest.deployment.status"
-                        [stage]="latest.deployment.stage"
-                      />
-                      <span class="min-w-0 truncate">
-                        deployed {{ relative(latest.deployment.createdOn) }}
-                        @if (latest.deployment.branch) {
-                          from {{ latest.deployment.branch }}
-                        }
-                      </span>
-                    } @else if (group.lastActivity) {
-                      <span>updated {{ relative(group.lastActivity) }}</span>
-                    } @else {
-                      <span>No deployment activity reported</span>
-                    }
-                  </div>
-                </volt-card-content>
-              </volt-card>
-            </a>
+          @for (view of views().projects; track view.slug) {
+            <ng-container
+              *ngTemplateOutlet="card; context: { $implicit: view }"
+            />
           } @empty {
-            @if (!loading()) {
-              <p
-                class="rounded-md border border-border p-6 text-muted-foreground md:col-span-2 2xl:col-span-3"
-              >
-                No projects yet. Connect Cloudflare, or link a repository to a
-                Pages project or Worker below.
-              </p>
-            }
+            <p
+              class="rounded-md border border-border p-6 text-muted-foreground md:col-span-2 2xl:col-span-3"
+            >
+              No projects yet. Create one above, or save one of the projects
+              discovered in your Cloudflare account below.
+            </p>
           }
         </section>
       }
 
-      <!--
-        Secondary: most projects are found from Cloudflare on their own. This
-        only adds a repository link or ties a name to a specific resource.
-      -->
-      <details class="group rounded-md border border-border bg-card">
-        <summary
-          class="flex cursor-pointer list-none items-center justify-between gap-3 p-4 text-sm font-medium"
+      @if (hub.unavailable() && hasLinks()) {
+        <p
+          class="flex items-start gap-2 rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground"
         >
-          <span class="inline-flex items-center gap-2">
-            <lucide-icon name="plus" class="h-4 w-4" />
-            Link a repository or resource to a project
-          </span>
-          <lucide-icon
-            name="chevron-right"
-            class="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-90"
-          />
-        </summary>
-        <div class="space-y-4 border-t border-border p-4">
+          <lucide-icon name="lock" class="mt-0.5 h-4 w-4 shrink-0" />
+          Resource states cannot be verified: {{ hub.unavailable() }}.
+        </p>
+      }
+
+      <section class="space-y-4" aria-labelledby="discovered-heading">
+        <div>
+          <h2 id="discovered-heading" class="text-lg font-semibold">
+            Discovered in Cloudflare
+          </h2>
           <p class="text-sm text-muted-foreground">
-            Save a GitHub URL, or tie a project name to a specific Pages project
-            or Worker when its name does not match on its own.
+            Workers and Pages no project owns yet, grouped by name. Nothing here
+            is saved — open one to save it as a project.
           </p>
-          <form
-            class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_minmax(0,1fr)_auto]"
-            (submit)="onCreate($event)"
-          >
-            <volt-form-field>
-              <volt-label>Project</volt-label>
-              <volt-input
-                type="text"
-                placeholder="lumen-icons"
-                [(value)]="newName"
-                autocomplete="off"
-              />
-            </volt-form-field>
-            <volt-form-field>
-              <volt-label>Repository URL</volt-label>
-              <volt-input
-                type="url"
-                placeholder="https://github.com/andriipap/lumen-icons"
-                [(value)]="newRepoUrl"
-                autocomplete="off"
-              />
-            </volt-form-field>
-            <div class="space-y-2">
-              <label for="cloud-resource" class="text-sm font-medium">
-                Cloudflare resource
-              </label>
-              <select
-                id="cloud-resource"
-                class="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                [value]="newCloudLink()"
-                (change)="onNewLinkChange($event)"
-              >
-                <option value="">Not linked</option>
-                @for (option of linkOptions(); track option.value) {
-                  <option [value]="option.value">{{ option.label }}</option>
-                }
-              </select>
-            </div>
-            <div class="flex items-end">
-              <volt-button
-                type="submit"
-                variant="solid"
-                [disabled]="isCreating() || !newName()"
-              >
-                @if (isCreating()) {
-                  <lucide-icon
-                    name="loader"
-                    class="mr-1 h-4 w-4 animate-spin"
-                  />
-                  Saving
-                } @else {
-                  <lucide-icon name="plus" class="mr-1 h-4 w-4" />
-                  Save
-                }
-              </volt-button>
-            </div>
-          </form>
-          @if (createError()) {
-            <volt-error>{{ createError() }}</volt-error>
-          }
         </div>
-      </details>
+
+        <app-cloud-gate [status]="hub.status()">
+          @if (views().discovered.length) {
+            <div
+              class="grid gap-4 md:grid-cols-2 2xl:grid-cols-3"
+              [moveStagger]="45"
+            >
+              @for (view of views().discovered; track view.slug) {
+                <ng-container
+                  *ngTemplateOutlet="card; context: { $implicit: view }"
+                />
+              }
+            </div>
+          } @else if (!hub.loading()) {
+            <p
+              class="rounded-md border border-border p-4 text-muted-foreground"
+            >
+              Every Worker and Pages project belongs to a project.
+            </p>
+          }
+        </app-cloud-gate>
+      </section>
     </div>
+
+    <ng-template #card let-view>
+      <a
+        [routerLink]="['/projects', view.slug]"
+        [move]="'fade-up'"
+        moveDuration="260"
+        class="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        [attr.data-testid]="
+          view.kind === 'saved' ? 'project-card' : 'discovered-card'
+        "
+      >
+        <volt-card class="h-full transition-colors hover:border-primary/60">
+          <volt-card-content class="flex h-full flex-col gap-4 p-5">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 space-y-1">
+                <div class="flex min-w-0 items-center gap-2">
+                  <h2 class="truncate text-lg font-semibold">
+                    {{ view.name }}
+                  </h2>
+                  @if (view.kind === 'discovered') {
+                    <span
+                      class="shrink-0 rounded-full border border-dashed border-border px-2 py-0.5 text-xs text-muted-foreground"
+                      >Not saved</span
+                    >
+                  }
+                </div>
+                <div
+                  class="space-y-0.5 text-sm text-muted-foreground"
+                  data-testid="resource-counts"
+                >
+                  @for (line of countLines(view); track $index) {
+                    <p>{{ line }}</p>
+                  } @empty {
+                    <p>No resources linked</p>
+                  }
+                </div>
+                @if (unresolved(view); as count) {
+                  <p
+                    class="inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400"
+                  >
+                    <lucide-icon name="alert-circle" class="h-3.5 w-3.5" />
+                    {{ count }}
+                    {{ count === 1 ? 'resource needs' : 'resources need' }}
+                    attention
+                  </p>
+                }
+              </div>
+              <lucide-icon
+                name="chevron-right"
+                class="h-5 w-5 shrink-0 text-muted-foreground"
+              />
+            </div>
+
+            <div class="space-y-2 text-sm">
+              @if (view.url) {
+                <span class="flex min-w-0 items-center gap-2 text-primary">
+                  <lucide-icon name="external-link" class="h-4 w-4 shrink-0" />
+                  <span class="truncate">{{ view.url }}</span>
+                </span>
+              }
+              @if (view.repoUrl) {
+                <span
+                  class="flex min-w-0 items-center gap-2 text-muted-foreground"
+                >
+                  <lucide-icon name="github" class="h-4 w-4 shrink-0" />
+                  <span class="truncate">{{ repo(view.repoUrl) }}</span>
+                </span>
+              }
+            </div>
+
+            <div
+              class="mt-auto flex min-w-0 flex-wrap items-center gap-2 border-t border-border pt-3 text-sm text-muted-foreground"
+            >
+              @if (view.latestDeployment; as latest) {
+                <app-deployment-status
+                  [status]="latest.deployment.status"
+                  [stage]="latest.deployment.stage"
+                />
+                <span class="min-w-0 truncate">
+                  deployed {{ relative(latest.deployment.createdOn) }}
+                  @if (latest.deployment.branch) {
+                    from {{ latest.deployment.branch }}
+                  }
+                </span>
+              } @else if (view.lastActivity) {
+                <span>latest activity {{ relative(view.lastActivity) }}</span>
+              } @else {
+                <span>No activity reported</span>
+              }
+            </div>
+          </volt-card-content>
+        </volt-card>
+      </a>
+    </ng-template>
   `,
 })
 export default class ProjectsPage {
-  protected readonly cloud = inject(CloudflareAccount);
-  readonly #projectsService = inject(Projects);
+  protected readonly hub = inject(ProjectHub);
+  readonly #cloud = inject(CloudflareAccount);
+  readonly #projects = inject(Projects);
+  readonly #router = inject(Router);
 
-  protected readonly projects = signal<Project[]>([]);
-  protected readonly isLoadingProjects = signal(true);
   protected readonly newName = signal('');
   protected readonly newRepoUrl = signal('');
-  protected readonly newCloudLink = signal('');
+  protected readonly creating = signal(false);
   protected readonly isCreating = signal(false);
   protected readonly createError = signal('');
-  protected readonly statusError = signal('');
 
-  protected readonly status = this.cloud.status;
-  protected readonly loading = computed(
-    () => this.cloud.loading() || this.isLoadingProjects(),
-  );
   protected readonly relative = formatRelative;
-  protected readonly groupHasCloudResource = (group: ProjectGroup) =>
-    Boolean(group.pages.length || group.workers.length || group.url);
+  protected readonly repo = repoLabel;
+  protected readonly unresolved = unresolvedCount;
 
-  protected readonly connectedAccount = computed(
-    () => this.status()?.connection.accountName ?? null,
-  );
-
-  protected readonly canConnect = computed(() => {
-    const state = this.status();
-    return Boolean(state?.canConnect) && state?.connection.kind !== 'oauth';
-  });
-
-  protected readonly linkOptions = computed(() => [
-    ...this.cloud.projects().map((project) => ({
-      value: `pages:${project.name}`,
-      label: `Pages · ${project.name}`,
-    })),
-    ...this.cloud.workers().map((worker) => ({
-      value: `worker:${worker.name}`,
-      label: `Worker · ${worker.name}`,
-    })),
-  ]);
-
-  protected readonly groups = computed(() =>
-    groupDashboardProjects({
-      saved: this.projects(),
-      pages: this.cloud.projects(),
-      workers: this.cloud.workers(),
+  protected readonly views = computed(() =>
+    buildProjectViews({
+      saved: this.hub.projects() ?? [],
+      inventory: this.hub.inventory(),
+      unavailable: this.hub.unavailable() ?? undefined,
     }),
   );
 
   protected readonly liveCount = computed(
-    () => this.groups().filter((group) => group.url).length,
+    () => this.views().projects.filter((view) => view.url).length,
   );
+
+  protected readonly hasLinks = computed(() =>
+    (this.hub.projects() ?? []).some((project) => project.resources.length),
+  );
+
+  protected readonly connectedAccount = computed(
+    () => this.hub.status()?.connection.accountName ?? null,
+  );
+
+  protected readonly canConnect = computed(() => {
+    const state = this.hub.status();
+    return Boolean(state?.canConnect) && state?.connection.kind !== 'oauth';
+  });
 
   constructor() {
     afterNextRender(() => {
-      if (typeof window !== 'undefined') void this.load();
+      if (typeof window !== 'undefined') void this.hub.load();
     });
   }
 
   protected connect(): void {
-    window.location.href = this.cloud.connectUrl;
+    window.location.href = this.#cloud.connectUrl;
   }
 
   protected async reload(): Promise<void> {
-    await this.load(true);
+    await this.hub.load(true);
   }
 
-  protected repoLabel(group: ProjectGroup): string | null {
-    return (
-      group.repoUrl ?? group.pages.find((project) => project.repo)?.repo ?? null
-    );
+  protected onToggle(event: Event): void {
+    this.creating.set((event.target as HTMLDetailsElement).open);
   }
 
-  protected onNewLinkChange(event: Event): void {
-    this.newCloudLink.set((event.target as HTMLSelectElement).value);
+  /** "2 Workers · 1 Pages" then "1 D1 · 2 R2": compute/web, then storage. */
+  protected countLines(view: ProjectView): string[] {
+    const counts = resourceCounts(view.resources);
+    return [
+      counts.filter((entry) => entry.group !== 'storage'),
+      counts.filter((entry) => entry.group === 'storage'),
+    ]
+      .filter((line) => line.length)
+      .map((line) =>
+        line.map((entry) => countLabel(entry.type, entry.count)).join(' · '),
+      );
   }
 
   protected async onCreate(event: Event): Promise<void> {
@@ -393,65 +419,30 @@ export default class ProjectsPage {
     this.createError.set('');
 
     try {
-      const project = await this.#projectsService.createProject(
-        this.newName(),
-        this.newRepoUrl() || undefined,
+      const project = await this.#projects.createProject(
+        this.newName().trim(),
+        this.newRepoUrl().trim() || undefined,
       );
-
-      const link = this.parseLink(this.newCloudLink());
-      const saved = link
-        ? await this.#projectsService.linkProject(project.id, link)
-        : project;
-
-      this.projects.update((list) => [saved, ...list]);
       this.newName.set('');
       this.newRepoUrl.set('');
-      this.newCloudLink.set('');
+      this.creating.set(false);
+
+      // Straight to the new project, where its resources get linked. The slug
+      // is recomputed from the refreshed list, so a duplicate name still lands
+      // on the right one.
+      const view = this.views().projects.find(
+        (candidate) => candidate.project?.id === project.id,
+      );
+      await this.#router.navigate([
+        '/projects',
+        view?.slug ?? slugFromName(project.name),
+      ]);
     } catch (error: unknown) {
       this.createError.set(
-        error instanceof Error ? error.message : 'Failed to save project',
+        error instanceof Error ? error.message : 'Could not create the project',
       );
     } finally {
       this.isCreating.set(false);
     }
-  }
-
-  private async load(refresh = false): Promise<void> {
-    this.isLoadingProjects.set(true);
-    this.statusError.set('');
-
-    const projectList = this.#projectsService
-      .getProjects()
-      .then((projects) => this.projects.set(projects))
-      .catch((error: unknown) => {
-        console.error('Failed to load projects', error);
-        this.projects.set([]);
-      })
-      .finally(() => this.isLoadingProjects.set(false));
-
-    try {
-      const status = await this.cloud.loadStatus();
-      if (status.admin && status.configured) {
-        await this.cloud.loadOverview(refresh);
-      }
-    } catch (error: unknown) {
-      this.statusError.set(
-        error instanceof Error ? error.message : 'Could not reach the server',
-      );
-      console.error('Failed to load Cloudflare dashboard', error);
-    }
-
-    await projectList;
-  }
-
-  private parseLink(
-    value: string,
-  ): { cfType: 'worker' | 'pages'; cfName: string } | null {
-    if (!value) return null;
-
-    const [cfType, ...rest] = value.split(':');
-    if (cfType !== 'worker' && cfType !== 'pages') return null;
-
-    return { cfType, cfName: rest.join(':') };
   }
 }

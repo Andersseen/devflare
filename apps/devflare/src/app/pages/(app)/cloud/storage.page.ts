@@ -15,6 +15,7 @@ import {
   type CloudStorage,
 } from '@org/core';
 import { CloudGate } from './cloud-gate';
+import { ResourceOwner } from './resource-owner';
 
 /**
  * The data side of the account: D1 databases and KV namespaces.
@@ -29,6 +30,7 @@ import { CloudGate } from './cloud-gate';
 @Component({
   selector: 'app-cloud-storage-page',
   imports: [
+    ResourceOwner,
     LucideAngularModule,
     VoltCard,
     VoltCardHeader,
@@ -106,6 +108,13 @@ import { CloudGate } from './cloud-gate';
                           <p class="text-xs text-muted-foreground font-mono">
                             {{ database.id }}
                           </p>
+                          <app-resource-owner
+                            class="mt-1 block"
+                            [type]="'d1'"
+                            [resourceId]="database.id"
+                            [label]="database.name"
+                            [compact]="true"
+                          />
                         </div>
                         <div
                           class="text-sm text-muted-foreground whitespace-nowrap text-right"
@@ -151,6 +160,13 @@ import { CloudGate } from './cloud-gate';
                         <p class="text-xs text-muted-foreground font-mono">
                           {{ namespace.id }}
                         </p>
+                        <app-resource-owner
+                          class="mt-1 block"
+                          [type]="'kv'"
+                          [resourceId]="namespace.id"
+                          [label]="namespace.name"
+                          [compact]="true"
+                        />
                       </li>
                     }
                   </ul>

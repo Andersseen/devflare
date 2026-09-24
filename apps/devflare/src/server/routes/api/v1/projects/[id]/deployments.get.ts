@@ -1,7 +1,8 @@
 import { defineEventHandler, getRouterParam, createError } from 'h3';
 import { getAppSession, requireAuth } from '../../../../../lib/session';
 import { db } from '../../../../../db';
-import { rowsOf, type ProjectRow } from '../../../../../lib/project-rows';
+import { getOwnedProject } from '../../../../../lib/project-store';
+import { rowsOf } from '../../../../../lib/project-rows';
 
 /**
  * GET /api/v1/projects/:id/deployments — what DevFlare itself has deployed for
@@ -35,11 +36,7 @@ export default defineEventHandler(async (event) => {
 
   // Ownership is proved against `projects`, not by trusting the id: a
   // deployments row is only reachable through a project the caller owns.
-  const owned = rowsOf<ProjectRow>(
-    await db.sql`SELECT id FROM projects WHERE id = ${id} AND userId = ${user.id}`,
-  );
-
-  if (!owned.length) {
+  if (!(await getOwnedProject(user.id, id))) {
     throw createError({ statusCode: 404, statusMessage: 'Project not found' });
   }
 

@@ -1,62 +1,39 @@
-import { defineEventHandler, getRouterParam, createError, readBody } from 'h3';
-import { getAppSession, requireAuth } from '../../../../lib/session';
-import { db } from '../../../../db';
+import { createError, defineEventHandler, readBody } from 'h3';
+import { answer, callerOf, routeParam } from '../../../../lib/project-http';
 import {
-  parseLink,
-  rowsOf,
-  type ProjectRow,
-} from '../../../../lib/project-rows';
+  deleteProjectFor,
+  getProjectFor,
+  updateProjectFor,
+} from '../../../../lib/project-service';
 
+/**
+ * GET    /api/v1/projects/:id — one project with its resources.
+ * PATCH  /api/v1/projects/:id — edit `name` and/or `repoUrl`.
+ * DELETE /api/v1/projects/:id — remove it, its links and its deploy log.
+ *
+ * PATCH used to set the single `cfType`/`cfName` link (spec 005). Links are a
+ * collection now, with their own routes under ./[id]/resources.
+ */
 export default defineEventHandler(async (event) => {
-  const session = await getAppSession(event);
-  const user = requireAuth(session);
-  const id = getRouterParam(event, 'id');
-
-  if (!id) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Project ID is required',
-    });
-  }
-
-  const owned = rowsOf<ProjectRow>(
-    await db.sql`SELECT * FROM projects WHERE id = ${id} AND userId = ${user.id}`,
-  );
-
-  if (!owned.length) {
-    throw createError({ statusCode: 404, statusMessage: 'Project not found' });
-  }
+  const caller = await callerOf(event);
+  const id = routeParam(event, 'id');
 
   if (event.method === 'GET') {
-    return { project: owned[0] };
+    return answer(async () => ({ project: await getProjectFor(caller, id) }));
   }
 
   if (event.method === 'PATCH') {
-    // Spec 005: link this row to the Worker or Pages project it deploys to, or
-    // clear the link. Nothing is verified against Cloudflare here — a name that
-    // stops resolving is shown as unlinked rather than blocking the edit.
-    let link;
-    try {
-      link = parseLink(await readBody(event));
-    } catch (error) {
-      throw createError({
-        statusCode: 400,
-        statusMessage:
-          error instanceof Error ? error.message : 'Invalid link payload',
-      });
-    }
-
-    await db.sql`UPDATE projects SET cfType = ${link.cfType}, cfName = ${link.cfName} WHERE id = ${id} AND userId = ${user.id}`;
-
-    const project = rowsOf<ProjectRow>(
-      await db.sql`SELECT * FROM projects WHERE id = ${id}`,
-    )[0];
-    return { project };
+    const body = await readBody(event);
+    return answer(async () => ({
+      project: await updateProjectFor(caller, id, body),
+    }));
   }
 
   if (event.method === 'DELETE') {
-    await db.sql`DELETE FROM projects WHERE id = ${id} AND userId = ${user.id}`;
-    return { success: true };
+    return answer(async () => {
+      await deleteProjectFor(caller, id);
+      return { success: true };
+    });
   }
 
   throw createError({ statusCode: 405, statusMessage: 'Method Not Allowed' });

@@ -3,3 +3,5 @@
 export * from './lib/services/projects.service';
 export * from './lib/services/devauth-admin.service';
 export * from './lib/services/cloudflare-account.service';
+export * from './lib/services/project-resources';
+export * from './lib/services/project-hub.service';

@@ -54,5 +54,6 @@ the code is the implementation of it.
 | 016 | [DevAuth SDK hardening](016-dev-auth-hardening.md)                                                      | In progress                                                   |
 | 017 | [Prefer and expose custom deployment domains](017-custom-domain-links.md)                               | Done                                                          |
 | 018 | [Split DevTools out of DevFlare; refocus DevFlare on projects](018-split-devtools-app.md)               | Done (DevTools deployment is follow-up)                       |
+| 019 | [Project resources: explicit ownership of Cloudflare infrastructure](019-project-resources.md)          | Done                                                          |
 
 (Keep this table updated — it's how agents discover active work.)

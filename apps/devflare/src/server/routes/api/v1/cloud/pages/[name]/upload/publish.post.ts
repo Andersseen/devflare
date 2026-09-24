@@ -7,7 +7,11 @@ import {
 } from '../../../../../../../lib/cloudflare';
 import { createPagesDeployment } from '../../../../../../../lib/pages-upload';
 import { db } from '../../../../../../../db';
-import { rowsOf, type ProjectRow } from '../../../../../../../lib/project-rows';
+import type { ProjectRow } from '../../../../../../../lib/project-rows';
+import {
+  findPagesOwner,
+  getOwnedProject,
+} from '../../../../../../../lib/project-store';
 
 /**
  * POST /api/v1/cloud/pages/:name/upload/publish — turn an uploaded asset set
@@ -18,9 +22,11 @@ import { rowsOf, type ProjectRow } from '../../../../../../../lib/project-rows';
  * the whole repo — `deploy.page.ts` faked its upload with a setTimeout, so
  * there was never anything real to record.
  *
- * A row is only written when the caller names a DevFlare project to attribute
- * it to; `deployments.projectId` is NOT NULL with a foreign key, and inventing a
- * project to satisfy it would be worse than having no local history. Cloudflare
+ * A row is only written when the deployment can be attributed to a DevFlare
+ * project: the one the caller names, or else the project that explicitly owns
+ * this Pages project (spec 019 — a `project_resource` link, never a name
+ * match). `deployments.projectId` is NOT NULL with a foreign key, and inventing
+ * a project to satisfy it would be worse than having no local history. Cloudflare
  * keeps the deployment either way, and /cloud reads it from there.
  */
 export default defineEventHandler((event) =>
@@ -58,13 +64,11 @@ export default defineEventHandler((event) =>
       typeof body?.projectId === 'string' && body.projectId
         ? body.projectId
         : null;
-    let project: ProjectRow | undefined;
+    let project: ProjectRow | null = null;
 
     if (projectId) {
       const user = requireAuth(await getAppSession(event));
-      project = rowsOf<ProjectRow>(
-        await db.sql`SELECT * FROM projects WHERE id = ${projectId} AND userId = ${user.id}`,
-      )[0];
+      project = await getOwnedProject(user.id, projectId);
 
       if (!project) {
         // 404 rather than 403 — whether someone else's project exists is not
@@ -74,6 +78,9 @@ export default defineEventHandler((event) =>
           statusMessage: 'Project not found',
         });
       }
+    } else {
+      const user = requireAuth(await getAppSession(event));
+      project = await findPagesOwner(user.id, name);
     }
 
     const deployment = await createPagesDeployment(config, name, {
