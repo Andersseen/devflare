@@ -1,14 +1,5 @@
-// Services
+// DevFlare platform services. Browser utilities live in apps/devtools, not
+// here — see docs/specs/018-split-devtools-app.md.
 export * from './lib/services/projects.service';
 export * from './lib/services/devauth-admin.service';
 export * from './lib/services/cloudflare-account.service';
-
-// Tool Services
-export * from './lib/services/tools/qr-generator.service';
-export * from './lib/services/tools/seo-simulator.service';
-export * from './lib/services/tools/data-converter.service';
-export * from './lib/services/tools/screen-recorder.service';
-export * from './lib/services/tools/og-generator.service';
-export * from './lib/services/tools/palette.service';
-export * from './lib/services/tools/bg-remover.service';
-export * from './lib/services/tools/url-shortener.service';

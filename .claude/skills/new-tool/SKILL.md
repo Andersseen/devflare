@@ -1,15 +1,22 @@
 ---
 name: new-tool
-description: Scaffold a new DevFlare browser tool end to end — @org/core service + spec, the page component, and all four registration points (barrel export, router, shell navigation catalog, lucide icon).
+description: Scaffold a new DevTools browser utility end to end — colocated service + spec, the page component, the tool-registry entry and the lucide icon. Tools live in apps/devtools, never in DevFlare.
 disable-model-invocation: true
 ---
 
 # New tool
 
-Adds a client-side tool to DevFlare: **3 new files** (service, spec, page) plus
-**4 registration edits** (barrel, route, catalog, icon). The registrations are
-the ones that get forgotten — a page with no route entry is simply unreachable,
-and an unregistered lucide icon renders as empty space with no error.
+Adds a client-side tool to **DevTools** (`apps/devtools`) — the standalone,
+anonymous, static app. DevFlare (`apps/devflare`) is the project hub and must
+not grow tools again (docs/specs/018-split-devtools-app.md).
+
+**3 new files** (service, spec, page) plus **2 registration edits** (registry,
+icon). The registrations are the ones that get forgotten — and
+`tool-registry.spec.ts` fails the test run if a page and the registry disagree.
+
+Before adding one, check the brief still wants it: DevTools deliberately does
+not clone generic utilities (JWT decoders, Base64, cron, regex, hashes…), and
+image-asset tools belong to Imageryx, not here.
 
 ## Arguments
 
@@ -18,10 +25,12 @@ The user gives a tool name and a one-line purpose, e.g.
 
 Derive:
 
-- `slug` — kebab-case, used for the file name and the URL (`json-formatter`)
+- `slug` — kebab-case, used for the page file name **and** the URL
+  (`json-formatter` → `/json-formatter`)
 - `ClassName` — PascalCase service name, named after the tool, **no `Service`
-  suffix** (`JsonFormatter` — match `QrGenerator`, not `QrGeneratorService`)
+  suffix** (`JsonFormatter` — match `QrGenerator`)
 - `Title` — display name for the UI (`JSON Formatter`)
+- `category` — one of `web`, `data`, `media` (see `TOOL_CATEGORIES`)
 - `icon` — a valid [lucide](https://lucide.dev/icons) icon name (`braces`)
 
 If any of these is unclear, ask once, then build everything without stopping again.
@@ -41,110 +50,71 @@ The files in `templates/` use these tokens — replace every one:
 
 The templates are a starting shape, not a contract — replace the placeholder
 `run()` body with the tool's real logic and adjust the Volt components to what
-the tool actually needs (`VoltInput`, `VoltTabs`, a canvas, a file drop zone…).
+the tool actually needs.
 
 ## Ground rules
 
-Read `docs/ai/CONVENTIONS.md` before writing. In short: standalone components,
-signals only, `inject()` as `#private` fields, `export default class` for pages,
-inline Tailwind template, `@voltui/components` before custom markup. All tool
-logic runs **in the browser** — never add a server route for a tool.
+Read `docs/ai/CONVENTIONS.md` and `apps/devtools/README.md` first. In short:
+standalone components, signals only, `inject()` as `#private` fields,
+`export default class` for pages, inline Tailwind template. All tool logic
+runs **in the browser**: no server route, no API call to a DevFlare backend, no
+DevAuth, no D1/KV/R2. Every page must have an `<h1>` and must not touch
+`window`/`document`/`navigator` during render — the build prerenders every
+tool and fails if a page throws.
 
 ## Steps
 
-**1. Service** → `libs/shared/core/src/lib/services/tools/<slug>.service.ts`
+**1. Service** → `apps/devtools/src/app/tools/<slug>.service.ts`
 
-Use `templates/service.ts.template`. Pure logic, no DOM coupling beyond what the
-tool needs; canvas/file elements are passed in as arguments by the page.
+Use `templates/service.ts.template`. Pure logic; canvas/file elements are passed
+in as arguments by the page. Colocated in the app — not in `@org/core`, which is
+DevFlare's platform library and which DevTools is not allowed to import.
 
-**2. Spec** → `libs/shared/core/src/lib/services/tools/<slug>.service.spec.ts`
+**2. Spec** → `apps/devtools/src/app/tools/<slug>.service.spec.ts`
 
 Use `templates/service.spec.ts.template`. Services require tests (pages do not).
-Cover the real transformation and at least one malformed input.
+Cover the real transformation and at least one malformed input. Runs under
+`pnpm nx test devtools`.
 
-> **Heads up:** `libs/shared/core` has no `test` target yet, so this spec will
-> not actually run — `pnpm exec nx show projects --with-target test` lists only
-> `auth`, `dev-auth`, `devflare`. Still write it; see step 0 of the
-> `test-writer` agent for how to wire the target when you want it executing.
+**3. Page** → `apps/devtools/src/app/pages/<slug>.page.ts`
 
-**3. Barrel export** → `libs/shared/core/src/index.ts`
+Use `templates/page.ts.template`. File-based routing: the file name is the URL.
+Copy the two-column layout from `apps/devtools/src/app/pages/qr-generator.page.ts`
+(controls left, preview right) unless the tool needs something else.
 
-Append under the `// Tool Services` block:
+**4. Registry entry** → `apps/devtools/src/app/tools/tool-registry.ts`
 
-```ts
-export * from './lib/services/tools/<slug>.service';
-```
-
-Without this the page cannot import from `@org/core`.
-
-**4. Page** → `apps/devflare/src/app/pages/tools/<slug>.page.ts`
-
-Use `templates/page.ts.template`. Keep it thin: signals for state, handlers that
-delegate to the service. Copy the two-column layout from
-`apps/devflare/src/app/pages/tools/qr-generator.page.ts` (controls left, preview
-right) unless the tool needs something else.
-
-**5. Route** → `apps/devflare/src/app/app.routes.ts`
-
-Routing is **explicit**, not file-based — `provideRouter(appRoutes)` in
-`app.config.ts`. Add inside the same children array as the other tools:
+One entry drives the home grid, the tool strip in the header **and** the list of
+routes prerendered by `vite.config.ts`:
 
 ```ts
 {
-  path: 'tools/<slug>',
-  loadComponent: () => import('./pages/tools/<slug>.page'),
-},
-```
-
-**6. Catalog entry** → `apps/devflare/src/app/components/shell-navigation.ts`
-
-This one entry drives the home grid, the `/tools` grid **and** the sidebar link —
-they are all derived from `TOOLS`. Do not edit `(home).page.ts` or
-`sidebar.component.ts`; they no longer hold per-tool markup.
-
-Add to the `TOOLS` array, picking a Tailwind color not already used by a
-neighbour:
-
-```ts
-{
+  path: '<slug>',
   title: '<Title>',
   description: '<one sentence, ends with a period>',
-  link: '/tools/<slug>',
+  category: '<web|data|media>',
   icon: '<icon>',
   colorClass: 'text-<color>-500',
   bgClass: 'bg-<color>-500/10',
 },
 ```
 
-Add `navLabel` only if `title` is too long for the sidebar (compare against the
-neighbours — `'QR Code Studio'` ships `navLabel: 'QR Generator'`).
+Add `navLabel` only if `title` is too long for the tool strip.
 
-**7. Register the icon** → `apps/devflare/src/app/app.config.ts`
+**5. Register the icon** → `apps/devtools/src/app/app.config.ts`
 
-Icons are explicitly picked, not bundled wholesale:
-`LucideAngularModule.pick({ … })`. An unregistered `<icon>` renders as nothing —
-silently, with no build error. Import the PascalCase name from `lucide-angular`
-and add it to the `pick({ … })` object.
+`LucideAngularModule.pick({ … })` — an unregistered icon renders as nothing,
+silently. Import the PascalCase name from `lucide-angular` and add it.
+
+**6. E2E** → add the tool to the `TOOLS` table in
+`apps/devtools-e2e/src/tools.spec.ts` (path, card title, h1).
 
 ## Verify before reporting done
 
 ```
-pnpm format:write && pnpm lint && pnpm typecheck && pnpm test
+pnpm format:write && pnpm lint && pnpm typecheck && pnpm nx test devtools && pnpm nx build devtools
 ```
 
-Then confirm all four registration points are wired:
-
-```
-grep -rn "<slug>" libs/shared/core/src/index.ts apps/devflare/src/app/app.routes.ts apps/devflare/src/app/components/shell-navigation.ts
-```
-
-Three hits expected — one per file — plus the icon in `app.config.ts`, which is
-keyed by icon name rather than slug:
-
-```
-grep -n "<IconName>" apps/devflare/src/app/app.config.ts
-```
-
-Report the route the user can now open (`/tools/<slug>`) and anything you had to
-guess. The tool should appear in the home grid, at `/tools`, and in the sidebar
-under the DevTools section without any further edits.
+The build step matters: it prerenders the new page and fails on an SSR crash.
+Report the route the user can now open (`http://localhost:4300/<slug>` via
+`pnpm dev:tools`) and anything you had to guess.

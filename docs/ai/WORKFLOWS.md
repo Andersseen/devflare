@@ -10,9 +10,10 @@ cp .env.sample .env        # fill in at least BETTER_AUTH_SECRET
 ## Daily development
 
 ```bash
-pnpm dev:all      # auth (:8787) + app (:4200) together
-pnpm dev:app      # app only  → http://localhost:4200
-pnpm dev:auth     # auth only → http://localhost:8787
+pnpm dev:all      # auth (:8787) + DevFlare (:4200) + DevTools (:4300)
+pnpm dev:app      # DevFlare only  → http://localhost:4200
+pnpm dev:tools    # DevTools only  → http://localhost:4300 (needs nothing else)
+pnpm dev:auth     # auth only      → http://localhost:8787
 pnpm seed:user    # create test user (auth service must be running)
 ```
 
@@ -34,12 +35,15 @@ pnpm test           # Vitest across all projects
 pnpm check          # all of the above + production build (slowest, most complete)
 ```
 
-Scoped/faster variants: `nx test devflare`, `nx lint dev-auth`,
+`pnpm build` builds DevFlare and DevTools (`build:app` / `build:tools` for one).
+
+Scoped/faster variants: `nx test devflare`, `nx test devtools`, `nx lint dev-auth`,
 `nx affected -t test lint build` (only what changed).
 
 ## Verifying a change actually works (not just compiles)
 
-1. Tool page change → open `http://localhost:4200/tools/<tool>` and exercise it.
+1. Tool page change → open `http://localhost:4300/<tool>` (`pnpm dev:tools`) and
+   exercise it, then `nx build devtools` — the prerender fails on SSR crashes.
 2. Auth change → run the curl flow:
    ```bash
    curl -X POST http://localhost:8787/api/auth/sign-in/email \
@@ -49,7 +53,8 @@ Scoped/faster variants: `nx test devflare`, `nx lint dev-auth`,
    ```
 3. App API change → `curl http://localhost:4200/api/v1/projects -b /tmp/c.txt`
    (cookies from step 2 work through the proxy).
-4. E2E: `nx e2e devflare-e2e` (Playwright; needs both services running).
+4. E2E: `nx e2e devflare-e2e` (starts DevFlare itself; the sign-in tests stop at
+   the provider boundary) and `nx e2e devtools-e2e` (starts DevTools; nothing else).
 
 ## Database
 
@@ -101,4 +106,4 @@ output. Full production setup (resources, secrets, domains): see
 | Session not visible at :4200           | Both services running? The Nitro catch-all proxies `/api/auth/*` to :8787.                                                                                                                                                       |
 | Cookies lost in staging/prod           | `COOKIE_DOMAIN` must be the root domain (`.yourdomain.com`), same for both apps.                                                                                                                                                 |
 | Rate-limited during testing (429)      | KV rate limit ~10 req/min/IP on auth endpoints — wait or restart local state.                                                                                                                                                    |
-| Port already in use                    | A previous `pnpm dev:all` still alive — kill node/wrangler processes.                                                                                                                                                            |
+| Port already in use                    | A previous `pnpm dev:all` (or an E2E dev server) still alive — kill node/wrangler processes. Vite silently moves DevFlare to :4201, which breaks the registered OAuth redirect URI.                                              |

@@ -16,6 +16,9 @@ const baseURL = process.env['BASE_URL'] || 'http://localhost:4200';
  */
 export default defineConfig({
   ...nxE2EPreset(__filename, { testDir: './src' }),
+  // The dev server compiles each route on first request, and CI always starts
+  // cold; the default 5s is not always enough for that.
+  expect: { timeout: 15_000 },
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     baseURL,

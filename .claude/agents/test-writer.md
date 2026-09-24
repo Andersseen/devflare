@@ -1,6 +1,6 @@
 ---
 name: test-writer
-description: Writes Vitest specs for @org/core services (libs/shared/core), the layer that holds all of DevFlare's business logic and currently has zero tests. Use when asked to add or backfill tests for a tool service, or after adding a new service to libs/shared/core.
+description: Writes Vitest specs for @org/core services (libs/shared/core, DevFlare's platform logic) and DevTools' colocated tool services (apps/devtools/src/app/tools). Use when asked to add or backfill tests for a service, or after adding one.
 tools: Read, Grep, Glob, Bash, Write, Edit
 model: sonnet
 ---
@@ -49,8 +49,9 @@ cannot run them.
 Target `libs/shared/core/src/lib/services/`, which currently has **zero** spec
 files:
 
-- `services/tools/` — ten tool services, the highest-value target. These are
-  pure browser logic with few Angular dependencies.
+- Tool services no longer live here: they moved to `apps/devtools/src/app/tools/`
+  (docs/specs/018-split-devtools-app.md), with colocated specs that run under
+  `nx test devtools`. Put tool specs there, next to the service.
 - `services/projects.service.ts`, `services/auth.service.ts`,
   `services/webcontainer.service.ts` — these do network / platform work; mock at
   the boundary or skip and say why.

@@ -1,5 +1,9 @@
 # DevFlare Auth (`dev-auth`)
 
+> **Purpose: identity provider** — OAuth 2.1 / OIDC, plus the `@dev-auth/*`
+> consumer SDK in `libs/shared/dev-auth-*`. One of four products in this
+> repository; see the root [README](../../README.md).
+
 A personal **authentication provider**: users sign in here once, and any of my
 applications can authenticate against it through a standard OAuth 2.1 /
 OpenID Connect flow.

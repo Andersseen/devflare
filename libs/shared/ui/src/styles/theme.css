@@ -1,0 +1,157 @@
+/*
+ * Shared design tokens for the apps in this repo (DevFlare, DevTools).
+ *
+ * Each app's styles.css imports, in this order:
+ *   1. tailwindcss
+ *   2. @voltui/components/themes.css (Volt's own tokens + @source)
+ *   3. this file — the shared palette, which intentionally wins over Volt's
+ *   4. its own overrides (typically just --primary/--accent/--ring), which is
+ *      how each product keeps its own identity on the same foundation.
+ *
+ * Tokens only: no layout, no app-shell rules. Those stay in each app.
+ */
+
+/*
+ * Volt keys `dark:` off a `.dark` class; this app has always been driven by the
+ * OS preference. Accept both so existing `dark:` utilities keep working.
+ */
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    @slot;
+  }
+  &:where(.dark, .dark *) {
+    @slot;
+  }
+}
+
+@theme {
+  /* Semantic Colors - mapped to CSS variables */
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-foreground: var(--surface-foreground);
+  --color-border: var(--border);
+
+  --color-foreground: var(--foreground);
+  --color-text: var(--foreground);
+
+  /* Volt's preset drops `bold` to 600; keep this app's heavier headings. */
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+
+  /* Shadcn/ui compatible colors */
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+}
+
+/* Light Theme (Default) */
+:root {
+  --background: #ffffff;
+  --foreground: #0f172a;
+
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+
+  --primary: #4f46e5;
+  --primary-foreground: #ffffff;
+
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0f172a;
+
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+
+  --accent: #eef2ff;
+  --accent-foreground: #4f46e5;
+
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+
+  --warning: #f59e0b;
+  --warning-foreground: #ffffff;
+
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #4f46e5;
+
+  --radius: 0.5rem;
+
+  /* Legacy mappings for compatibility */
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --surface: #ffffff;
+  --surface-foreground: #0f172a;
+  --success: #16a34a;
+  --success-foreground: #ffffff;
+}
+
+/* Dark Theme */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0f172a;
+    --foreground: #f8fafc;
+
+    --card: #1e293b;
+    --card-foreground: #f8fafc;
+
+    --popover: #1e293b;
+    --popover-foreground: #f8fafc;
+
+    --primary: #6366f1;
+    --primary-foreground: #ffffff;
+
+    --secondary: #1e293b;
+    --secondary-foreground: #f1f5f9;
+
+    --muted: #334155;
+    --muted-foreground: #94a3b8;
+
+    --accent: rgba(99, 102, 241, 0.2);
+    --accent-foreground: #818cf8;
+
+    --destructive: #ef4444;
+    --destructive-foreground: #ffffff;
+
+    --warning: #fbbf24;
+    --warning-foreground: #0f172a;
+
+    --border: #334155;
+    --input: #334155;
+    --ring: #6366f1;
+
+    /* Legacy mappings */
+    --text: #f8fafc;
+    --text-muted: #94a3b8;
+    --surface: #1e293b;
+    --surface-foreground: #f8fafc;
+    --success: #22c55e;
+    --success-foreground: #ffffff;
+  }
+}

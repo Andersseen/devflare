@@ -1,6 +1,6 @@
 ---
 name: angular-conventions-reviewer
-description: Reviews Angular/AnalogJS changes against this repo's conventions — standalone components, signals over RxJS, inject(), thin pages delegating to @org/core. Use after writing or editing anything under apps/devflare/src/app or libs/shared. ESLint does not catch any of these rules.
+description: Reviews Angular/AnalogJS changes against this repo's conventions — standalone components, signals over RxJS, inject(), thin pages delegating to @org/core (DevFlare) or colocated tool services (DevTools). Use after writing or editing anything under apps/devflare/src/app, apps/devtools/src/app or libs/shared. ESLint does not catch any of these rules.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---
@@ -11,7 +11,7 @@ linter cannot enforce. You do **not** fix code — you report findings.
 ## First, load the ground truth
 
 1. Read `docs/ai/CONVENTIONS.md` (the authoritative rule set).
-2. Read `apps/devflare/src/app/pages/tools/qr-generator.page.ts` — the canonical
+2. Read `apps/devtools/src/app/pages/qr-generator.page.ts` — the canonical
    page. When a rule is ambiguous, whatever that file does is correct.
 
 ## Scope
@@ -19,7 +19,7 @@ linter cannot enforce. You do **not** fix code — you report findings.
 Review only what changed. Get the diff with:
 
 ```
-git diff --name-only HEAD && git diff HEAD -- apps/devflare/src/app libs/shared
+git diff --name-only HEAD && git diff HEAD -- apps/devflare/src/app apps/devtools/src/app libs/shared
 ```
 
 If there is no diff, review the files the user names instead. Never review the
@@ -37,7 +37,8 @@ whole repo.
   Signals (`signal`/`computed`/`effect`) are required. RxJS is allowed only
   where an external library forces it — say so explicitly if you see that case.
 - A page missing `export default class` (AnalogJS requires the default export).
-- Business logic living in a `*.page.ts` instead of a `@org/core` service.
+- Business logic living in a `*.page.ts` instead of a service (`@org/core` for
+  DevFlare, `apps/devtools/src/app/tools/` for DevTools).
   Pages hold signals + event handlers that delegate; anything else (parsing,
   encoding, canvas math, network calls, format conversion) belongs in
   `libs/shared/core/src/lib/services/`.
@@ -64,7 +65,7 @@ whole repo.
 Group by file, most severe first. For each finding:
 
 ```
-apps/devflare/src/app/pages/tools/foo.page.ts:42
+apps/devtools/src/app/pages/foo.page.ts:42
   [hard] Constructor injection — use `#foo = inject(FooService);`
 ```
 

@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import type { CloudPagesProject, CloudWorker, Project } from '@org/core';
+import type {
+  CloudDeployment,
+  CloudPagesProject,
+  CloudWorker,
+  Project,
+} from '@org/core';
 import {
   groupDashboardProjects,
+  latestDeployment,
   resourceUrl,
   resourceUrls,
 } from './dashboard-projects';
@@ -230,5 +236,60 @@ describe('resource URLs', () => {
       'https://empty-domains.pages.dev',
     ]);
     expect(resourceUrl(project, null)).toBe('https://empty-domains.pages.dev');
+  });
+});
+
+function deployment(id: string, createdOn: string): CloudDeployment {
+  return {
+    id,
+    shortId: id.slice(0, 8),
+    url: `https://${id}.demo.pages.dev`,
+    environment: 'production',
+    createdOn,
+    trigger: 'github:push',
+    status: 'success',
+    stage: 'deploy',
+    branch: 'main',
+    commit: 'abcdef1234',
+    commitMessage: null,
+  };
+}
+
+describe('latestDeployment', () => {
+  it('picks the newest Pages deployment across a project', () => {
+    const older = {
+      ...pages('docs'),
+      latestDeployment: deployment('old', '2026-09-01T00:00:00.000Z'),
+    };
+    const newer = {
+      ...pages('site'),
+      latestDeployment: deployment('new', '2026-09-20T00:00:00.000Z'),
+    };
+
+    expect(latestDeployment([older, newer, pages('empty')])).toEqual({
+      pagesProject: 'site',
+      deployment: newer.latestDeployment,
+    });
+  });
+
+  it('is null when nothing has deployed', () => {
+    expect(latestDeployment([pages('empty')])).toBeNull();
+    expect(latestDeployment([])).toBeNull();
+  });
+
+  it('is exposed on each dashboard group', () => {
+    const [group] = groupDashboardProjects({
+      saved: [],
+      pages: [
+        {
+          ...pages('imageryx'),
+          latestDeployment: deployment('abc', '2026-09-20T00:00:00.000Z'),
+        },
+      ],
+      workers: [worker('imageryx-api')],
+    }).filter((item) => item.slug === 'imageryx');
+
+    expect(group.latestDeployment?.pagesProject).toBe('imageryx');
+    expect(group.workers).toHaveLength(1);
   });
 });

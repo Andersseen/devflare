@@ -1,4 +1,9 @@
-import type { CloudPagesProject, CloudWorker, Project } from '@org/core';
+import type {
+  CloudDeployment,
+  CloudPagesProject,
+  CloudWorker,
+  Project,
+} from '@org/core';
 
 export interface WatchedProject {
   name: string;
@@ -22,6 +27,13 @@ export interface ProjectGroup {
   /** Route-only URLs rendered separately from the Pages/Worker resource cards. */
   verifiedUrls: string[];
   lastActivity: string | null;
+  /** Newest Pages deployment across the group, with the project it belongs to. */
+  latestDeployment: LatestDeployment | null;
+}
+
+export interface LatestDeployment {
+  pagesProject: string;
+  deployment: CloudDeployment;
 }
 
 export const WATCHED_PROJECTS: WatchedProject[] = [
@@ -250,7 +262,32 @@ function toGroup(
     url: publicUrls[0] ?? null,
     verifiedUrls,
     lastActivity: lastActivity(pages, workers),
+    latestDeployment: latestDeployment(pages),
   };
+}
+
+/**
+ * Only Pages reports deployments in the overview payload; Workers expose
+ * versions, which need a per-Worker request and are shown on the Worker page.
+ */
+export function latestDeployment(
+  pages: CloudPagesProject[],
+): LatestDeployment | null {
+  let newest: LatestDeployment | null = null;
+
+  for (const project of pages) {
+    const deployment = project.latestDeployment;
+    if (!deployment) continue;
+
+    const time = new Date(deployment.createdOn).getTime();
+    if (!Number.isFinite(time)) continue;
+
+    if (!newest || time > new Date(newest.deployment.createdOn).getTime()) {
+      newest = { pagesProject: project.name, deployment };
+    }
+  }
+
+  return newest;
 }
 
 function uniquePublicUrls(urls: readonly string[]): string[] {

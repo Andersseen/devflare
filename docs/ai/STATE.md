@@ -8,23 +8,22 @@
 > to the last ~5 entries, newest first. Update the date. Facts only; no plans
 > you didn't verify.
 
-_Last updated: 2026-09-23_
+_Last updated: 2026-09-24_
 
 ## Branch & repo status
 
-Verified directly against `git log --oneline -5` and `git branch --show-current`
-on 2026-09-23. `gh pr list --state all --limit 15` was attempted but could not
-reach GitHub from this environment. **This section has drifted before** (see
+Verified directly against `git log --oneline -15`, `git branch --show-current`
+and `gh pr list --state all --limit 15` on 2026-09-24. **This section has drifted before** (see
 the 2026-08-10 / 2026-09-03 / 2026-09-11 lessons) from carrying forward a
 previous write-up's claim instead of re-checking. **Standing rule: before
 writing anything here, run `git log`/`git branch`/`gh pr list` yourself.**
 
-- Current branch is **`main`** at `7f921e4` (merge of PR #42,
-  `feature/updates`). The working tree contains uncommitted Spec 017
-  Cloudflare-only dashboard changes; they have not been deployed.
-- Newest confirmed history: `7f921e4` (PR #42 merge), `6cfaede` (`feat:
-updates`), `425ec7c` (PR #41 merge). GitHub PR state beyond those local log
-  entries was not rechecked because the CLI could not reach GitHub.
+- Work branch **`feature/split-devtools-app`**, created from `main` at
+  `0395b2c` (merge of PR #43, `feature/updates`, which carried the Spec 017
+  dashboard work). Spec 018 (DevTools split) is on this branch, **uncommitted**
+  at the time of writing — not merged, not deployed.
+- Newest merged PRs: #43, #42, #41 (`feature/updates`), #40
+  (`feature/dev-auth-hardening`), #39, #38, #37. PR #32 CLOSED.
 - **PR #32 (`feature/012-dev-auth-angular-ui`, "add optional DevAuth Angular
   UI") is CLOSED** as of 2026-09-04T09:15:31Z and superseded by PR #37.
 - **PR #38 (`feature/dev-auth-sdk-polish`, MERGED 2026-09-12)** —
@@ -471,7 +470,31 @@ Key decisions and the traps behind them:
   `apps/devflare/shims/papaparse.server.mjs`, which throws if SSR ever calls it.
 - `better-sqlite3` and the tracked, empty `data/devflare.db` are removed.
 
-## UI shell (merged)
+## Product split (spec 018, branch `feature/split-devtools-app`)
+
+The repo now holds four products; see
+[docs/specs/018-split-devtools-app.md](../specs/018-split-devtools-app.md) and
+the "Product map" in ARCHITECTURE.md.
+
+- **DevTools** (`apps/devtools`, :4300) owns all 8 browser utilities, moved
+  with `git mv` (pages + services + papaparse shim). Anonymous, static
+  (`static: true`, 9 prerendered routes), own shell and teal accent. A build
+  hook fails the build if a prerendered route has no `<h1>` — verified with a
+  deliberate `window` access. `wrangler.toml` is assets-only; **no domain, no
+  deploy job yet**.
+- **DevFlare** is the project hub: nav = Projects + Cloud, Settings in the
+  footer, one external DevTools link (`VITE_DEVTOOLS_URL`, dev default :4300).
+  Home = project cards with latest Pages deployment; project detail =
+  overview (live / repository / latest deployment), Resources, Deployments
+  history (existing `/api/v1/cloud/pages/:name`). `/dev-auth-sdk` kept but
+  out of nav. Old `/tools/*` → 302 to DevTools when `DEVTOOLS_URL` is set
+  (set only for local dev in wrangler.toml; production falls back to `/`).
+- `@org/core` holds only platform services. Nx `domain:devtools` rule blocks
+  both cross-app directions (verified by a deliberate bad import).
+- Design tokens moved to `libs/shared/ui/src/styles/theme.css`; both apps
+  import them and override only the accent.
+
+## UI shell (merged; nav superseded by spec 018)
 
 Reworked the shell so the VoltUI adoption keeps the pre-VoltUI look:
 
@@ -517,11 +540,11 @@ dev-auth's auth pages were migrated from inline HTML-in-TypeScript strings
 
 ## What works today
 
-- App shell: navbar with Deployment/DevTools sections, section-scoped sidebar,
-  `/tools` index. `pnpm check` is green.
-- All 10 tool pages under `/tools/*` (client-side: QR, bg-remover, image
-  compressor, data converter, OG generator, palette, screen recorder, SEO
-  simulator, SVG optimizer, URL shortener).
+- DevFlare shell: navbar with Projects/Cloud sections, section-scoped sidebar,
+  Settings footer, external DevTools link. `pnpm check` is green (spec 018).
+- DevTools app: 8 tools at root URLs on :4300 (SEO simulator, QR, URL
+  shortener, data converter, screen recorder, OG generator, palette,
+  bg-remover). Image compressor and SVG optimizer live in Imageryx.
 - Full auth flow in local dev: `pnpm dev:all`, then "Continue with DevAuth" at
   :4200 → authenticate at :8787 (email/password or GitHub) → back to :4200
   with DevFlare's own session. Verified end-to-end in a real browser
@@ -536,7 +559,7 @@ dev-auth's auth pages were migrated from inline HTML-in-TypeScript strings
   apps could reuse. Re-verified live end-to-end 2026-09-03 — see "DevAuth
   consumer SDK" above.
 - DevFlare's dashboard (`/`) now requires a session (`authGuard`), same as
-  `/deploy`, `/projects`, `/settings`. `/tools/*` stays public.
+  `/deploy`, `/projects`, `/settings`. Tools are no longer in DevFlare.
 - Projects API (`GET/POST /api/v1/projects`, `GET/PATCH/DELETE
 /api/v1/projects/[id]`), auth-gated, backed by Cloudflare D1 — locally via
   miniflare state in `.wrangler/`. The `{ rows }` envelope bug that broke the
@@ -677,6 +700,22 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
    reused from it.
 
 ## Session log
+
+- **2026-09-24 — Spec 018: DevTools split + DevFlare project-hub refocus.**
+  See "Product split" above. Verified: `pnpm check` green (format, lint 13
+  projects, typecheck 10, test 10, build DevFlare + DevTools);
+  `nx run-many -t build` green for all 8 buildable projects; unit tests
+  DevFlare 129, DevTools 23 (new), core 8; E2E cold, all three browsers,
+  twice: devflare-e2e 36/36, devtools-e2e 60/60. Redirects checked on the
+  built Worker with `wrangler dev` (dev env → :4300 paths; production env →
+  `/`). Signed-in browser walk of Projects, a project detail with deployment
+  history, and Cloud against the live account. Fixed on the way: the old nav's
+  broken `/tools/converter|recorder|shortener` links (mapped in the redirect),
+  unregistered `folder`/`file` icons in the R2 browser, a shared Vite
+  `cacheDir` and late dependency discovery that made cold E2E runs flaky, an
+  SSR crash in the palette page (colorthief's Node build). Still dev-only
+  noise, predating this work: `NG0203 cdk-dir-doc` and ng-primitives
+  `addEventListener` errors logged by the Vite dev SSR (not in builds).
 
 - **2026-09-23 — Cloudflare-only hub inventory completion (Spec 017).** Queried
   the connected Cloudflare account read-only and reconciled its exact inventory:

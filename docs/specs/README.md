@@ -53,5 +53,6 @@ the code is the implementation of it.
 | 015 | [Publish the DevAuth SDK to npm](015-dev-auth-npm-publishing.md)                                        | In progress (packaging + CI done; first real publish pending) |
 | 016 | [DevAuth SDK hardening](016-dev-auth-hardening.md)                                                      | In progress                                                   |
 | 017 | [Prefer and expose custom deployment domains](017-custom-domain-links.md)                               | Done                                                          |
+| 018 | [Split DevTools out of DevFlare; refocus DevFlare on projects](018-split-devtools-app.md)               | Done (DevTools deployment is follow-up)                       |
 
 (Keep this table updated — it's how agents discover active work.)

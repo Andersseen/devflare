@@ -1,6 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { __CLASS_NAME__ } from '@org/core';
+import { __CLASS_NAME__ } from '../tools/__SLUG__.service';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   VoltCard,

@@ -1,10 +1,10 @@
 # CONVENTIONS — How code is written here
 
 > Read before writing or editing any code. When in doubt, copy the style of the
-> nearest existing file — `apps/devflare/src/app/pages/tools/qr-generator.page.ts`
+> nearest existing file — `apps/devtools/src/app/pages/qr-generator.page.ts`
 > is the canonical page example.
 
-## Angular (apps/devflare, libs/shared/\*)
+## Angular (apps/devflare, apps/devtools, libs/shared/\*)
 
 - **Standalone components only.** Never create an NgModule. Imports go in the
   `imports: []` array of `@Component`.
@@ -13,7 +13,8 @@
   - Selector prefix `app-`, e.g. `app-qr-generator-page`.
   - Single file: inline `template:` with Tailwind classes. No separate `.html`/`.css`.
   - Keep pages thin: state (signals) + event handlers that delegate to a
-    `@org/core` service.
+    service — `@org/core` in DevFlare, a colocated
+    `apps/devtools/src/app/tools/<slug>.service.ts` in DevTools.
 - **Routing**: use AnalogJS file-based routing via `provideFileRouter()`.
   Layouts live as route-group pages such as `(app).page.ts`; redirects and
   guards live in each page's `routeMeta`. Do not add a manual route table.
@@ -27,10 +28,21 @@
 - **UI kit**: use `@voltui/components` (`VoltCard`, `VoltButton`, `VoltInput`,
   `VoltTabs`, …) before writing custom markup; icons via `lucide-angular`
   (`<lucide-icon name="download" />`). Shared in-repo pieces go to `@org/ui`.
-- **Services** (`libs/shared/core`): `@Injectable({ providedIn: 'root' })`, one
-  service per tool in `src/lib/services/tools/`, exported from `src/index.ts`.
-  Pure logic — no DOM/component coupling beyond what the tool needs (canvas
-  elements are passed in as arguments).
+- **Services**: `@Injectable({ providedIn: 'root' })`.
+  - DevFlare platform services live in `libs/shared/core` (`@org/core`),
+    exported from `src/index.ts`.
+  - DevTools tool services live next to the tools in
+    `apps/devtools/src/app/tools/`, one per tool, with a colocated spec. Pure
+    logic — no DOM/component coupling beyond what the tool needs (canvas
+    elements are passed in as arguments). New tools are registered in
+    `tool-registry.ts` (see the `new-tool` skill).
+- **App boundaries**: an app never imports another app. DevFlare and DevTools
+  share only `domain:shared` libraries (`@org/ui` primitives and
+  `libs/shared/ui/src/styles/theme.css` tokens); each keeps its own shell.
+- **SSR/prerender safety**: never touch `window`, `document`, `navigator` or
+  `localStorage` during render — guard with `typeof window !== 'undefined'`
+  or do it in an event handler / `afterNextRender`. DevTools' build fails on
+  a page that throws while prerendering.
 
 ## Server code (apps/devflare/src/server)
 
@@ -98,5 +110,6 @@
 - NgModules, constructor injection, `any` types to silence errors.
 - New global state libraries (NgRx etc.) — signals + services suffice.
 - Server-side calls to third-party APIs from tool pages (tools are client-side).
+- Tool code in DevFlare or `@org/core`, or DevAuth/D1/KV/R2 in DevTools.
 - Hand-written SQL string concatenation.
 - Editing generated `.flow.js`, `dist/`, or `.nx/` content.

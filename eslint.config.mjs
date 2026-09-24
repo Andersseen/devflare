@@ -65,6 +65,11 @@ export default [
                 'domain:shared',
               ],
             },
+            // DevFlare (the project hub) and DevTools (browser utilities) are
+            // separate products in one repo: neither may import the other, and
+            // anything they genuinely share goes through a `domain:shared`
+            // library. DevTools also gets no DevAuth SDK — it works anonymously
+            // by design. See docs/specs/018-split-devtools-app.md.
             {
               sourceTag: 'domain:devflare',
               onlyDependOnLibsWithTags: [
@@ -73,6 +78,10 @@ export default [
                 'domain:cloudflare-connect',
                 'domain:shared',
               ],
+            },
+            {
+              sourceTag: 'domain:devtools',
+              onlyDependOnLibsWithTags: ['domain:devtools', 'domain:shared'],
             },
             {
               sourceTag: 'domain:shared',
