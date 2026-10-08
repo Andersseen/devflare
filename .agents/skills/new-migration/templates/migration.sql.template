@@ -1,0 +1,36 @@
+-- <NNNN>_<short_snake_case_name>.sql
+--
+-- <One line: what this migration is for and why it is needed now.>
+--
+-- Applied by `wrangler d1 migrations apply DB` against the DB *binding*, never
+-- a database name (the bound database differs per --env). Wrangler wraps this
+-- file, so do not add BEGIN/COMMIT.
+
+CREATE TABLE IF NOT EXISTS <table_name> (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+  -- Owner column: required on anything user-scoped, so h3 handlers can
+  -- constrain on the session user and an id cannot be guessed (IDOR).
+  user_id TEXT NOT NULL,
+
+  -- New NOT NULL columns need a DEFAULT or the ALTER fails on a non-empty
+  -- table. Prefer NULL + backfill when there is no sensible default.
+  <column_name> TEXT NOT NULL DEFAULT '',
+
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Index every column a WHERE clause filters on. Without this the owner lookup
+-- is a full table scan on every request.
+CREATE INDEX IF NOT EXISTS idx_<table_name>_user_id
+  ON <table_name>(user_id);
+
+
+-- ---------------------------------------------------------------------------
+-- Adding a column to an existing table: three steps, not one.
+-- SQLite rejects `ADD COLUMN ... NOT NULL` without a DEFAULT on a table that
+-- already has rows, and cannot retype or drop a column in place.
+-- ---------------------------------------------------------------------------
+-- ALTER TABLE <table_name> ADD COLUMN <new_column> TEXT;
+-- UPDATE <table_name> SET <new_column> = '<backfill>' WHERE <new_column> IS NULL;
+-- (enforce NOT NULL in a later migration, via table rebuild)
