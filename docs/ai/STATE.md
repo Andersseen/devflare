@@ -18,10 +18,10 @@ the 2026-08-10 / 2026-09-03 / 2026-09-11 lessons) from carrying forward a
 previous write-up's claim instead of re-checking. **Standing rule: before
 writing anything here, run `git log`/`git branch`/`gh pr list` yourself.**
 
-- Work branch **`feature/devflare-project-grouping`** at `d04bc1c`, two commits
-  ahead of `main` (`bebb8d8` groups related resources; `d04bc1c` allows the
-  owner into production DevRadar). The working tree is clean. The branch is
-  ready to push for a PR; production access still requires that PR's deploy.
+- Work branch **`fix/ci-route-only-project-test`**, two commits ahead of `main`
+  (`fix: update route-only project expectation` plus its STATE update). The
+  working tree is clean. This fixes the stale DevFlare dashboard assertion that
+  made the post-merge CI and production verification checks fail.
 - Newest merged changes: dashboard cleanup (`0d582c9`), #47 DevRadar
   foundation, #46 (`feature/dev-tooling`, spec 020), #45 (spec 019), #44
   (spec 018), #43, #42, #41 (`feature/updates`), #40
@@ -806,6 +806,16 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
    reused from it.
 
 ## Session log
+
+- **2026-10-12 — Fixed the post-merge CI failure.** GitHub Actions run 114 for
+  merge commit `5da04c6` failed only because
+  `dashboard-projects.spec.ts` still expected three route-only watched projects
+  after Ally was added with its verified domain. The actual result correctly
+  includes `ally`; updated the expectation on branch
+  `fix/ci-route-only-project-test` and committed `f43c54e`. The DevFlare app
+  suite passes locally: 16 files, 195 tests; the changed file passes 26/26.
+  Prettier and ESLint also pass. The deploy workflow's `verify` failure was the
+  same `pnpm check` test failure, so deployment jobs were skipped as designed.
 
 - **2026-10-12 — Fixed DevRadar production access policy.** The live browser
   flow authenticated successfully, then rendered the expected no-access page
