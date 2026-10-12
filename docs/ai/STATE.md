@@ -19,8 +19,9 @@ previous write-up's claim instead of re-checking. **Standing rule: before
 writing anything here, run `git log`/`git branch`/`gh pr list` yourself.**
 
 - Work branch **`feature/ci-deploy-devtools-radar`**, from current `main` at
-  `0d582c9` (merge of the dashboard cleanup PR). It is uncommitted and has no
-  PR yet.
+  `0d582c9` (merge of the dashboard cleanup PR), with commit `40083a3`
+  (`ci: deploy devtools and devradar from main`). It is clean locally and has
+  no PR yet. `gh pr list` could not reach GitHub from this environment.
 - Newest merged changes: dashboard cleanup (`0d582c9`), #47 DevRadar
   foundation, #46 (`feature/dev-tooling`, spec 020), #45 (spec 019), #44
   (spec 018), #43, #42, #41 (`feature/updates`), #40
@@ -811,9 +812,12 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
   `deploy-radar` jobs to `.github/workflows/deploy.yml`. Each waits for
   verification and DevAuth, then applies its production D1 migrations, builds
   and deploys its Worker. Updated deployment docs and Wrangler comments to
-  describe the automated path and the one-time prerequisites. Format and YAML
-  syntax checks pass; the global Nx lint command stalled on the local daemon
-  and was stopped. No Cloudflare deployment was run.
+  describe the automated path and the one-time prerequisites. Committed as
+  `40083a3` without a co-author trailer. Format/YAML checks, both production
+  builds, both local D1 migration commands, and both Wrangler production
+  dry-runs pass. The aggregate Nx `check` remains blocked by local graph
+  construction; lint, typecheck, and test did not start. No Cloudflare
+  deployment was run, and no PR was created.
 
 - **2026-10-12 — Extracted dashboard project data and models.** The uncommitted
   DevFlare dashboard change now keeps `WATCHED_PROJECTS` in
