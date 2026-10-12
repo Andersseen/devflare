@@ -50,7 +50,16 @@ export const WATCHED_PROJECTS = [
   },
   { name: 'ForgeCMS', slug: 'forgecms', aliases: ['forge cms'] },
   { name: 'Etym', slug: 'etym', aliases: ['etyma'] },
-  { name: 'Ally', slug: 'ally' },
+  {
+    name: 'Ally',
+    slug: 'ally',
+    verifiedDomains: ['ally.andersseen.dev'],
+  },
+  {
+    name: 'Duplex',
+    slug: 'duplex',
+    aliases: ['duplex-web', 'duplex-worker'],
+  },
   { name: 'ImageryX', slug: 'imageryx', aliases: ['imageryx'] },
   {
     name: 'Andersseen Dev',

@@ -319,6 +319,36 @@ describe('discovered projects (heuristic, unsaved)', () => {
     ).toEqual(['angular-movement', 'lumen-icons', 'volt-ui']);
   });
 
+  it('shows Ally with its verified public URL', () => {
+    const { discovered } = build({ workers: [worker('ally-audit-worker')] });
+
+    expect(discovered.find((view) => view.slug === 'ally')).toMatchObject({
+      url: 'https://ally.andersseen.dev',
+      verifiedUrls: ['https://ally.andersseen.dev'],
+      workers: [{ name: 'ally-audit-worker' }],
+    });
+  });
+
+  it('groups Duplex web and worker resources into one project', () => {
+    const { discovered } = build({
+      workers: [worker('duplex-web'), worker('duplex-worker')],
+    });
+
+    expect(discovered).toContainEqual(
+      expect.objectContaining({
+        name: 'Duplex',
+        slug: 'duplex',
+        workers: [
+          expect.objectContaining({ name: 'duplex-web' }),
+          expect.objectContaining({ name: 'duplex-worker' }),
+        ],
+      }),
+    );
+    expect(discovered.filter((view) => /duplex/i.test(view.name))).toHaveLength(
+      1,
+    );
+  });
+
   it('drops a route-only placeholder once a saved project represents it', () => {
     const { discovered, projects } = build({ saved: [saved('v', 'Volt UI')] });
     expect(discovered.some((view) => view.slug === 'volt-ui')).toBe(false);

@@ -18,11 +18,10 @@ the 2026-08-10 / 2026-09-03 / 2026-09-11 lessons) from carrying forward a
 previous write-up's claim instead of re-checking. **Standing rule: before
 writing anything here, run `git log`/`git branch`/`gh pr list` yourself.**
 
-- Work branch **`feature/fix-ci-d1-deploy`**, from `main` at `25c8bfe`
-  (merge of PR #49), with commits `d7af40e` and `f017a96` fixing production
-  D1 deployment configuration and recording the incident. It is clean locally
-  and pushed to `origin`; PR #50 is open. `gh pr list` could not reach GitHub
-  from this environment, so PR status was checked through the GitHub connector.
+- Work branch **`feature/devflare-project-grouping`** at `d04bc1c`, two commits
+  ahead of `main` (`bebb8d8` groups related resources; `d04bc1c` allows the
+  owner into production DevRadar). The working tree is clean. The branch is
+  ready to push for a PR; production access still requires that PR's deploy.
 - Newest merged changes: dashboard cleanup (`0d582c9`), #47 DevRadar
   foundation, #46 (`feature/dev-tooling`, spec 020), #45 (spec 019), #44
   (spec 018), #43, #42, #41 (`feature/updates`), #40
@@ -807,6 +806,49 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
    reused from it.
 
 ## Session log
+
+- **2026-10-12 — Fixed DevRadar production access policy.** The live browser
+  flow authenticated successfully, then rendered the expected no-access page
+  for `andriipap01@gmail.com`. Production `wrangler.toml` still had an empty
+  `DEVRADAR_ALLOWED_USERS`, whose documented fail-closed behavior permits
+  nobody. Added the owner's email to the production allowlist on branch
+  `feature/devflare-project-grouping`; deployment is still required before the
+  change affects the live Worker.
+
+- **2026-10-12 — Rechecked the managed DevRadar OAuth client.** The live
+  DevAuth admin view shows `dev-radar` as an active managed client with the
+  exact production callback and the local `:4400` callback. A fresh public
+  OAuth start now reaches DevAuth `/login` with a signed transaction, proving
+  client registration and redirect validation work. A fresh browser flow then
+  returns `auth_error=provider_error`, which is the token exchange/userinfo
+  stage; the remaining likely mismatch is the one-time secret generated for
+  the managed client versus DevRadar's production `DEV_AUTH_CLIENT_SECRET`.
+  The example file is local-only and still correctly documents `dev-radar-dev`.
+  A local `.dev.vars` inspection also found real credentials; none were copied
+  into source or logs, and the affected GitHub App private key should be
+  rotated because it was exposed during diagnostic output.
+
+- **2026-10-12 — Corrected DevFlare project grouping and public URLs.** Added
+  explicit `Duplex` aliases for `duplex-web` and `duplex-worker`, so they form
+  one discovered project, and recorded the verified `https://ally.andersseen.dev`
+  domain for `Ally`, whose live resource is currently a Worker not reporting a
+  domain through the Cloudflare API. Added focused grouping/URL tests. Prettier,
+  direct ESLint and the DevFlare app TypeScript check pass; Nx lint/test commands
+  stalled without output in this environment, and the direct Vitest invocation
+  could not resolve the `@org/core` alias outside the Nx/Vite executor.
+
+- **2026-10-12 — Diagnosed DevRadar production sign-in failure.** A live
+  request to `https://devradar.andersseen.dev/api/auth/login` sends the correct
+  `client_id=dev-radar` and exact production callback to DevAuth, but DevAuth
+  immediately redirects to `/login?error=invalid_client&error_description=client_id+is+required`.
+  This is the provider's misleading response when the configured confidential
+  client is absent from its effective registry; the production setup still
+  requires `OAUTH_CLIENT_SECRETS["dev-radar"]` on DevAuth and the same
+  `DEV_AUTH_CLIENT_SECRET` on DevRadar, followed by redeploying both as needed.
+  The tracked production config also still has an empty
+  `DEVRADAR_ALLOWED_USERS`, which must be set to the owner's DevAuth user id
+  after the OAuth client is fixed. Public `/api/v1/overview` correctly returns
+  401 while unauthenticated.
 
 - **2026-10-12 — Fixed the first production CI failure for DevTools and
   DevRadar.** PR #49 merged the deploy jobs, but both failed at remote D1

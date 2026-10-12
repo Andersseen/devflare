@@ -115,8 +115,10 @@ crons = ["17 */6 * * *"]
 DEV_AUTH_URL = "https://auth-devflare.andersseen.dev"
 DEV_AUTH_CLIENT_ID = "dev-radar"
 DEV_AUTH_REDIRECT_URI = "https://devradar.andersseen.dev/api/auth/callback"
-# Set to the owner's DevAuth user id (`sub`) before going live. Empty = nobody.
-DEVRADAR_ALLOWED_USERS = ""
+# The owner may be listed by DevAuth user id (`sub`) or email. Prefer the id
+# when available; email is accepted here so the production deployment is
+# usable before the identity record is copied into configuration.
+DEVRADAR_ALLOWED_USERS = "andriipap01@gmail.com"
 # GITHUB_APP_ID = "<numeric App ID>"
 # GITHUB_APP_SLUG = "<app url name>"
 GITHUB_SYNC_REQUEST_BUDGET = "45"
