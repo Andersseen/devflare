@@ -86,17 +86,16 @@ enabled = true
 [env.production]
 name = "dev-radar"
 
-# Attaching a custom domain creates DNS records on deploy. Uncomment this
-# before the first production deployment (DEPLOY.md › DevRadar).
-# [[env.production.routes]]
-# pattern = "devradar.andersseen.dev"
-# custom_domain = true
+# Attaching a custom domain creates DNS records on deploy. This route is
+# enabled for the first production deployment (DEPLOY.md › DevRadar).
+[[env.production.routes]]
+pattern = "devradar.andersseen.dev"
+custom_domain = true
 
 [[env.production.d1_databases]]
 binding = "DB"
 database_name = "dev-radar-db"
-# Placeholder: replace with the id printed by `wrangler d1 create dev-radar-db`.
-database_id = "00000000-0000-4000-8000-000000000021"
+database_id = "6c55ee87-3adb-4f87-af45-2c74bfa7b7cf"
 migrations_dir = "src/server/db/migrations"
 
 [[env.production.ratelimits]]
