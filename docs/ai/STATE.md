@@ -18,10 +18,11 @@ the 2026-08-10 / 2026-09-03 / 2026-09-11 lessons) from carrying forward a
 previous write-up's claim instead of re-checking. **Standing rule: before
 writing anything here, run `git log`/`git branch`/`gh pr list` yourself.**
 
-- Work branch **`feature/ci-deploy-devtools-radar`**, from current `main` at
-  `0d582c9` (merge of the dashboard cleanup PR), with commit `40083a3`
-  (`ci: deploy devtools and devradar from main`). It is clean locally and has
-  no PR yet. `gh pr list` could not reach GitHub from this environment.
+- Work branch **`feature/fix-ci-d1-deploy`**, from `main` at `25c8bfe`
+  (merge of PR #49), with commits `d7af40e` and `f017a96` fixing production
+  D1 deployment configuration and recording the incident. It is clean locally
+  and pushed to `origin`; PR #50 is open. `gh pr list` could not reach GitHub
+  from this environment, so PR status was checked through the GitHub connector.
 - Newest merged changes: dashboard cleanup (`0d582c9`), #47 DevRadar
   foundation, #46 (`feature/dev-tooling`, spec 020), #45 (spec 019), #44
   (spec 018), #43, #42, #41 (`feature/updates`), #40
@@ -806,6 +807,17 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
    reused from it.
 
 ## Session log
+
+- **2026-10-12 — Fixed the first production CI failure for DevTools and
+  DevRadar.** PR #49 merged the deploy jobs, but both failed at remote D1
+  migrations with Cloudflare error 7404 because the production configs still
+  used placeholder database IDs. Confirmed the account had neither database,
+  created `devtools-db` and `dev-radar-db`, applied their initial migrations
+  remotely, and committed the real IDs. Enabled the three production custom
+  domain routes. Both production dry-runs pass with the real D1 bindings and
+  assets. PR #50 is open; its GitHub CI is green for format, lint, typecheck,
+  unit tests, build, E2E, and staging deployment. The actual production
+  deploy remains intentionally gated by merging PR #50.
 
 - **2026-10-12 — CI deployment jobs for DevTools and DevRadar.** On branch
   `feature/ci-deploy-devtools-radar` from `main`, added `deploy-tools` and

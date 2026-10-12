@@ -86,21 +86,20 @@ enabled = true
 [env.production]
 name = "devtools"
 
-# Attaching a custom domain creates DNS records on deploy. Uncomment these
-# before the first production deployment (DEPLOY.md › DevTools).
-# [[env.production.routes]]
-# pattern = "devtools.andersseen.dev"
-# custom_domain = true
-#
-# [[env.production.routes]]
-# pattern = "go.andersseen.dev"
-# custom_domain = true
+# Attaching a custom domain creates DNS records on deploy. These routes are
+# enabled for the first production deployment (DEPLOY.md › DevTools).
+[[env.production.routes]]
+pattern = "devtools.andersseen.dev"
+custom_domain = true
+
+[[env.production.routes]]
+pattern = "go.andersseen.dev"
+custom_domain = true
 
 [[env.production.d1_databases]]
 binding = "DB"
 database_name = "devtools-db"
-# Placeholder: replace with the id printed by `wrangler d1 create devtools-db`.
-database_id = "00000000-0000-4000-8000-000000000020"
+database_id = "949392bd-d7bd-4fc9-8b78-7426842ba1a1"
 migrations_dir = "src/server/db/migrations"
 
 [[env.production.ratelimits]]

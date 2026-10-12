@@ -269,9 +269,8 @@ short-link redirect and unknown paths. The production workflow deploys it
 after `verify` and `deploy-auth`; the first run still needs the prerequisites
 below. Nothing here creates DNS records until step 6.
 
-1. **D1** — `pnpm cf:tools d1 create devtools-db`, then paste the printed
-   id into `[[env.production.d1_databases]]` in `apps/devtools/wrangler.toml`
-   (it is a placeholder today). This database is DevTools' own; never point
+1. **D1** — `devtools-db` has been created and its real id is configured in
+   `apps/devtools/wrangler.toml`. This database is DevTools' own; never point
    it at `devflare-db` or DevAuth's database.
 2. **DevAuth client** — `devtools` is already listed in DevAuth's production
    `OAUTH_CLIENTS` with the exact redirect URI
@@ -289,9 +288,9 @@ below. Nothing here creates DNS records until step 6.
 5. **Short-link host** — `SHORT_LINK_BASE_URL` is `https://go.andersseen.dev`.
    Tool paths and system names are reserved slugs, so the host can share the
    Worker with DevTools.
-6. **Domains** — uncomment the two `[[env.production.routes]]` blocks
-   (`devtools.andersseen.dev`, `go.andersseen.dev`, `custom_domain = true`).
-   Deploying with them creates the DNS records.
+6. **Domains** — the two `[[env.production.routes]]` blocks are enabled for
+   `devtools.andersseen.dev` and `go.andersseen.dev`; the first deployment
+   creates the DNS records.
 7. **Deploy** — after the prerequisites are complete, merge to `main` and the
    `deploy-tools` job in `.github/workflows/deploy.yml` runs build → migrate →
    deploy automatically. For a manual dry run, use:
@@ -314,9 +313,9 @@ and `deploy-auth`; the first run still needs the prerequisites below. Nothing
 below creates DNS records until step 6. The long form, including every GitHub
 App setting, is in [apps/dev-radar/README.md](apps/dev-radar/README.md).
 
-1. **D1** — `pnpm cf:radar d1 create dev-radar-db`, paste the id into
-   `[[env.production.d1_databases]]` in `apps/dev-radar/wrangler.toml`. Its own
-   database; never another app's.
+1. **D1** — `dev-radar-db` has been created and its real id is configured in
+   `apps/dev-radar/wrangler.toml`. It is DevRadar's own database; never use
+   another app's.
 2. **DevAuth client** — `dev-radar` is already listed in DevAuth's production
    `OAUTH_CLIENTS` (redirect `https://devradar.andersseen.dev/api/auth/callback`).
    Add `"dev-radar"` to `OAUTH_CLIENT_SECRETS` (re-put the whole JSON value) and
@@ -330,10 +329,10 @@ App setting, is in [apps/dev-radar/README.md](apps/dev-radar/README.md).
    `GITHUB_APP_SLUG` in `[env.production.vars]` and
    `pnpm cf:radar secret put GITHUB_APP_PRIVATE_KEY|GITHUB_WEBHOOK_SECRET --env production`.
 5. **Dry run** — `pnpm nx build dev-radar && pnpm cf:radar deploy --env production --dry-run`.
-6. **Domain + deploy** — uncomment the `[[env.production.routes]]` block
-   (`devradar.andersseen.dev`, `custom_domain = true`), then merge to `main`.
-   The `deploy-radar` job runs build → migrate → deploy automatically. For a
-   manual deploy, use `pnpm deploy:radar`.
+6. **Domain + deploy** — the `[[env.production.routes]]` block for
+   `devradar.andersseen.dev` is enabled. Merge to `main`; the `deploy-radar`
+   job runs build → migrate → deploy automatically. For a manual deploy, use
+   `pnpm deploy:radar`.
 7. **DevFlare link (optional)** — build DevFlare with
    `VITE_DEVRADAR_URL=https://devradar.andersseen.dev`; without it no link renders.
 
