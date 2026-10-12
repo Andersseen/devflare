@@ -1,4 +1,5 @@
 import {
+  DEVRADAR_LINK,
   SETTINGS_ITEM,
   SHELL_SECTIONS,
   sectionForUrl,
@@ -40,5 +41,15 @@ describe('shell navigation', () => {
       'projects',
       'cloud',
     ]);
+  });
+
+  it('reaches DevRadar only through one configurable external link', () => {
+    // A link, never a section: DevRadar is its own app (spec 021). No
+    // production domain is baked in — the value comes from VITE_DEVRADAR_URL.
+    expect(SHELL_SECTIONS.map((section) => section.id)).not.toContain('radar');
+    expect(DEVRADAR_LINK === null || /^https?:\/\//.test(DEVRADAR_LINK)).toBe(
+      true,
+    );
+    expect(DEVRADAR_LINK ?? '').not.toContain('andersseen');
   });
 });

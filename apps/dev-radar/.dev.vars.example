@@ -1,0 +1,21 @@
+# Copy to apps/dev-radar/.dev.vars (gitignored). Local development only;
+# deployed values are set with `wrangler secret put --env production`.
+
+# Secret of DevRadar's OAuth client at DevAuth. Must equal
+# OAUTH_CLIENT_SECRETS["dev-radar-dev"] in apps/dev-auth/.dev.vars.
+# Generate one with: openssl rand -base64 32
+DEV_AUTH_CLIENT_SECRET=generate-a-long-random-string
+
+# --- GitHub App (optional locally: without these DevRadar shows "disconnected")
+# Numeric App ID and the app's URL slug (github.com/apps/<slug>).
+GITHUB_APP_ID=
+GITHUB_APP_SLUG=
+
+# Webhook secret you typed into the GitHub App settings.
+# Generate one with: openssl rand -hex 32
+GITHUB_WEBHOOK_SECRET=
+
+# Private key (.pem) generated for the App. Paste it with literal \n escapes on
+# one line, or as a multi-line value. PKCS#1 ("BEGIN RSA PRIVATE KEY") and
+# PKCS#8 ("BEGIN PRIVATE KEY") are both accepted. Never commit it.
+GITHUB_APP_PRIVATE_KEY=

@@ -1,0 +1,10 @@
+{
+  "name": "dev-radar-e2e",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/dev-radar-e2e/src",
+  "implicitDependencies": ["dev-radar"],
+  "tags": ["scope:frontend", "domain:dev-radar"],
+  "// targets": "to see all targets run: nx show project dev-radar-e2e --web",
+  "targets": {}
+}

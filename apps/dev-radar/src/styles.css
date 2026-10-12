@@ -1,0 +1,43 @@
+@import 'tailwindcss';
+
+/*
+ * Volt design system. Required, not cosmetic: it carries an `@source` pointing
+ * at the compiled component bundle so Tailwind emits the utility classes used
+ * inside Volt's templates. See apps/devflare/src/styles.css for the long form.
+ */
+@import '@voltui/components/themes.css';
+
+/* Shared ecosystem tokens (typography, surfaces, borders, dark mode). */
+@import '../../../libs/shared/ui/src/styles/theme.css';
+
+/*
+ * DevRadar identity. Same foundation as DevFlare, different accent: sky
+ * blue instead of indigo, so the two products are recognisably related but never
+ * mistaken for one another. Status colours (success / failure / pending) are
+ * not tokens here: they are fixed semantic utilities in the components.
+ */
+:root {
+  --primary: #0284c7;
+  --primary-foreground: #ffffff;
+  --accent: #f0f9ff;
+  --accent-foreground: #0369a1;
+  --ring: #0284c7;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary: #38bdf8;
+    --primary-foreground: #082f49;
+    --accent: rgba(56, 189, 248, 0.16);
+    --accent-foreground: #7dd3fc;
+    --ring: #38bdf8;
+  }
+}
+
+html,
+body {
+  display: block;
+  min-height: 100%;
+  background-color: var(--background);
+  color: var(--foreground);
+}

@@ -90,6 +90,18 @@ export default [
                 'domain:shared',
               ],
             },
+            // DevRadar (GitHub monitoring) is its own product (spec 021). Like
+            // DevTools it may use the DevAuth *SDK* to sign in as its own OAuth
+            // client, and shared design tokens — never @org/core, the DevAuth
+            // app, or another application.
+            {
+              sourceTag: 'domain:dev-radar',
+              onlyDependOnLibsWithTags: [
+                'domain:dev-radar',
+                'domain:dev-auth-sdk',
+                'domain:shared',
+              ],
+            },
             {
               sourceTag: 'domain:shared',
               onlyDependOnLibsWithTags: ['domain:shared'],

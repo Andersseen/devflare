@@ -56,5 +56,6 @@ the code is the implementation of it.
 | 018 | [Split DevTools out of DevFlare; refocus DevFlare on projects](018-split-devtools-app.md)               | Done (DevTools deployment is follow-up)                       |
 | 019 | [Project resources: explicit ownership of Cloudflare infrastructure](019-project-resources.md)          | Done                                                          |
 | 020 | [DevTools: curated toolkit + connected tools foundation](020-devtools-connected-foundation.md)          | Done (verified locally; deployment is manual follow-up)       |
+| 021 | [DevRadar v0.1.0: GitHub monitoring foundation](021-dev-radar-foundation.md)                            | Done (verified locally with a fake GitHub; needs owner setup) |
 
 (Keep this table updated — it's how agents discover active work.)

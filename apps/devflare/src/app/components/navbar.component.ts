@@ -4,6 +4,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { VoltSidebarService } from '@voltui/components';
 import { DevAuth } from '@dev-auth/angular';
 import {
+  DEVRADAR_LINK,
   DEVTOOLS_LINK,
   injectActiveSection,
   SHELL_SECTIONS,
@@ -76,6 +77,17 @@ import {
             <lucide-icon name="external-link" class="h-3.5 w-3.5" />
           </a>
         }
+        @if (devradarLink) {
+          <a
+            [href]="devradarLink"
+            target="_blank"
+            rel="noreferrer"
+            class="hidden h-8 items-center gap-1.5 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:inline-flex"
+          >
+            DevRadar
+            <lucide-icon name="external-link" class="h-3.5 w-3.5" />
+          </a>
+        }
         <dev-auth-user-button
           [style.--dev-auth-surface]="'var(--popover)'"
           [style.--dev-auth-foreground]="'var(--popover-foreground)'"
@@ -105,4 +117,5 @@ export class NavbarComponent {
   protected readonly sections = SHELL_SECTIONS;
   protected readonly activeSection = injectActiveSection();
   protected readonly devtoolsLink = DEVTOOLS_LINK;
+  protected readonly devradarLink = DEVRADAR_LINK;
 }

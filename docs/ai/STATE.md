@@ -8,22 +8,23 @@
 > to the last ~5 entries, newest first. Update the date. Facts only; no plans
 > you didn't verify.
 
-_Last updated: 2026-09-24_
+_Last updated: 2026-10-12_
 
 ## Branch & repo status
 
 Verified directly against `git log --oneline -15`, `git branch --show-current`
-and `gh pr list --state all --limit 15` on 2026-09-24. **This section has drifted before** (see
+and `gh pr list --state all --limit 15` on 2026-10-12. **This section has drifted before** (see
 the 2026-08-10 / 2026-09-03 / 2026-09-11 lessons) from carrying forward a
 previous write-up's claim instead of re-checking. **Standing rule: before
 writing anything here, run `git log`/`git branch`/`gh pr list` yourself.**
 
-- Work branch **`feature/dev-tooling`**, from `main` at `6630900` (merge of
-  PR #45, spec 019). It carries `ed80713` (Agentyx skills) and, **uncommitted**,
-  spec 020 (DevTools connected foundation). No PR yet.
-- Newest merged PRs: #45 (spec 019, 2026-09-24T12:31Z), #44 (spec 018), #43,
-  #42, #41 (`feature/updates`), #40 (`feature/dev-auth-hardening`), #39, #38,
-  #37. PR #32 CLOSED.
+- Work branch **`feature/dev-radar-foundation`**, from `main` at `459fb09`
+  (merge of PR #46, which carried spec 020 and the Agentyx skills). It holds
+  spec 021 (DevRadar v0.1.0); the PR against `main` is open and is **not**
+  merged — delete the branch after the owner merges it.
+- Newest merged PRs: #46 (`feature/dev-tooling`, spec 020), #45 (spec 019),
+  #44 (spec 018), #43, #42, #41 (`feature/updates`), #40
+  (`feature/dev-auth-hardening`), #39, #38, #37. PR #32 CLOSED.
 - **PR #32 (`feature/012-dev-auth-angular-ui`, "add optional DevAuth Angular
   UI") is CLOSED** as of 2026-09-04T09:15:31Z and superseded by PR #37.
 - **PR #38 (`feature/dev-auth-sdk-polish`, MERGED 2026-09-12)** —
@@ -474,7 +475,7 @@ Key decisions and the traps behind them:
 
 ## Product split (spec 018, merged in PR #44)
 
-The repo now holds four products; see
+The repo then held four products (five since spec 021); see
 [docs/specs/018-split-devtools-app.md](../specs/018-split-devtools-app.md) and
 the "Product map" in ARCHITECTURE.md.
 
@@ -497,7 +498,52 @@ the "Product map" in ARCHITECTURE.md.
 - Design tokens moved to `libs/shared/ui/src/styles/theme.css`; both apps
   import them and override only the accent.
 
-## DevTools: local + connected tools (spec 020, `feature/dev-tooling`, uncommitted)
+## DevRadar: GitHub monitoring (spec 021, `feature/dev-radar-foundation`, PR open)
+
+See [docs/specs/021-dev-radar-foundation.md](../specs/021-dev-radar-foundation.md)
+and [apps/dev-radar/README.md](../../apps/dev-radar/README.md).
+
+- New fifth product `apps/dev-radar` (Nx `dev-radar`, tag `domain:dev-radar`,
+  :4400) + `apps/dev-radar-e2e`. Worker + Static Assets like DevTools; own D1
+  `dev-radar-db` (migration `0000_init.sql`, 9 tables); own DevAuth client
+  (`dev-radar-dev` / `dev-radar`, registered in `apps/dev-auth/wrangler.toml`);
+  own `dr_session`; access = DevAuth identity **and** `DEVRADAR_ALLOWED_USERS`
+  (empty in production = nobody).
+- GitHub App (read-only: Metadata, Contents, Pull requests, Actions) with a
+  hand-written `fetch` + WebCrypto client — no Octokit. Webhooks (`installation`,
+  `installation_repositories`, `push`, `pull_request`, `workflow_run`,
+  `release`) are HMAC-verified over the raw body, claimed by delivery id and
+  normalized into typed `DomainEvent`s → Activity. Budgeted sync (45 requests
+  per run by default), manual **Sync now**, 6-hourly cron reconcile (Nitro task
+  `radar:reconcile`, confirmed bundled into the Worker).
+- Verified: format, lint (15 projects), typecheck, tests (DevRadar 204: CI
+  state, webhook signature/idempotency/ordering, normalization, API mapping,
+  pagination/rate-limit/retry/budget, sync, persistence on the real migration,
+  guards, filters, key UI states), build, `wrangler deploy --dry-run`; E2E
+  (`dev-radar-e2e` 93 = 31 × chromium/firefox/webkit; devtools-e2e 114;
+  devflare-e2e 45) green. Webhook endpoint also exercised with real HMACs
+  against the local D1.
+- **Not verified against real GitHub or a real DevAuth round trip.** No GitHub
+  App exists yet and nothing was sent to api.github.com; GitHub behaviour is
+  covered by a fake `fetch` built from GitHub's documented shapes. Sign-in was
+  verified up to the DevAuth boundary (PKCE redirect, forged state refused,
+  allowlist 403) but not completed, because `OAUTH_CLIENT_SECRETS["dev-radar-dev"]`
+  was not added to the (tracked) `apps/dev-auth/.dev.vars`.
+- **Not deployed.** Production D1 id is a placeholder, the route is commented
+  out, `OAUTH_CLIENT_SECRETS["dev-radar"]` and the GitHub App/secrets do not
+  exist. Merging deploys DevAuth with the new `dev-radar` client entry, which
+  it drops with a logged error until the secret exists. Manual steps: DEPLOY.md
+  › DevRadar.
+- DevFlare gained one external link (`VITE_DEVRADAR_URL`; local port in dev, no
+  link in production builds without a value).
+- Known gaps (README › Known limitations): CI = Actions runs only; no review /
+  mergeability state; per-run budget means big accounts need several syncs.
+- Seen while verifying: `devtools-e2e` is load-sensitive — once, right after
+  heavy builds, two Wrangler Doctor specs timed out on a cold dev server and once
+  the run aborted without a summary; unchanged code passes on rerun (3 clean
+  uncached runs, plus pristine `main`). Cause not investigated.
+
+## DevTools: local + connected tools (spec 020, merged in PR #46)
 
 See [docs/specs/020-devtools-connected-foundation.md](../specs/020-devtools-connected-foundation.md)
 and [apps/devtools/README.md](../../apps/devtools/README.md).
@@ -596,6 +642,9 @@ dev-auth's auth pages were migrated from inline HTML-in-TypeScript strings
 
 ## What works today
 
+- DevRadar (`pnpm dev:radar`, :4400): dashboard over a mirrored GitHub state;
+  renders its **disconnected** state without GitHub credentials. See the
+  DevRadar section above for what is and is not verified.
 - DevFlare shell: navbar with Projects/Cloud sections, section-scoped sidebar,
   Settings footer, external DevTools link. `pnpm check` is green (spec 018).
 - DevTools app: 8 tools at root URLs on :4300 (SEO simulator, QR, URL
@@ -757,6 +806,17 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
 
 ## Session log
 
+- **2026-10-12 — Spec 021: DevRadar v0.1.0 foundation.** Branch
+  `feature/dev-radar-foundation`, PR open. Added `apps/dev-radar` and
+  `apps/dev-radar-e2e`; touched DevFlare only for the external link, DevAuth
+  only for the two client registrations (and its `registered-clients.spec.ts`,
+  which pins the exact production client set — it failed until updated).
+  Found by tests while writing: the sync lease compared timestamps, so two
+  callers in the same millisecond could both win (now a random token column).
+  Full local CI chain run (format, lint, typecheck, test with coverage, build,
+  e2e) — see the DevRadar section for numbers and the one flaky DevTools E2E
+  observation. Needs from the owner: GitHub App, DevAuth secret, D1 id,
+  allowlist, domain (DEPLOY.md › DevRadar).
 - **2026-09-24 — Spec 020: DevTools curated toolkit + connected foundation.**
   Branch `feature/dev-tooling`, uncommitted. Verified: `pnpm check` green
   (format; lint 13 projects; typecheck 10; test 10 — DevTools 249, was 23;

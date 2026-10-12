@@ -1,12 +1,12 @@
 # ARCHITECTURE — System map
 
-> Verified against the code on 2026-09-24 (after spec 020). If something here contradicts the code,
+> Verified against the code on 2026-10-12 (after spec 021). If something here contradicts the code,
 > the code wins — and update this file.
 
 ## Product map
 
 "DevFlare repo" is this monorepo; "DevFlare app" is `apps/devflare` only. The
-repo holds four products with separate purposes (spec 018):
+repo holds five products with separate purposes (specs 018, 021):
 
 ```
 DEVFLARE REPO
@@ -23,6 +23,11 @@ DEVFLARE REPO
 ├── DevAuth             apps/dev-auth            domain:dev-auth
 │   └── Identity (OAuth 2.1 / OIDC)   + SDK libs  domain:dev-auth-sdk
 │
+├── DevRadar            apps/dev-radar           domain:dev-radar
+│   └── GitHub monitoring (spec 021): repositories, PRs, Actions, releases,
+│       activity. Read-only GitHub App + own D1 + own DevAuth client.
+│       Future home of dev automation (v0.2.0, not built).
+│
 └── Cloudflare Connect  apps/cloudflare-connect  domain:cloudflare-connect
     └── Future infrastructure authorization broker (placeholder).
 
@@ -38,6 +43,9 @@ design tokens in src/styles/theme.css)    domain:shared
   `domain:devtools` may depend only on `domain:devtools`, `domain:dev-auth-sdk`
   and `domain:shared` (so not `@org/core`, not the DevAuth app), and
   `domain:devflare` has no `domain:devtools` in its allow-list.
+  `domain:dev-radar` follows the same shape: itself, `domain:dev-auth-sdk` and
+  `domain:shared` only. DevFlare reaches DevRadar through one configurable
+  external link (`VITE_DEVRADAR_URL`), never an import or a shared database.
 - Reusable code shared by both goes into a `domain:shared` library. Today that
   is only the design tokens (`libs/shared/ui/src/styles/theme.css`); each app
   keeps its own shell/navigation so the two can evolve independently.
@@ -46,7 +54,9 @@ design tokens in src/styles/theme.css)    domain:shared
   with the tools in `apps/devtools/src/app/tools/`.
 - Product placement rule: generic browser developer utility → DevTools; image
   asset platform capability → Imageryx (separate repo); project /
-  infrastructure capability → DevFlare.
+  infrastructure capability → DevFlare; GitHub repository monitoring and
+  development automation → DevRadar. Nothing GitHub-specific goes into
+  DevFlare, `@org/core` or DevAuth.
 
 ## Big picture
 
@@ -68,6 +78,14 @@ devtools (Worker + Static Assets, :4300 dev) — every page prerendered and serv
               │  /api/v1/*    ── connected tools (short links, domain inspector)
               │                  ──► Cloudflare D1 `devtools-db` · Rate Limiting bindings
               │  short-link host (SHORT_LINK_BASE_URL) ── 302 to the destination
+
+dev-radar (Worker + Static Assets, :4400 dev) — every static page prerendered;
+         the Worker answers:
+              │  /api/auth/*  ── OIDC as its OWN DevAuth client (dev-radar[-dev])
+              │  /api/v1/*    ── dashboard API, reads D1 `dev-radar-db` only
+              │  /api/github/webhook ◄── GitHub App deliveries (HMAC-verified)
+              │  GitHub REST  ── read-only App installation, server side only
+              │  cron (6 h)   ── reconcile missed webhooks
 
 dev-auth (Hono Worker, :8787) — OAuth 2.1 / OIDC identity provider
          ──► Cloudflare D1 (users/sessions/issued tokens/JWKS, Drizzle schema)
@@ -131,7 +149,8 @@ dimension): `dev-auth` cannot import `dev-auth-sdk`, `devflare`, or
 — composition belongs to the consumer, not to either service. `devtools` is a
 consumer too (spec 020), for its connected tools only: `@dev-auth/core` on the
 server, `@dev-auth/angular` + `@dev-auth/elements` in the connected pages. Its
-local tools never load them.
+local tools never load them. `dev-radar` is a consumer too (spec 021): the
+whole app is behind sign-in, via the same SDK pieces and its own client.
 
 `apps/devflare/src/server/lib/cloudflare-{oauth,oauth-client,connection}.ts`
 are today's working (DevFlare-only, single-tenant) Cloudflare OAuth code —
@@ -159,6 +178,8 @@ makes the arrangement work for a consumer on a different domain.
 | `apps/devflare-e2e`             | —                    | Playwright E2E tests for DevFlare                                                                                                                                             |
 | `apps/devtools`                 | —                    | DevTools — browser utilities (Angular 21 + Analog, `static: true`, every route prerendered)                                                                                   |
 | `apps/devtools-e2e`             | —                    | Playwright E2E tests for DevTools (needs no other service)                                                                                                                    |
+| `apps/dev-radar`                | —                    | DevRadar — GitHub monitoring (Angular 21 + Analog, Worker + Static Assets, own D1)                                                                                            |
+| `apps/dev-radar-e2e`            | —                    | Playwright E2E for DevRadar (migrates + seeds its own local D1; needs no other service)                                                                                       |
 | `libs/shared/core`              | `@org/core`          | DevFlare platform services: projects, Cloudflare account, DevAuth admin. No tool code                                                                                         |
 | `libs/shared/ui`                | `@org/ui`            | Small shared components (badge, button, card, input) + shared design tokens (`src/styles/theme.css`)                                                                          |
 | `libs/shared/dev-auth-angular`  | `@dev-auth/angular`  | DevAuth consumer SDK — Angular session adapter for a consumer app's OWN cookie session, guard, types (does not speak OAuth itself)                                            |
@@ -274,6 +295,41 @@ dogfoods instead. See
   `/tools/shortener` → `/data-converter`, `/screen-recorder`, `/url-shortener`
   (which now forwards to `/short-links`).
 
+## apps/dev-radar (GitHub monitoring)
+
+Spec: [021](../specs/021-dev-radar-foundation.md). Operator docs:
+[apps/dev-radar/README.md](../../apps/dev-radar/README.md).
+
+- **Build**: same shape as DevTools — Analog + Nitro `cloudflare-module`;
+  `/`, `/repositories`, `/pull-requests`, `/activity`, `/settings` are
+  prerendered shells, `/repositories/:id` is server-rendered by the Worker. The
+  Nitro task `radar:reconcile` (`src/server/tasks`) is wired to the wrangler
+  cron through `scheduledTasks` in `vite.config.ts` (keep both schedules equal).
+- **Access**: DevAuth identity (own OAuth client, `dr_session` cookie hashed in
+  D1) **and** `DEVRADAR_ALLOWED_USERS` (fail closed). `lib/http.ts`:
+  `requireAllowedUser` (401/403), same-origin CSRF check, rate limiting. The
+  browser shell (`app/components/shell.component.ts`) is the single gate and
+  renders pages only when `RadarAccess` says `allowed`.
+- **Layout** (`src/`): `shared/` (browser + server: DTOs, `ci-state`,
+  `domain-events`, `release-hint`), `server/lib/github/` (App JWT, transport,
+  endpoints, mapping), `server/lib/store/` (the only SQL; row→DTO queries),
+  `server/lib/sync/` (budgeted reconcile), `server/lib/webhooks/` (signature,
+  payload guards, normalization, idempotent processing), `server/routes/` (thin
+  h3 adapters), `app/` (shell, `Remote<T>` data helper, pages).
+- **Data flow**: GitHub → (webhook | sync) → D1 → dashboard API → pages. Pages
+  never trigger GitHub calls. Webhook state changes are guarded by GitHub's
+  `updated_at` so out-of-order deliveries cannot regress newer state.
+- **Events**: webhooks normalize into `DomainEvent`s published to a
+  `DomainEventSink`; the v0.1.0 sink writes `repository_events`. The v0.2.0
+  automation engine subscribes there. Sync/reconcile publishes nothing.
+- **DB**: `dev-radar-db` (binding `DB`), migrations in
+  `src/server/db/migrations/`: `app_user`, `app_session`,
+  `github_installations`, `repositories`, `pull_requests`, `workflow_runs`,
+  `releases`, `webhook_deliveries`, `repository_events`. GitHub numeric ids are
+  the keys. Tests run the real migrations on `node:sqlite`.
+- **Testing**: Vitest specs beside the code (fake GitHub over `fetch` in
+  `server/testing/`); Playwright in `apps/dev-radar-e2e` on a seeded local D1.
+
 ## apps/dev-auth (identity provider)
 
 - **Entry**: `src/index.ts` — Hono app. Middleware in `src/middleware/`:
@@ -320,9 +376,12 @@ dogfoods instead. See
   (push to `main` deploys). Husky pre-commit runs lint-staged
   (Prettier + ESLint on staged files).
 - **Testing**: Vitest (jsdom) with colocated `*.spec.ts`; Playwright in
-  `apps/devflare-e2e`, `apps/devtools-e2e` and `apps/dev-auth/e2e`.
+  `apps/devflare-e2e`, `apps/devtools-e2e`, `apps/dev-radar-e2e` and
+  `apps/dev-auth/e2e`.
 - **Deploy targets**: dev-auth → Cloudflare Worker (`auth-devflare.andersseen.dev`);
   devflare → Cloudflare Worker + Static Assets (`devflare.andersseen.dev`);
   devtools → Cloudflare Worker + Static Assets, **not deployed yet** (no
-  domain, no CI deploy job; manual steps in DEPLOY.md › DevTools).
+  domain, no CI deploy job; manual steps in DEPLOY.md › DevTools);
+  dev-radar → Cloudflare Worker + Static Assets + Cron Trigger, **not deployed
+  yet** (manual steps in DEPLOY.md › DevRadar).
   Full guide: [/DEPLOY.md](../../DEPLOY.md).
