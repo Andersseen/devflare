@@ -316,7 +316,7 @@ describe('discovered projects (heuristic, unsaved)', () => {
         .filter((view) => view.verifiedUrls.length)
         .map((view) => view.slug)
         .sort(),
-    ).toEqual(['angular-movement', 'lumen-icons', 'volt-ui']);
+    ).toEqual(['ally', 'angular-movement', 'lumen-icons', 'volt-ui']);
   });
 
   it('shows Ally with its verified public URL', () => {
