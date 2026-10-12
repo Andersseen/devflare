@@ -5,7 +5,6 @@ import {
   resolveProjectResources,
   resourceActivity,
   resourceKey,
-  type CloudDeployment,
   type CloudInventory,
   type CloudPagesProject,
   type CloudResourceRef,
@@ -13,6 +12,14 @@ import {
   type Project,
   type ResolvedResource,
 } from '@org/core';
+import { WATCHED_PROJECTS } from './dashboard-projects.data';
+import type {
+  LatestDeployment,
+  ProjectView,
+  ProjectViewKind,
+  ProjectViews,
+  WatchedProject,
+} from './dashboard-projects.models';
 
 /**
  * The Projects dashboard's model (spec 019).
@@ -23,104 +30,13 @@ import {
  *   persisted `ProjectResource` links — resolved against Cloudflare so a link
  *   whose resource vanished shows as missing instead of disappearing.
  * - **Discovered** projects are Workers and Pages nobody owns yet, grouped by
- *   name the way the dashboard always did. They are suggestions: nothing is
+ *   application name or a configured alias. They are suggestions: nothing is
  *   persisted until someone saves one.
  *
  * Name matching never creates ownership. It only (a) groups unowned resources
  * into discovered projects and (b) suggests unowned resources to a saved
  * project whose name they resemble, for its owner to link or ignore.
  */
-
-export interface WatchedProject {
-  name: string;
-  slug: string;
-  aliases?: string[];
-  /**
-   * Public domains verified in production but not returned by the current
-   * Cloudflare Pages/Workers-domain permissions (for example Worker routes).
-   */
-  verifiedDomains?: string[];
-}
-
-export type ProjectViewKind = 'saved' | 'discovered';
-
-export interface ProjectView {
-  kind: ProjectViewKind;
-  name: string;
-  slug: string;
-  /** The saved row. Null for a discovered project. */
-  project: Project | null;
-  /**
-   * Saved: every persisted link, resolved (available / missing / unverifiable).
-   * Discovered: the grouped resources, all available, none persisted.
-   */
-  resources: ResolvedResource[];
-  /** Saved only: unowned resources whose names resemble this project. */
-  suggestions: CloudResourceRef[];
-  /** The available Pages projects and Workers — for URLs and deployments. */
-  pages: CloudPagesProject[];
-  workers: CloudWorker[];
-  repoUrl: string | null;
-  url: string | null;
-  /** Route-only URLs rendered separately from the resource cards. */
-  verifiedUrls: string[];
-  lastActivity: string | null;
-  /** Newest Pages deployment across the project, with the project it belongs to. */
-  latestDeployment: LatestDeployment | null;
-}
-
-export interface LatestDeployment {
-  pagesProject: string;
-  deployment: CloudDeployment;
-}
-
-export interface ProjectViews {
-  projects: ProjectView[];
-  discovered: ProjectView[];
-}
-
-export const WATCHED_PROJECTS: WatchedProject[] = [
-  {
-    name: 'DevFlare',
-    slug: 'devflare',
-    aliases: [
-      'dev-auth',
-      'dev-auth-prod',
-      'dev-auth-staging',
-      'auth-devflare',
-      'worker-devflare-hono',
-      'devflare-worker',
-      'control-bucket',
-    ],
-  },
-  {
-    name: 'Volt UI',
-    slug: 'volt-ui',
-    aliases: ['voltui'],
-    verifiedDomains: ['volt-ui.andersseen.dev'],
-  },
-  {
-    name: 'Angular Movement',
-    slug: 'angular-movement',
-    aliases: ['angular movemnt'],
-    verifiedDomains: ['angular-movement.andersseen.dev'],
-  },
-  {
-    name: 'Lumen Icons',
-    slug: 'lumen-icons',
-    aliases: ['lumen iconos'],
-    verifiedDomains: ['lumen-icons.andersseen.dev'],
-  },
-  { name: 'ForgeCMS', slug: 'forgecms', aliases: ['forge cms'] },
-  { name: 'Etym', slug: 'etym', aliases: ['etyma'] },
-  { name: 'Ally', slug: 'ally' },
-  { name: 'ImageryX', slug: 'imageryx', aliases: ['imageryx'] },
-  {
-    name: 'Andersseen Dev',
-    slug: 'andersseen-dev',
-    aliases: ['andersseen-dev', 'andersseen dev', 'my-blog'],
-  },
-];
 
 export function buildProjectViews(input: {
   saved: readonly Project[];

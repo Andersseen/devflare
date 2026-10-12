@@ -252,6 +252,34 @@ describe('explicit ownership over heuristics', () => {
 });
 
 describe('discovered projects (heuristic, unsaved)', () => {
+  it('groups known multi-deployment apps into one discovered project', () => {
+    const { discovered } = build({
+      pages: [pages('strata-www'), pages('strata-sc-qualification')],
+      workers: [worker('cv-builder'), worker('cv-builder-pdf')],
+    });
+
+    expect(discovered.find((view) => view.slug === 'strata')).toMatchObject({
+      name: 'Strata',
+      pages: [{ name: 'strata-www' }, { name: 'strata-sc-qualification' }],
+    });
+    expect(discovered.find((view) => view.slug === 'cv-builder')).toMatchObject(
+      {
+        name: 'CV Builder',
+        workers: [{ name: 'cv-builder' }, { name: 'cv-builder-pdf' }],
+      },
+    );
+    expect(
+      discovered.some((view) =>
+        [
+          'strata-www',
+          'strata-sc-qualification',
+          'cv-builder',
+          'cv-builder-pdf',
+        ].includes(view.name),
+      ),
+    ).toBe(false);
+  });
+
   it('groups DevFlare resources under one discovered project', () => {
     const { discovered } = build({
       pages: [pages('volt-ui')],

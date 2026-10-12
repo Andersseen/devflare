@@ -806,6 +806,25 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
 
 ## Session log
 
+- **2026-10-12 — Extracted dashboard project data and models.** The uncommitted
+  DevFlare dashboard change now keeps `WATCHED_PROJECTS` in
+  `dashboard-projects.data.ts` and the view contracts in
+  `dashboard-projects.models.ts`; `dashboard-projects.ts` contains the
+  grouping/transformation logic only and is 378 lines (previously 474).
+  Existing behavior is preserved. Formatting, changed-file ESLint, DevFlare
+  TypeScript, dashboard tests (24/24), and the production Vite build pass.
+
+- **2026-10-12 — Production navbar links and multi-resource project grouping.**
+  On `main`, uncommitted. Added public production build values for the
+  DevTools and DevRadar navbar links, plus the production `DEVTOOLS_URL` used
+  by legacy `/tools/*` redirects. Added explicit aliases so the discovered
+  `strata-www` + `strata-sc-qualification` resources render as `Strata`, and
+  `cv-builder` + `cv-builder-pdf` render as `CV Builder`, without broad prefix
+  merging. Verified formatting, changed-file ESLint, DevFlare TypeScript,
+  dashboard tests (24/24), and the production Vite build; the built bundle
+  contains both public URLs. The global Nx lint/test commands stalled on the
+  local daemon (`kill EPERM`) and were stopped; nothing was deployed.
+
 - **2026-10-12 — Spec 021: DevRadar v0.1.0 foundation.** Branch
   `feature/dev-radar-foundation`, PR open. Added `apps/dev-radar` and
   `apps/dev-radar-e2e`; touched DevFlare only for the external link, DevAuth
