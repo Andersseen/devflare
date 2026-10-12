@@ -131,7 +131,7 @@ says so; it never invents data.
 | `pnpm cf:radar <args>`        | `wrangler --cwd apps/dev-radar`              |
 | `pnpm db:migrate:radar:local` | Apply migrations to the local D1             |
 | `pnpm db:migrate:radar`       | Apply migrations to production D1 (remote)   |
-| `pnpm deploy:radar`           | Build → migrate → deploy (manual, see below) |
+| `pnpm deploy:radar`           | Manual build → migrate → deploy fallback     |
 
 ## Configuration
 
@@ -265,7 +265,8 @@ pnpm db:migrate:radar                             # production, remote
 
 ## Deployment prerequisites
 
-DevRadar is **not deployed, and no workflow deploys it.** Everything is manual:
+DevRadar is wired into the production workflow. Its first deployment still
+requires the following one-time setup:
 
 1. `pnpm cf:radar d1 create dev-radar-db` → paste the id into
    `[[env.production.d1_databases]]` in `wrangler.toml`.
@@ -274,9 +275,11 @@ DevRadar is **not deployed, and no workflow deploys it.** Everything is manual:
    `[env.production.vars]`, the two secrets `put`.
 4. Uncomment the `[[env.production.routes]]` block (this creates DNS on
    deploy), set the webhook URL on the App to that host.
-5. `pnpm nx build dev-radar && pnpm cf:radar deploy --env production --dry-run`,
-   then `pnpm deploy:radar`.
-6. Optional: set `VITE_DEVRADAR_URL` when building DevFlare to link to it.
+5. `pnpm nx build dev-radar && pnpm cf:radar deploy --env production --dry-run`.
+6. Merge to `main`; the `deploy-radar` job in `.github/workflows/deploy.yml`
+   applies migrations, builds and deploys it. `pnpm deploy:radar` remains
+   available as a manual fallback.
+7. Optional: set `VITE_DEVRADAR_URL` when building DevFlare to link to it.
 
 See also [DEPLOY.md › DevRadar](../../DEPLOY.md).
 

@@ -80,15 +80,14 @@ SHORT_LINK_BASE_URL = "http://localhost:4300/api/go"
 enabled = true
 
 # ---------------------------------------------------------------------------
-# Production — NOT deployed yet. Before the first `pnpm deploy:tools`, see
-# DEPLOY.md › DevTools: create the D1 database and paste its id below, register
-# the `devtools` client at DevAuth, put the secret, and attach the domains.
+# Production — deployed by `.github/workflows/deploy.yml` after the one-time
+# prerequisites in DEPLOY.md › DevTools are complete.
 # ---------------------------------------------------------------------------
 [env.production]
 name = "devtools"
 
-# Attaching a custom domain creates DNS records on deploy, so these stay
-# commented until the owner decides to go live (DEPLOY.md › DevTools).
+# Attaching a custom domain creates DNS records on deploy. Uncomment these
+# before the first production deployment (DEPLOY.md › DevTools).
 # [[env.production.routes]]
 # pattern = "devtools.andersseen.dev"
 # custom_domain = true
