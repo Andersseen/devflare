@@ -10,10 +10,12 @@ cp .env.sample .env        # fill in at least BETTER_AUTH_SECRET
 ## Daily development
 
 ```bash
-pnpm dev:all      # auth (:8787) + DevFlare (:4200) + DevTools (:4300)
+pnpm dev:all      # auth (:8787) + DevFlare (:4200) + DevTools (:4300) + DevRadar (:4400)
 pnpm dev:app      # DevFlare only  → http://localhost:4200
 pnpm dev:tools    # DevTools only  → http://localhost:4300 (local tools need nothing
                   # else; connected tools need dev:auth + db:migrate:tools:local)
+pnpm dev:radar    # DevRadar only → http://localhost:4400 (needs dev:auth + db:migrate:radar:local
+                  # + the dev-radar-dev client secret; see apps/dev-radar/README.md)
 pnpm dev:auth     # auth only      → http://localhost:8787
 pnpm seed:user    # create test user (auth service must be running)
 ```
@@ -36,7 +38,8 @@ pnpm test           # Vitest across all projects
 pnpm check          # all of the above + production build (slowest, most complete)
 ```
 
-`pnpm build` builds DevFlare and DevTools (`build:app` / `build:tools` for one).
+`pnpm build` builds DevFlare, DevTools and DevRadar (`build:app` / `build:tools` /
+`build:radar` for one).
 
 Scoped/faster variants: `nx test devflare`, `nx test devtools`, `nx lint dev-auth`,
 `nx affected -t test lint build` (only what changed).
@@ -58,10 +61,13 @@ Scoped/faster variants: `nx test devflare`, `nx test devtools`, `nx lint dev-aut
    the provider boundary) and `nx e2e devtools-e2e` (starts DevTools and
    migrates its local D1). `DEVTOOLS_E2E_AUTH=1 nx e2e devtools-e2e` adds the
    full DevAuth round trip — needs `pnpm dev:auth` + `pnpm seed:user`.
+   `nx e2e dev-radar-e2e` migrates and seeds DevRadar's local D1 itself and
+   needs no other service (it never reaches GitHub or DevAuth). It runs the
+   three browsers CI runs: `pnpm exec playwright install chromium firefox webkit`.
 
 ## Database
 
-Both apps use Cloudflare D1. Locally that is wrangler's miniflare state under
+Every app that has data uses its own Cloudflare D1. Locally that is wrangler's miniflare state under
 `apps/<app>/.wrangler/state` — there is no SQLite file to delete any more.
 
 ```bash
@@ -76,6 +82,10 @@ pnpm db:migrate          # both, production, remote
   `apps/devtools/src/server/db/migrations/`. `pnpm db:migrate:tools:local`
   locally; `pnpm db:migrate:tools` is production and deliberately **not** part
   of `db:migrate` until DevTools is deployed.
+- **DevRadar DB** (`dev-radar-db`): migrations in
+  `apps/dev-radar/src/server/db/migrations/`. `pnpm db:migrate:radar:local`
+  locally (part of `db:migrate:local`); `pnpm db:migrate:radar` is production
+  and likewise **not** part of `db:migrate` until DevRadar is deployed.
 
 Migration commands take the **binding** (`DB`), not a database name — under
 `--env production` the bound database is `dev-auth-db-prod`, so a bare

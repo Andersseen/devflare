@@ -3,8 +3,9 @@
 # DevFlare
 
 **A Cloudflare-focused personal developer platform.**
-One monorepo, four products: a project hub, browser utilities, an identity
-provider, and a future Cloudflare authorization service.
+One monorepo, five products: a project hub, developer utilities, an identity
+provider, a GitHub monitoring dashboard, and a future Cloudflare authorization
+service.
 
 [![CI](https://github.com/Andersseen/devflare/actions/workflows/ci.yml/badge.svg)](https://github.com/Andersseen/devflare/actions/workflows/ci.yml)
 [![Deploy](https://github.com/Andersseen/devflare/actions/workflows/deploy.yml/badge.svg)](https://github.com/Andersseen/devflare/actions/workflows/deploy.yml)
@@ -26,12 +27,13 @@ provider, and a future Cloudflare authorization service.
 "DevFlare repo" is this monorepo. "DevFlare" on its own means the project-hub
 app. They are not the same thing.
 
-| Product                | Path                      | Purpose                                                  | Status                                       |
-| ---------------------- | ------------------------- | -------------------------------------------------------- | -------------------------------------------- |
-| **DevFlare**           | `apps/devflare`           | Personal project hub — projects, where they run, deploys | Live at `devflare.andersseen.dev`            |
-| **DevTools**           | `apps/devtools`           | Curated developer tools: local (in-browser) + connected  | Builds and runs locally; not deployed yet    |
-| **DevAuth**            | `apps/dev-auth` + SDK     | OAuth 2.1 / OIDC identity provider + `@dev-auth/*` SDK   | Live at `auth-devflare.andersseen.dev`       |
-| **Cloudflare Connect** | `apps/cloudflare-connect` | Future delegated Cloudflare authorization broker         | Placeholder only — health endpoint, no OAuth |
+| Product                | Path                      | Purpose                                                  | Status                                                       |
+| ---------------------- | ------------------------- | -------------------------------------------------------- | ------------------------------------------------------------ |
+| **DevFlare**           | `apps/devflare`           | Personal project hub — projects, where they run, deploys | Live at `devflare.andersseen.dev`                            |
+| **DevTools**           | `apps/devtools`           | Curated developer tools: local (in-browser) + connected  | Builds and runs locally; not deployed yet                    |
+| **DevAuth**            | `apps/dev-auth` + SDK     | OAuth 2.1 / OIDC identity provider + `@dev-auth/*` SDK   | Live at `auth-devflare.andersseen.dev`                       |
+| **DevRadar**           | `apps/dev-radar`          | GitHub monitoring: repos, PRs, CI, releases, activity    | v0.1.0 foundation; builds and runs locally; not deployed yet |
+| **Cloudflare Connect** | `apps/cloudflare-connect` | Future delegated Cloudflare authorization broker         | Placeholder only — health endpoint, no OAuth                 |
 
 Each app has its own README defining what it is and is not.
 
@@ -76,6 +78,16 @@ and applications in other repositories sign in against, plus the published
 `@dev-auth/core`, `@dev-auth/client`, `@dev-auth/angular` and
 `@dev-auth/elements` SDK packages. → [apps/dev-auth/README.md](apps/dev-auth/README.md)
 
+### DevRadar — your development command center
+
+A dashboard over your GitHub repositories: state, open pull requests, Actions
+results, releases and recent activity. It reads GitHub as a **read-only GitHub
+App**, keeps a mirror in its own D1 (webhooks + scheduled reconcile) and signs
+you in through DevAuth, with an owner allowlist on top. No sample data, ever —
+it says when GitHub is not connected. → [apps/dev-radar/README.md](apps/dev-radar/README.md)
+
+Not yet: the automation engine (v0.2.0), notifications, other Git hosts.
+
 ### Cloudflare Connect — not built yet
 
 The boundary for a future service that answers "which Cloudflare resources may
@@ -96,20 +108,27 @@ Browser ──► DevTools (Worker + Static Assets; every page prerendered)
               │  /api/v1/*     ── connected tools ─► D1  devtools-db
               │  short links   ── 302 ─────────────► destination
 
+Browser ──► DevRadar (Worker + Static Assets)       :4400
+              │  /api/auth/*   ── OIDC (own client) ► DevAuth
+              │  /api/v1/*     ── dashboard ───────► D1  dev-radar-db
+              │  /api/github/webhook ◄── GitHub App (HMAC-verified)
+              │  GitHub API    ── read-only App installation, server side
+
 Databases: DevAuth → identity · DevFlare → projects/infra · DevTools → its
-session + short links. No app reads another's database.
+session + short links · DevRadar → its session + mirrored GitHub state.
+No app reads another's database.
 
 DevAuth ──► D1 dev-auth-db-prod (users, sessions, OAuth) · KV (rate limits)
 ```
 
-DevFlare and DevTools never import each other; shared code goes through
+No app imports another; shared code goes through
 `libs/shared/*`. Full map and dependency rules:
 [docs/ai/ARCHITECTURE.md](docs/ai/ARCHITECTURE.md).
 
-| Environment | DevFlare                  | DevTools         | DevAuth                        |
-| ----------- | ------------------------- | ---------------- | ------------------------------ |
-| Production  | `devflare.andersseen.dev` | — (not deployed) | `auth-devflare.andersseen.dev` |
-| Local       | `localhost:4200`          | `localhost:4300` | `localhost:8787`               |
+| Environment | DevFlare                  | DevTools         | DevRadar         | DevAuth                        |
+| ----------- | ------------------------- | ---------------- | ---------------- | ------------------------------ |
+| Production  | `devflare.andersseen.dev` | — (not deployed) | — (not deployed) | `auth-devflare.andersseen.dev` |
+| Local       | `localhost:4200`          | `localhost:4300` | `localhost:4400` | `localhost:8787`               |
 
 ## Tech stack
 
@@ -133,37 +152,40 @@ DevFlare and DevTools never import each other; shared code goes through
 pnpm install
 cp .env.sample .env       # fill in your values
 pnpm db:migrate:local     # set up the local D1 databases
-pnpm dev:all              # DevAuth :8787 · DevFlare :4200 · DevTools :4300
+pnpm dev:all              # DevAuth :8787 · DevFlare :4200 · DevTools :4300 · DevRadar :4400
 pnpm seed:user            # in another terminal
 ```
 
 Open <http://localhost:4200> and sign in with `test@devflare.com` /
 `TestPass123`. DevTools at <http://localhost:4300> needs no account and no
-other service.
+other service. DevRadar (<http://localhost:4400>) needs DevAuth plus its own
+OAuth client secret — see [apps/dev-radar/README.md](apps/dev-radar/README.md).
 
 | Script           | Starts                |
 | ---------------- | --------------------- |
-| `pnpm dev:all`   | All three             |
+| `pnpm dev:all`   | All four              |
 | `pnpm dev:auth`  | DevAuth only → :8787  |
 | `pnpm dev:app`   | DevFlare only → :4200 |
 | `pnpm dev:tools` | DevTools only → :4300 |
+| `pnpm dev:radar` | DevRadar only → :4400 |
 
 ## Scripts
 
 Everything runs from the repo root — the Cloudflare scripts wrap
 `wrangler --cwd`, so there is never a `cd`.
 
-| Script                  | Description                                             |
-| ----------------------- | ------------------------------------------------------- |
-| `pnpm check`            | format → lint → typecheck → test → build                |
-| `pnpm build`            | Build DevFlare and DevTools (`build:app`/`build:tools`) |
-| `pnpm db:migrate:local` | Apply D1 migrations locally                             |
-| `pnpm db:migrate`       | Apply D1 migrations to production                       |
-| `pnpm deploy:dry`       | Build and validate DevAuth + DevFlare, ship nothing     |
-| `pnpm deploy:all`       | Deploy DevAuth, then DevFlare                           |
-| `pnpm cf:tail:app`      | Live DevFlare production logs                           |
-| `pnpm cf:app <args>`    | Escape hatch → `wrangler --cwd apps/devflare`           |
-| `pnpm cf:tools <args>`  | Escape hatch → `wrangler --cwd apps/devtools`           |
+| Script                  | Description                                                                     |
+| ----------------------- | ------------------------------------------------------------------------------- |
+| `pnpm check`            | format → lint → typecheck → test → build                                        |
+| `pnpm build`            | Build DevFlare, DevTools and DevRadar (`build:app`/`build:tools`/`build:radar`) |
+| `pnpm db:migrate:local` | Apply D1 migrations locally                                                     |
+| `pnpm db:migrate`       | Apply D1 migrations to production                                               |
+| `pnpm deploy:dry`       | Build and validate DevAuth + DevFlare, ship nothing                             |
+| `pnpm deploy:all`       | Deploy DevAuth, then DevFlare                                                   |
+| `pnpm cf:tail:app`      | Live DevFlare production logs                                                   |
+| `pnpm cf:app <args>`    | Escape hatch → `wrangler --cwd apps/devflare`                                   |
+| `pnpm cf:tools <args>`  | Escape hatch → `wrangler --cwd apps/devtools`                                   |
+| `pnpm cf:radar <args>`  | Escape hatch → `wrangler --cwd apps/dev-radar`                                  |
 
 Run `pnpm check` before opening a PR — CI runs the same gates plus E2E.
 
@@ -176,6 +198,8 @@ devflare/
 │   ├── devflare-e2e/        # Playwright E2E for DevFlare
 │   ├── devtools/            # Browser utilities: Analog, prerendered → static assets
 │   ├── devtools-e2e/        # Playwright E2E for DevTools
+│   ├── dev-radar/           # GitHub monitoring: Analog + Nitro → Worker, own D1
+│   ├── dev-radar-e2e/       # Playwright E2E for DevRadar (seeds its own local D1)
 │   ├── dev-auth/            # Identity provider: Hono + better-auth + D1
 │   └── cloudflare-connect/  # Placeholder for the Cloudflare authorization broker
 ├── libs/
@@ -203,8 +227,8 @@ Full detail in [AGENTS.md](AGENTS.md) and [docs/ai/CONVENTIONS.md](docs/ai/CONVE
 
 ## Deployment
 
-Push to `main` deploys DevAuth and DevFlare via GitHub Actions. DevTools has
-build and preview configuration but no domain or deploy job yet. Manual:
+Push to `main` deploys DevAuth and DevFlare via GitHub Actions. DevTools and
+DevRadar have build and preview configuration but no domain or deploy job yet. Manual:
 
 ```bash
 pnpm deploy:dry     # validate first

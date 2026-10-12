@@ -13,7 +13,7 @@ This is the entry point for AI coding agents. Read this first, then load only th
 
 ## What this is (one paragraph)
 
-The DevFlare repo is an Nx 22 / pnpm monorepo of four products: **DevFlare**
+The DevFlare repo is an Nx 22 / pnpm monorepo of five products: **DevFlare**
 (`apps/devflare`, AnalogJS/Angular 21) — a personal **project hub** over the
 owner's Cloudflare account; **DevTools** (`apps/devtools`) — anonymous,
 **curated developer tools**, mostly local/in-browser (OAuth inspector, Wrangler
@@ -22,7 +22,10 @@ inspector) behind DevAuth; **DevAuth**
 (`apps/dev-auth`) — a standalone OAuth 2.1 / OIDC **identity provider** (Hono +
 better-auth + D1) that DevFlare and apps in other repositories authenticate
 against, plus its `@dev-auth/*` SDK; and **Cloudflare Connect**
-(`apps/cloudflare-connect`) — a not-yet-implemented placeholder. "DevFlare"
+(`apps/cloudflare-connect`) — a not-yet-implemented placeholder; and
+**DevRadar** (`apps/dev-radar`) — a **GitHub monitoring dashboard** (repos,
+PRs, Actions, releases, activity) over a read-only GitHub App, signed in through
+DevAuth, with its own D1. "DevFlare"
 alone means the hub app, not the repo.
 
 ## Hard rules
@@ -58,11 +61,19 @@ dev-auth-elements:build:flow` respectively (pure npm — `@flowview/compiler`;
     only `connected` tools use DevTools' Worker, DevAuth and D1. DevAuth
     authenticates, DevTools authorizes (`DEVTOOLS_ALLOWED_USERS`, checked
     server side). See [spec 020](docs/specs/020-devtools-connected-foundation.md).
+12. **DevRadar: read-only GitHub, nothing GitHub elsewhere.** GitHub access is
+    a read-only GitHub App installation (JWT → short-lived installation token,
+    server side only); no write permission or call, no token/key/webhook secret
+    in D1, logs, errors or the browser. GitHub-specific code lives only in
+    `apps/dev-radar`. Access = DevAuth identity **and** `DEVRADAR_ALLOWED_USERS`
+    (fail closed). Webhooks are HMAC-verified over the raw body and idempotent;
+    no mock data in app code. See [spec 021](docs/specs/021-dev-radar-foundation.md).
 
 ## Quick reference
 
 - Package manager: **pnpm** (never npm/yarn). Node ≥ 22.
-- Run everything: `pnpm dev:all` → DevFlare :4200, DevTools :4300, auth :8787.
+- Run everything: `pnpm dev:all` → DevFlare :4200, DevTools :4300, DevRadar :4400,
+  auth :8787.
 - Test user: `test@devflare.com` / `TestPass123` (create with `pnpm seed:user`).
 - TS path aliases: `@org/core`, `@org/ui`, `@dev-auth/angular`, `@org/deploy`,
   `@dev-auth/client`, `@dev-auth/core`, `@dev-auth/elements` (see
@@ -73,6 +84,9 @@ dev-auth-elements:build:flow` respectively (pure npm — `@flowview/compiler`;
   recreate a manual `app.routes.ts`.
 - DevTools routes: `apps/devtools/src/app/pages/<slug>.page.ts`, registered in
   `apps/devtools/src/app/tools/tool-registry.ts` (use the `new-tool` skill).
+- DevRadar routes: `apps/dev-radar/src/app/pages/**/*.page.ts`; API in
+  `apps/dev-radar/src/server/routes/api/{auth,v1,github}`; operator docs in
+  `apps/dev-radar/README.md`.
 - Main app API: `apps/devflare/src/server/routes/api/**` (Nitro/h3 file-based).
 - Auth service: `apps/dev-auth/src/index.ts` (Hono on Cloudflare Workers).
 - Generic agent skills (Claude + Codex) are installed by Agentyx from

@@ -82,7 +82,36 @@ describe('configured OAuth clients', () => {
     },
   );
 
-  it('drops only DevTools, not DevFlare, when its secret has not been set', async () => {
+  it.each([
+    ['local', 'dev-radar-dev', 'http://localhost:4400/api/auth/callback'],
+    [
+      'production',
+      'dev-radar',
+      'https://devradar.andersseen.dev/api/auth/callback',
+    ],
+  ] as const)(
+    '%s: DevRadar is its own confidential client with one exact redirect URI',
+    async (environment, clientId, redirectUri) => {
+      const json = registries[environment];
+      const { clients } = await parseOAuthClients(json, secretsFor(json));
+      const radar = clients.find((client) => client.clientId === clientId);
+
+      expect(radar).toMatchObject({
+        type: 'web',
+        public: false,
+        tokenEndpointAuthMethod: 'client_secret_basic',
+        redirectUris: [redirectUri],
+      });
+
+      // Never sharing another app's identity or callback.
+      for (const other of clients.filter((c) => c.clientId !== clientId)) {
+        expect(other.redirectUris).not.toContain(redirectUri);
+        expect(other.clientId.startsWith('dev-radar')).toBe(false);
+      }
+    },
+  );
+
+  it('drops only DevTools, not the other clients, when its secret has not been set', async () => {
     const json = registries.production;
     const secrets = JSON.parse(secretsFor(json)) as Record<string, string>;
     delete secrets['devtools'];
@@ -92,8 +121,29 @@ describe('configured OAuth clients', () => {
       JSON.stringify(secrets),
     );
 
-    expect(clients.map((client) => client.clientId)).toEqual(['devflare']);
+    expect(clients.map((client) => client.clientId)).toEqual([
+      'devflare',
+      'dev-radar',
+    ]);
     expect(errors).toHaveLength(1);
     expect(errors[0]).toContain('devtools');
+  });
+
+  it('drops only DevRadar when its secret has not been set', async () => {
+    const json = registries.production;
+    const secrets = JSON.parse(secretsFor(json)) as Record<string, string>;
+    delete secrets['dev-radar'];
+
+    const { clients, errors } = await parseOAuthClients(
+      json,
+      JSON.stringify(secrets),
+    );
+
+    expect(clients.map((client) => client.clientId)).toEqual([
+      'devflare',
+      'devtools',
+    ]);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain('dev-radar');
   });
 });

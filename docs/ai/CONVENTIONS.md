@@ -75,6 +75,32 @@ Same h3 + `db.sql` rules, with DevTools' own guards (spec 020):
   `lib/domain-inspector/probe.ts` — never a bare `fetch(userInput)`.
 - Local tools never call the server. If a tool can run in the browser, it does.
 
+## Server code (apps/dev-radar)
+
+Same h3 + `db.sql` rules as DevTools, plus (spec 021):
+
+- Dashboard endpoints: `await requireAllowedUser(event)` first. Manual sync is
+  also `assertSameOriginJson(event, false)` + `enforceRateLimit(...)`. The only
+  unauthenticated route is `api/github/webhook.post.ts`, and it is
+  authenticated by HMAC signature **before** anything is parsed or stored.
+- GitHub is read **only** through `lib/github/api.ts` (`GitHubApi`), with the
+  per-run request budget. No write call, no new permission, no raw `fetch` to
+  api.github.com elsewhere. Tokens (App JWT, installation tokens, private key,
+  webhook secret) stay in memory on the server: never logged, stored in D1,
+  put in an error message, or returned to the browser.
+- Dashboard routes read D1 (`lib/store/queries.ts`); a page request never
+  causes a GitHub call. SQL lives in `lib/store/` only; routes and sync code
+  call store functions. Variable-length lists use `json_each(${json})`, not
+  concatenated placeholders.
+- Webhook handling is idempotent twice over (delivery id claim **and** guarded
+  upserts). Never store the payload. New event handling = a normalizer (pure,
+  `webhooks/normalize.ts`) + a handler in `process.ts` + specs; GitHub's
+  vocabulary must not leak past `normalize.ts` into `DomainEvent`s.
+- CI states are `unknown | none | pending | success | failure`
+  (`src/shared/ci-state.ts`). Never render "no workflows" as success.
+- No mock data in app code. Tests use `server/testing/fake-github.ts` (a fake
+  `fetch`); E2E seeds a throwaway local D1 (`apps/dev-radar-e2e/fixtures`).
+
 ## dev-auth (apps/dev-auth)
 
 - Page HTML lives in `.flow` templates; the compiled `.flow.js` is **generated —
@@ -127,6 +153,8 @@ Same h3 + `db.sql` rules, with DevTools' own guards (spec 020):
 - Server-side calls to third-party APIs from local tool pages. (Connected
   DevTools tools may fetch server side, through the SSRF-safe probe only.)
 - Tool code in DevFlare or `@org/core`.
+- Putting GitHub-specific code in DevFlare, `@org/core`, DevTools or DevAuth
+  (it belongs in DevRadar), or any GitHub write permission/call in DevRadar.
 - DevAuth, D1 or any server call from a **local** DevTools tool, or from the
   DevTools shell (only `connected` tools may use them).
 - Generic filler tools in DevTools (Base64, UUID, lorem ipsum, hash, regex…).

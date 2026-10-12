@@ -303,6 +303,41 @@ DevAuth sign-in; after signing in as an allowed user a link can be created and
 `https://go.andersseen.dev/<slug>` answers 302; a non-allowed account sees
 "No access to connected tools".
 
+## DevRadar
+
+DevRadar (`apps/dev-radar`, spec 021) is a Worker with Static Assets, like
+DevTools, plus a GitHub App integration and a 6-hourly Cron Trigger that
+reconciles missed webhooks. **It is not deployed yet, and no workflow deploys
+it.** Nothing below creates DNS records until step 6. The long form, including
+every GitHub App setting, is in [apps/dev-radar/README.md](apps/dev-radar/README.md).
+
+1. **D1** — `pnpm cf:radar d1 create dev-radar-db`, paste the id into
+   `[[env.production.d1_databases]]` in `apps/dev-radar/wrangler.toml`. Its own
+   database; never another app's.
+2. **DevAuth client** — `dev-radar` is already listed in DevAuth's production
+   `OAUTH_CLIENTS` (redirect `https://devradar.andersseen.dev/api/auth/callback`).
+   Add `"dev-radar"` to `OAUTH_CLIENT_SECRETS` (re-put the whole JSON value) and
+   redeploy DevAuth; then `pnpm cf:radar secret put DEV_AUTH_CLIENT_SECRET --env production`
+   with the same value.
+3. **Allowed users** — set `DEVRADAR_ALLOWED_USERS` in `[env.production.vars]`
+   to the owner's DevAuth user id. Empty means nobody can sign in.
+4. **GitHub App** — create it read-only (Metadata, Contents, Pull requests,
+   Actions; events Push, Pull request, Workflow run, Release), webhook URL
+   `https://devradar.andersseen.dev/api/github/webhook`. Set `GITHUB_APP_ID` and
+   `GITHUB_APP_SLUG` in `[env.production.vars]` and
+   `pnpm cf:radar secret put GITHUB_APP_PRIVATE_KEY|GITHUB_WEBHOOK_SECRET --env production`.
+5. **Dry run** — `pnpm nx build dev-radar && pnpm cf:radar deploy --env production --dry-run`.
+6. **Domain + deploy** — uncomment the `[[env.production.routes]]` block
+   (`devradar.andersseen.dev`, `custom_domain = true`), then `pnpm deploy:radar`
+   (build → migrate → deploy).
+7. **DevFlare link (optional)** — build DevFlare with
+   `VITE_DEVRADAR_URL=https://devradar.andersseen.dev`; without it no link renders.
+
+Verify: `/` shows the DevAuth sign-in when signed out and `/api/v1/overview`
+answers 401; after signing in as an allowed user, Settings reports the App as
+configured; install the App and press **Sync now**; GitHub → App → Advanced →
+_Recent deliveries_ shows `200` for new deliveries.
+
 ## Troubleshooting
 
 ### "Invalid origin" errors

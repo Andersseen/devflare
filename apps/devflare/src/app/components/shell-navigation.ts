@@ -31,6 +31,17 @@ export const DEVTOOLS_LINK: string | null =
   (import.meta.env['VITE_DEVTOOLS_URL'] as string | undefined) ||
   (import.meta.env.DEV ? 'http://localhost:4300' : null);
 
+/**
+ * Where the standalone DevRadar app (apps/dev-radar, spec 021) lives. Same
+ * rules as DEVTOOLS_LINK: build-time `VITE_DEVRADAR_URL`, the local
+ * `pnpm dev:radar` port in development, and no link at all in a production
+ * build without a value — no DevRadar domain is assumed. DevFlare links out;
+ * it shares no data or code with DevRadar.
+ */
+export const DEVRADAR_LINK: string | null =
+  (import.meta.env['VITE_DEVRADAR_URL'] as string | undefined) ||
+  (import.meta.env.DEV ? 'http://localhost:4400' : null);
+
 export interface ShellNavItem {
   label: string;
   link: string;

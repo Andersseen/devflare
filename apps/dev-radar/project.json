@@ -1,0 +1,67 @@
+{
+  "name": "dev-radar",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "prefix": "app",
+  "sourceRoot": "apps/dev-radar/src",
+  "tags": ["scope:frontend", "type:app", "domain:dev-radar"],
+  "targets": {
+    "build": {
+      "executor": "@analogjs/platform:vite",
+      "options": {
+        "configFile": "apps/dev-radar/vite.config.ts",
+        "main": "apps/dev-radar/src/main.ts",
+        "outputPath": "dist/apps/dev-radar/client",
+        "tsConfig": "apps/dev-radar/tsconfig.app.json"
+      },
+      "defaultConfiguration": "production",
+      "configurations": {
+        "development": {
+          "mode": "development"
+        },
+        "production": {
+          "sourcemap": false,
+          "mode": "production"
+        }
+      },
+      "outputs": ["{workspaceRoot}/dist/apps/dev-radar"]
+    },
+    "serve": {
+      "executor": "@analogjs/platform:vite-dev-server",
+      "continuous": true,
+      "defaultConfiguration": "development",
+      "options": {
+        "buildTarget": "dev-radar:build",
+        "port": 4400
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "dev-radar:build:development",
+          "hmr": true
+        },
+        "production": {
+          "buildTarget": "dev-radar:build:production"
+        }
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "serve-static": {
+      "continuous": true,
+      "executor": "@nx/web:file-server",
+      "options": {
+        "buildTarget": "dev-radar:build",
+        "port": 4400,
+        "staticFilePath": "dist/apps/dev-radar/analog/public",
+        "spa": true
+      }
+    },
+    "test": {
+      "executor": "@analogjs/vitest-angular:test",
+      "options": {
+        "config": "vite.config.ts"
+      }
+    }
+  }
+}

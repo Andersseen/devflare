@@ -5,7 +5,7 @@
 
 ## Purpose
 
-This repository ("the DevFlare repo") holds four products for one developer's
+This repository ("the DevFlare repo") holds five products for one developer's
 own work, all on Cloudflare:
 
 - **DevFlare** (`apps/devflare`) — a **personal project hub**. Every project,
@@ -19,6 +19,10 @@ own work, all on Cloudflare:
   identity provider** (OAuth 2.1 / OIDC) and its consumer SDK. DevFlare is one
   registered client; apps in other repositories on other domains are others.
   Treat it as a separate product — no DevFlare-specific assumptions in it.
+- **DevRadar** (`apps/dev-radar`) — a **GitHub monitoring dashboard**: the
+  state of the owner's repositories, open PRs, Actions results, releases and
+  activity, via a read-only GitHub App and DevAuth sign-in. The planned home of
+  development automation (v0.2.0, not built). "Your development command center."
 - **Cloudflare Connect** (`apps/cloudflare-connect`) — placeholder for a
   future delegated Cloudflare authorization broker. Not implemented.
 
@@ -45,7 +49,8 @@ separate repository.
 ## Product principles (use these to resolve design questions)
 
 - **One purpose per app**: project/infrastructure capability → DevFlare;
-  generic browser utility → DevTools; image-asset capability → Imageryx.
+  generic browser utility → DevTools; GitHub monitoring / dev automation →
+  DevRadar; image-asset capability → Imageryx.
 - **Client-side first**: if a tool can run fully in the browser, it must.
 - **No accounts required for tools**: DevTools never depends on DevAuth.
 - **Zero-cost infra bias**: everything targets Cloudflare free tiers (Workers, D1,
