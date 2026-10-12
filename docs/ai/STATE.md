@@ -18,12 +18,12 @@ the 2026-08-10 / 2026-09-03 / 2026-09-11 lessons) from carrying forward a
 previous write-up's claim instead of re-checking. **Standing rule: before
 writing anything here, run `git log`/`git branch`/`gh pr list` yourself.**
 
-- Work branch **`feature/dev-radar-foundation`**, from `main` at `459fb09`
-  (merge of PR #46, which carried spec 020 and the Agentyx skills). It holds
-  spec 021 (DevRadar v0.1.0); the PR against `main` is open and is **not**
-  merged — delete the branch after the owner merges it.
-- Newest merged PRs: #46 (`feature/dev-tooling`, spec 020), #45 (spec 019),
-  #44 (spec 018), #43, #42, #41 (`feature/updates`), #40
+- Work branch **`feature/ci-deploy-devtools-radar`**, from current `main` at
+  `0d582c9` (merge of the dashboard cleanup PR). It is uncommitted and has no
+  PR yet.
+- Newest merged changes: dashboard cleanup (`0d582c9`), #47 DevRadar
+  foundation, #46 (`feature/dev-tooling`, spec 020), #45 (spec 019), #44
+  (spec 018), #43, #42, #41 (`feature/updates`), #40
   (`feature/dev-auth-hardening`), #39, #38, #37. PR #32 CLOSED.
 - **PR #32 (`feature/012-dev-auth-angular-ui`, "add optional DevAuth Angular
   UI") is CLOSED** as of 2026-09-04T09:15:31Z and superseded by PR #37.
@@ -805,6 +805,15 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
    reused from it.
 
 ## Session log
+
+- **2026-10-12 — CI deployment jobs for DevTools and DevRadar.** On branch
+  `feature/ci-deploy-devtools-radar` from `main`, added `deploy-tools` and
+  `deploy-radar` jobs to `.github/workflows/deploy.yml`. Each waits for
+  verification and DevAuth, then applies its production D1 migrations, builds
+  and deploys its Worker. Updated deployment docs and Wrangler comments to
+  describe the automated path and the one-time prerequisites. Format and YAML
+  syntax checks pass; the global Nx lint command stalled on the local daemon
+  and was stopped. No Cloudflare deployment was run.
 
 - **2026-10-12 — Extracted dashboard project data and models.** The uncommitted
   DevFlare dashboard change now keeps `WATCHED_PROJECTS` in

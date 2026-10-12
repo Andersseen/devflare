@@ -158,6 +158,7 @@ only `/api/*` to Nitro.
 
 ## Deployment
 
-Not deployed yet, and nothing deploys it automatically. The manual steps —
+The production workflow deploys it automatically after its production
+prerequisites are configured. The setup steps —
 D1, secrets, DevAuth registration, allowed users, the two domains — are in
 [DEPLOY.md › DevTools](../../DEPLOY.md#devtools).

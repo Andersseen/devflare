@@ -1,8 +1,8 @@
 # Production Deployment Guide
 
-Everything runs on Cloudflare. Two deployed Workers, two D1 databases — plus
-DevTools, a third Worker that is configured but not deployed yet (see
-[DevTools](#devtools)).
+Everything runs on Cloudflare. DevAuth and DevFlare are already deployed;
+DevTools and DevRadar are now wired into the production deploy workflow but
+need the prerequisites in their sections before their first successful run.
 
 ## Architecture
 
@@ -265,9 +265,9 @@ curl -H "Authorization: Bearer $ADMIN_SECRET" \
 
 DevTools (`apps/devtools`, spec 020) is a Worker with Static Assets: every
 page is prerendered and served from Assets; the Worker handles `/api/*`, the
-short-link redirect and unknown paths. **It is not deployed yet, and no
-workflow deploys it** — every step below is manual and deliberate. Nothing
-here creates DNS records until step 6.
+short-link redirect and unknown paths. The production workflow deploys it
+after `verify` and `deploy-auth`; the first run still needs the prerequisites
+below. Nothing here creates DNS records until step 6.
 
 1. **D1** — `pnpm cf:tools d1 create devtools-db`, then paste the printed
    id into `[[env.production.d1_databases]]` in `apps/devtools/wrangler.toml`
@@ -292,8 +292,10 @@ here creates DNS records until step 6.
 6. **Domains** — uncomment the two `[[env.production.routes]]` blocks
    (`devtools.andersseen.dev`, `go.andersseen.dev`, `custom_domain = true`).
    Deploying with them creates the DNS records.
-7. **Deploy** — `pnpm deploy:tools` (build → migrate → deploy). Dry run
-   first: `pnpm nx build devtools && pnpm cf:tools deploy --env production --dry-run`.
+7. **Deploy** — after the prerequisites are complete, merge to `main` and the
+   `deploy-tools` job in `.github/workflows/deploy.yml` runs build → migrate →
+   deploy automatically. For a manual dry run, use:
+   `pnpm nx build devtools && pnpm cf:tools deploy --env production --dry-run`.
 8. **DevFlare** — set `DEVTOOLS_URL` (runtime var) and `VITE_DEVTOOLS_URL`
    (build time) to `https://devtools.andersseen.dev` so its legacy `/tools/*`
    links and navbar point there.
@@ -307,9 +309,10 @@ DevAuth sign-in; after signing in as an allowed user a link can be created and
 
 DevRadar (`apps/dev-radar`, spec 021) is a Worker with Static Assets, like
 DevTools, plus a GitHub App integration and a 6-hourly Cron Trigger that
-reconciles missed webhooks. **It is not deployed yet, and no workflow deploys
-it.** Nothing below creates DNS records until step 6. The long form, including
-every GitHub App setting, is in [apps/dev-radar/README.md](apps/dev-radar/README.md).
+reconciles missed webhooks. The production workflow deploys it after `verify`
+and `deploy-auth`; the first run still needs the prerequisites below. Nothing
+below creates DNS records until step 6. The long form, including every GitHub
+App setting, is in [apps/dev-radar/README.md](apps/dev-radar/README.md).
 
 1. **D1** — `pnpm cf:radar d1 create dev-radar-db`, paste the id into
    `[[env.production.d1_databases]]` in `apps/dev-radar/wrangler.toml`. Its own
@@ -328,8 +331,9 @@ every GitHub App setting, is in [apps/dev-radar/README.md](apps/dev-radar/README
    `pnpm cf:radar secret put GITHUB_APP_PRIVATE_KEY|GITHUB_WEBHOOK_SECRET --env production`.
 5. **Dry run** — `pnpm nx build dev-radar && pnpm cf:radar deploy --env production --dry-run`.
 6. **Domain + deploy** — uncomment the `[[env.production.routes]]` block
-   (`devradar.andersseen.dev`, `custom_domain = true`), then `pnpm deploy:radar`
-   (build → migrate → deploy).
+   (`devradar.andersseen.dev`, `custom_domain = true`), then merge to `main`.
+   The `deploy-radar` job runs build → migrate → deploy automatically. For a
+   manual deploy, use `pnpm deploy:radar`.
 7. **DevFlare link (optional)** — build DevFlare with
    `VITE_DEVRADAR_URL=https://devradar.andersseen.dev`; without it no link renders.
 

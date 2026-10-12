@@ -80,16 +80,14 @@ crons = ["17 */6 * * *"]
 enabled = true
 
 # ---------------------------------------------------------------------------
-# Production — NOT deployed yet. Before the first `pnpm deploy:radar`, see
-# DEPLOY.md › DevRadar: create the D1 database and paste its id below, register
-# the `dev-radar` client at DevAuth, register the GitHub App, put the secrets,
-# set the allowlist and attach the domain.
+# Production — deployed by `.github/workflows/deploy.yml` after the one-time
+# prerequisites in DEPLOY.md › DevRadar are complete.
 # ---------------------------------------------------------------------------
 [env.production]
 name = "dev-radar"
 
-# Attaching a custom domain creates DNS records on deploy, so this stays
-# commented until the owner decides to go live (DEPLOY.md › DevRadar).
+# Attaching a custom domain creates DNS records on deploy. Uncomment this
+# before the first production deployment (DEPLOY.md › DevRadar).
 # [[env.production.routes]]
 # pattern = "devradar.andersseen.dev"
 # custom_domain = true
