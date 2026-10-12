@@ -119,8 +119,8 @@ DEV_AUTH_REDIRECT_URI = "https://devradar.andersseen.dev/api/auth/callback"
 # when available; email is accepted here so the production deployment is
 # usable before the identity record is copied into configuration.
 DEVRADAR_ALLOWED_USERS = "andriipap01@gmail.com"
-# GITHUB_APP_ID = "<numeric App ID>"
-# GITHUB_APP_SLUG = "<app url name>"
+GITHUB_APP_ID = "5287187"
+GITHUB_APP_SLUG = "andersseen-devradar"
 GITHUB_SYNC_REQUEST_BUDGET = "45"
 
 [env.production.observability]
