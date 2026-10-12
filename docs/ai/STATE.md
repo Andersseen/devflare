@@ -18,9 +18,10 @@ the 2026-08-10 / 2026-09-03 / 2026-09-11 lessons) from carrying forward a
 previous write-up's claim instead of re-checking. **Standing rule: before
 writing anything here, run `git log`/`git branch`/`gh pr list` yourself.**
 
-- Work branch **`main`** at `3098f83` (merge of PR #50). The production D1
-  deployment configuration and incident record are merged. The working tree
-  now has the uncommitted DevFlare grouping fix recorded below.
+- Work branch **`feature/devflare-project-grouping`** at `d04bc1c`, two commits
+  ahead of `main` (`bebb8d8` groups related resources; `d04bc1c` allows the
+  owner into production DevRadar). The working tree is clean. The branch is
+  ready to push for a PR; production access still requires that PR's deploy.
 - Newest merged changes: dashboard cleanup (`0d582c9`), #47 DevRadar
   foundation, #46 (`feature/dev-tooling`, spec 020), #45 (spec 019), #44
   (spec 018), #43, #42, #41 (`feature/updates`), #40
@@ -805,6 +806,14 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
    reused from it.
 
 ## Session log
+
+- **2026-10-12 — Fixed DevRadar production access policy.** The live browser
+  flow authenticated successfully, then rendered the expected no-access page
+  for `andriipap01@gmail.com`. Production `wrangler.toml` still had an empty
+  `DEVRADAR_ALLOWED_USERS`, whose documented fail-closed behavior permits
+  nobody. Added the owner's email to the production allowlist on branch
+  `feature/devflare-project-grouping`; deployment is still required before the
+  change affects the live Worker.
 
 - **2026-10-12 — Rechecked the managed DevRadar OAuth client.** The live
   DevAuth admin view shows `dev-radar` as an active managed client with the
