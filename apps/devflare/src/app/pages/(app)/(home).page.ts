@@ -33,8 +33,8 @@ import {
   repoLabel,
   slugFromName,
   unresolvedCount,
-  type ProjectView,
 } from './dashboard-projects';
+import type { ProjectView } from './dashboard-projects.models';
 
 /**
  * Projects — where DevFlare starts (spec 019).
@@ -218,8 +218,9 @@ import {
             Discovered in Cloudflare
           </h2>
           <p class="text-sm text-muted-foreground">
-            Workers and Pages no project owns yet, grouped by name. Nothing here
-            is saved — open one to save it as a project.
+            Workers and Pages no project owns yet, grouped by application name
+            and known aliases. Nothing here is saved — open one to save it as a
+            project.
           </p>
         </div>
 

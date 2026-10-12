@@ -119,6 +119,8 @@ DEV_AUTH_REDIRECT_URI = "https://devflare.andersseen.dev/api/auth/callback"
 CLOUDFLARE_ACCOUNT_ID = "c32a93ee83fe9b5d53c63fcc73b90bb9"
 CLOUDFLARE_OAUTH_CLIENT_ID = "5246101a6b6132f12492e3f025354eca"
 CLOUDFLARE_OAUTH_REDIRECT_URI = "https://devflare.andersseen.dev/api/v1/cloud/connect/callback"
+# Public DevTools origin used by the production legacy `/tools/*` redirect.
+DEVTOOLS_URL = "https://devtools.andersseen.dev"
 
 [env.production.observability]
 enabled = true
