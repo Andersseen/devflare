@@ -78,6 +78,16 @@ and applications in other repositories sign in against, plus the published
 `@dev-auth/core`, `@dev-auth/client`, `@dev-auth/angular` and
 `@dev-auth/elements` SDK packages. → [apps/dev-auth/README.md](apps/dev-auth/README.md)
 
+### Dashboard customization
+
+DevFlare's Projects and DevRadar's Repositories dashboards have an explicit
+**Edit dashboard** mode (groups, reordering with Quartz drag-and-drop plus
+button equivalents, hide / restore, save / cancel / reset), persisted per user in
+each app's own D1 ([spec 022](docs/specs/022-dashboard-customization.md)).
+Hiding or grouping is presentation only; it never changes Cloudflare resource
+ownership, and in DevRadar only _followed_ repositories (a subset of the ones the
+GitHub App can read) feed any total.
+
 ### DevRadar — your development command center
 
 A dashboard over your GitHub repositories: state, open pull requests, Actions

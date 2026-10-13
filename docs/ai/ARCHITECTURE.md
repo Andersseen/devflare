@@ -295,6 +295,21 @@ dogfoods instead. See
   `/tools/shortener` → `/data-converter`, `/screen-recorder`, `/url-shortener`
   (which now forwards to `/short-links`).
 
+## Dashboard customization (spec 022)
+
+`libs/shared/dashboard-layout` (`@org/dashboard-layout`, `domain:shared`) is the
+only code DevFlare and DevRadar share for it, in two entry points:
+`@org/dashboard-layout/logic` (pure, Angular-free; also imported by both
+Workers via a Nitro alias: layout operations, `reconcileLayout`, `parseLayout`
+validation, grid-aware `dropIndexFromPoint`) and `@org/dashboard-layout`
+(`LayoutEditor` signals + the `DashboardBoard` component on
+`@quartz-headless/core` `qzDraggable`/`qzDropZone`). Each product owns its own
+persistence: DevFlare `dashboard_group`/`dashboard_item`/`discovery_identity`
+(`server/lib/dashboard-store.ts`), DevRadar `dashboard_group`/
+`followed_repository` (`server/lib/store/dashboard.ts`). The layout is always a
+presentation concern; Cloudflare ownership and GitHub synchronization are not
+touched by it.
+
 ## apps/dev-radar (GitHub monitoring)
 
 Spec: [021](../specs/021-dev-radar-foundation.md). Operator docs:
@@ -325,7 +340,8 @@ Spec: [021](../specs/021-dev-radar-foundation.md). Operator docs:
 - **DB**: `dev-radar-db` (binding `DB`), migrations in
   `src/server/db/migrations/`: `app_user`, `app_session`,
   `github_installations`, `repositories`, `pull_requests`, `workflow_runs`,
-  `releases`, `webhook_deliveries`, `repository_events`. GitHub numeric ids are
+  `releases`, `webhook_deliveries`, `repository_events`, plus the per-user
+  `dashboard_group` and `followed_repository` (spec 022). GitHub numeric ids are
   the keys. Tests run the real migrations on `node:sqlite`.
 - **Testing**: Vitest specs beside the code (fake GitHub over `fetch` in
   `server/testing/`); Playwright in `apps/dev-radar-e2e` on a seeded local D1.

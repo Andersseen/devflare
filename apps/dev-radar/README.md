@@ -41,6 +41,34 @@ imports another app (Nx tag `domain:dev-radar`). Design and rationale:
   _disconnected_ notice. There is no sample data anywhere in the app. A
   repository without workflows reads **No CI**, never _Passing_.
 
+## Following repositories and customizing the dashboard (spec 022)
+
+- **Installed vs followed.** _Installed_ (available) repositories are everything
+  the GitHub App installation can read; they are synchronized as before.
+  _Followed_ repositories are the ones you choose to see. Only followed
+  repositories feed the Overview totals, "needs attention", releases, activity,
+  pull requests and the Repositories list. Nothing is followed until you choose:
+  a new account sees an onboarding state with **Select repositories**, and a
+  synchronization never follows or unfollows anything.
+- **Manage repositories** (Repositories page, or the Overview's _Select
+  repositories_): search the full installed inventory, select several at once,
+  save. Unfollowing only removes the repository from your dashboard — its
+  synchronized data stays and `/repositories/:id` keeps working for any
+  repository. It never changes the GitHub App installation or its permissions.
+- **Edit dashboard**: drag cards (grip handle) or use _Move up / Move down_,
+  _Move to group_, _Pin_ and _Unfollow_ on each card; add, rename, reorder and
+  delete groups (deleting a group moves its repositories to _Uncategorized_);
+  _Save layout_, _Cancel_, _Restore default layout_ (drops groups and pins, keeps
+  what you follow). Preferences are stored per user in D1 (`dashboard_group`,
+  `followed_repository`) keyed by GitHub's stable repository id, so renames and
+  transfers keep them.
+- **Accessibility.** Pointer drag-and-drop uses Quartz's native HTML drag and
+  drop, which has no keyboard mode and is not guaranteed on touch. Every drag
+  operation has a button equivalent, so editing is fully usable without
+  dragging.
+- API: `GET/PUT/DELETE /api/v1/dashboard-layout`, `GET /api/v1/repositories?scope=available`.
+  Saves use the `PREFERENCES_RATE_LIMITER` binding (60/min per user).
+
 ## Architecture
 
 ```
@@ -296,6 +324,8 @@ See also [DEPLOY.md › DevRadar](../../DEPLOY.md).
   repository is retried first on every run.
 - Bounded windows: ≤300 open PRs and the latest 50 runs / 10 releases per
   repository; ≤1000 repositories and 300 installations.
+- A layout save is several ordered statements (upserts first, prunes last), not
+  one transaction; two concurrent saves from different tabs are last-writer-wins.
 - D1 has no multi-statement transactions through `db0`; writes are ordered and
   idempotent (guarded upserts) instead, so a failed run is safe to repeat.
 - Single-owner access model (an allowlist), not multi-tenant: every allowed

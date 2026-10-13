@@ -8,7 +8,7 @@
 > to the last ~5 entries, newest first. Update the date. Facts only; no plans
 > you didn't verify.
 
-_Last updated: 2026-10-13_
+_Last updated: 2026-10-13 (spec 022)_
 
 ## Branch & repo status
 
@@ -18,9 +18,8 @@ the 2026-08-10 / 2026-09-03 / 2026-09-11 lessons) from carrying forward a
 previous write-up's claim instead of re-checking. **Standing rule: before
 writing anything here, run `git log`/`git branch`/`gh pr list` yourself.**
 
-- Work branch **`fix/configure-devradar-github`**, with open PR #53 to `main`.
-  `main` remains at `1390e00`; the branch contains the production GitHub App
-  configuration and the Worker fetch-context fix. The working tree is clean.
+- Work branch **`feature/dashboard-customization`** (spec 022), cut from
+  `main` at `5fd4d99` (PR #53 merged). PR open against `main`; not merged.
 - DevRadar production is configured with the read-only GitHub App and its
   installation for all current and future repositories owned by `Andersseen`;
   a live manual sync verified 1 installation and 88 repositories. Cloudflare has the webhook secret and the
@@ -811,6 +810,24 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
    reused from it.
 
 ## Session log
+
+- **2026-10-13 — Dashboard customization (spec 022).** Persistent, per-user
+  Edit dashboard in DevFlare (saved-project cards: groups, order, hide/restore;
+  discovery identities editable, `WATCHED_PROJECTS` kept as the bootstrap seed;
+  _Assign to project_ on discovered cards via the existing verified link API) and
+  DevRadar (followed repositories: every total, PR list, activity, releases and
+  the repository list are scoped to followed ones; Manage repositories;
+  groups, pins, order). Shared `@org/dashboard-layout` library on
+  `@quartz-headless/core@0.6.0`. New migrations: DevFlare `0006`, DevRadar
+  `0001` — **apply both to production D1 before deploying** (`pnpm db:migrate`,
+  `pnpm db:migrate:radar`). DevRadar also needs the new
+  `PREFERENCES_RATE_LIMITER` binding (in `wrangler.toml`, namespace 2103).
+  Verified: format, lint, typecheck, unit tests, builds, and the DevRadar and
+  DevFlare Playwright suites on Chromium/Firefox/WebKit. Not verified: real
+  touch devices, production D1, a real GitHub App with many repositories.
+  Lesson: Quartz 0.6.0's `qzDraggableHandle` checks `event.target` (the
+  draggable itself on `dragstart`), so a handle selector blocks every drag; and
+  its sortable `index` is one-axis, wrong for grids — see the board component.
 
 - **2026-10-13 — Expanded DevRadar's GitHub repository access.** Reused the
   existing GitHub tab, passed sudo verification, changed the
