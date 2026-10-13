@@ -1,5 +1,6 @@
 import { must } from '../../testing/must';
 import { computeCiState } from '../../../shared/ci-state';
+import type { SqlDatabase } from '../../db';
 import { createTestDb, NOW } from '../../testing/test-db';
 import {
   ghCommit,
@@ -57,8 +58,20 @@ const DISCONNECTED = {
 const iso = (d: Date) => d.toISOString();
 const daysAgo = (n: number) => new Date(NOW.getTime() - n * 86_400_000);
 
+const USER = 'user-1';
+
+async function followAll(db: SqlDatabase, userId = USER) {
+  await db.sql`INSERT INTO followed_repository (user_id, repository_id, position, created_at)
+    SELECT ${userId}, id, 0, ${iso(NOW)} FROM repositories`;
+}
+
 async function seed() {
   const t = createTestDb();
+  t.raw
+    .prepare(
+      `INSERT OR IGNORE INTO app_user (id, email, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`,
+    )
+    .run(USER, 'u@test.dev', 'U', iso(NOW), iso(NOW));
   await upsertInstallation(
     t.db,
     must(mapInstallation(ghInstallation(10, 'acme'))),
@@ -289,9 +302,10 @@ describe('persistence', () => {
   describe('dashboard queries', () => {
     it('an empty database yields honest empty results, not fake zeros with data', async () => {
       const { db } = createTestDb();
-      const overview = await getOverview(db, DISCONNECTED);
+      const overview = await getOverview(db, USER, DISCONNECTED);
       expect(overview.totals).toEqual({
         repositories: 0,
+        availableRepositories: 0,
         openPullRequests: 0,
         failing: 0,
         pending: 0,
@@ -299,8 +313,8 @@ describe('persistence', () => {
       });
       expect(overview.connection.configured).toBe(false);
       expect(overview.lastSyncedAt).toBeNull();
-      expect(await listRepositories(db)).toEqual([]);
-      expect(await listPullRequests(db)).toEqual([]);
+      expect(await listRepositories(db, USER)).toEqual([]);
+      expect(await listPullRequests(db, USER)).toEqual([]);
     });
 
     it('overview counts failing / pending / no-CI separately and lists failing first', async () => {
@@ -322,9 +336,11 @@ describe('persistence', () => {
       await applyCi(db, 102, { state: 'failure', sha: 'a' }, iso(NOW));
       await applyCi(db, 103, { state: 'none', sha: null }, iso(NOW));
       // 104 stays 'unknown'
-      const overview = await getOverview(db, CONNECTED);
+      await followAll(db);
+      const overview = await getOverview(db, USER, CONNECTED);
       expect(overview.totals).toMatchObject({
         repositories: 5,
+        availableRepositories: 5,
         failing: 1,
         pending: 1,
         noCi: 1,
@@ -339,7 +355,7 @@ describe('persistence', () => {
       const { db } = await seed();
       await applyHead(db, 100, mapCommit(ghCommit('sha-new')), null);
       await applyCi(db, 100, { state: 'success', sha: 'sha-old' }, iso(NOW));
-      const [repo] = await listRepositories(db);
+      const [repo] = await listRepositories(db, USER, 'available');
       expect(repo.ciStale).toBe(true);
       expect(repo.ci.state).toBe('success');
     });
@@ -372,8 +388,9 @@ describe('persistence', () => {
           100,
         ),
       );
+      await followAll(db);
       const byNumber = Object.fromEntries(
-        (await listPullRequests(db)).map((p) => [p.number, p.ci]),
+        (await listPullRequests(db, USER)).map((p) => [p.number, p.ci]),
       );
       expect(byNumber).toEqual({ 1: 'failure', 2: 'success', 3: 'none' });
     });
@@ -397,8 +414,9 @@ describe('persistence', () => {
           100,
         ),
       );
+      await followAll(db);
       const hints = Object.fromEntries(
-        (await listPullRequests(db)).map((p) => [
+        (await listPullRequests(db, USER)).map((p) => [
           p.number,
           p.releaseHint !== null,
         ]),
@@ -430,13 +448,13 @@ describe('persistence', () => {
         ],
         'd',
       );
-      const detail = await getRepositoryDetail(db, 100);
+      const detail = await getRepositoryDetail(db, USER, 100);
       expect(detail?.repository.openPullRequests).toBe(1);
       expect(detail?.pullRequests).toHaveLength(1);
       expect(detail?.workflowRuns).toHaveLength(1);
       expect(detail?.releases.map((r) => r.tag)).toEqual(['v1']);
       expect(detail?.activity).toHaveLength(1);
-      expect(await getRepositoryDetail(db, 12345)).toBeNull();
+      expect(await getRepositoryDetail(db, USER, 12345)).toBeNull();
     });
 
     it('settings lists installations with repository counts and the last sync', async () => {
@@ -448,6 +466,7 @@ describe('persistence', () => {
         .run(iso(NOW));
       const settings = await getSettings(
         db,
+        USER,
         CONNECTED,
         'https://radar.test/api/github/webhook',
       );

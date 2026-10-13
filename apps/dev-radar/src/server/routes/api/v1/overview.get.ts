@@ -9,7 +9,7 @@ import { getOverview } from '../../../lib/store/queries';
 
 /** GET /api/v1/overview — persisted state only; never calls GitHub. */
 export default defineEventHandler(async (event) => {
-  await requireAllowedUser(event);
+  const user = await requireAllowedUser(event);
   const connection = describeConnection(resolveGitHubConfig(event.context));
-  return getOverview(db, connection);
+  return getOverview(db, user.id, connection);
 });

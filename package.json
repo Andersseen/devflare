@@ -84,6 +84,7 @@
     "@flowview/runtime": "^0.1.2",
     "@imgly/background-removal": "^1.7.0",
     "@noble/hashes": "^2.3.0",
+    "@quartz-headless/core": "0.6.0",
     "@sentry/angular": "^10.53.1",
     "@voltui/components": "^1.0.1",
     "acorn": "^8.18.0",

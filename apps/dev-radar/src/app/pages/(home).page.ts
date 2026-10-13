@@ -35,7 +35,7 @@ import { Remote } from '../radar/remote';
       <div>
         <h1 class="text-3xl font-bold tracking-tight">Overview</h1>
         <p class="mt-1 text-muted-foreground">
-          What needs attention across your GitHub repositories.
+          What needs attention across the repositories you follow.
         </p>
       </div>
 
@@ -50,8 +50,44 @@ import { Remote } from '../radar/remote';
       } @else if (overview.data(); as data) {
         <app-disconnected-notice
           [connection]="data.connection"
-          [empty]="data.totals.repositories === 0"
+          [empty]="data.totals.availableRepositories === 0"
         />
+
+        @if (
+          data.connection.configured &&
+          data.totals.repositories === 0 &&
+          data.totals.availableRepositories > 0
+        ) {
+          <div
+            class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border p-8 text-center"
+            data-testid="not-following"
+          >
+            <p class="font-medium">You are not following any repositories</p>
+            <p class="max-w-md text-sm text-muted-foreground">
+              GitHub has {{ data.totals.availableRepositories }} available.
+              Select the ones you care about and this page will summarise
+              exactly those.
+            </p>
+            <a
+              routerLink="/repositories"
+              [queryParams]="{ manage: 1 }"
+              class="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
+              data-testid="select-repositories"
+              >Select repositories</a
+            >
+          </div>
+        } @else if (data.totals.availableRepositories > 0) {
+          <p class="text-sm text-muted-foreground" data-testid="scope-note">
+            Showing {{ data.totals.repositories }} followed of
+            {{ data.totals.availableRepositories }} available repositories.
+            <a
+              routerLink="/repositories"
+              [queryParams]="{ manage: 1 }"
+              class="font-medium text-primary underline"
+              >Manage repositories</a
+            >
+          </p>
+        }
 
         <section
           class="grid grid-cols-2 gap-3 lg:grid-cols-5"
@@ -88,7 +124,7 @@ import { Remote } from '../radar/remote';
               @if (data.attention.length === 0) {
                 <p class="text-sm text-muted-foreground">
                   @if (data.totals.repositories === 0) {
-                    No repositories yet.
+                    No followed repositories.
                   } @else {
                     No repository has failing or running CI.
                   }
@@ -214,7 +250,7 @@ export default class OverviewPage {
     return [
       {
         key: 'repositories',
-        label: 'Repositories',
+        label: 'Followed repositories',
         value: t.repositories,
         link: '/repositories',
         query: {},

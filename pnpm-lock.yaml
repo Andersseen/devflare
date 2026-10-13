@@ -56,6 +56,9 @@ importers:
       '@noble/hashes':
         specifier: ^2.3.0
         version: 2.3.0
+      '@quartz-headless/core':
+        specifier: 0.6.0
+        version: 0.6.0(@angular/common@21.2.21(@angular/core@21.2.21(@angular/compiler@21.2.21)(rxjs@7.8.2)(zone.js@0.16.0))(rxjs@7.8.2))(@angular/core@21.2.21(@angular/compiler@21.2.21)(rxjs@7.8.2)(zone.js@0.16.0))(rxjs@7.8.2)
       '@sentry/angular':
         specifier: ^10.53.1
         version: 10.53.1(@angular/common@21.2.21(@angular/core@21.2.21(@angular/compiler@21.2.21)(rxjs@7.8.2)(zone.js@0.16.0))(rxjs@7.8.2))(@angular/core@21.2.21(@angular/compiler@21.2.21)(rxjs@7.8.2)(zone.js@0.16.0))(@angular/router@21.2.21(@angular/common@21.2.21(@angular/core@21.2.21(@angular/compiler@21.2.21)(rxjs@7.8.2)(zone.js@0.16.0))(rxjs@7.8.2))(@angular/core@21.2.21(@angular/compiler@21.2.21)(rxjs@7.8.2)(zone.js@0.16.0))(@angular/platform-browser@21.2.21(@angular/common@21.2.21(@angular/core@21.2.21(@angular/compiler@21.2.21)(rxjs@7.8.2)(zone.js@0.16.0))(rxjs@7.8.2))(@angular/core@21.2.21(@angular/compiler@21.2.21)(rxjs@7.8.2)(zone.js@0.16.0)))(rxjs@7.8.2))(rxjs@7.8.2)
@@ -3984,6 +3987,14 @@ packages:
 
   '@protobufjs/utf8@1.1.1':
     resolution: {integrity: sha512-oOAWABowe8EAbMyWKM0tYDKi8Yaox52D+HWZhAIJqQXbqe0xI/GV7FhLWqlEKreMkfDjshR5FKgi3mnle0h6Eg==}
+
+  '@quartz-headless/core@0.6.0':
+    resolution: {integrity: sha512-hs4DQKdXQLdvG62d6aArlzBzbd0uMd6+hgUY2dZwfZ4/D+5tdgcumPFlrNFOIuoO2f229GgjopGsXvW7BTDTSQ==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      '@angular/common': ^21.0.0
+      '@angular/core': ^21.0.0
+      rxjs: ^7.8.0
 
   '@rolldown/binding-android-arm64@1.0.0-rc.4':
     resolution: {integrity: sha512-vRq9f4NzvbdZavhQbjkJBx7rRebDKYR9zHfO/Wg486+I7bSecdUapzCm5cyXoK+LHokTxgSq7A5baAXUZkIz0w==}
@@ -15331,6 +15342,13 @@ snapshots:
   '@protobufjs/pool@1.1.0': {}
 
   '@protobufjs/utf8@1.1.1': {}
+
+  '@quartz-headless/core@0.6.0(@angular/common@21.2.21(@angular/core@21.2.21(@angular/compiler@21.2.21)(rxjs@7.8.2)(zone.js@0.16.0))(rxjs@7.8.2))(@angular/core@21.2.21(@angular/compiler@21.2.21)(rxjs@7.8.2)(zone.js@0.16.0))(rxjs@7.8.2)':
+    dependencies:
+      '@angular/common': 21.2.21(@angular/core@21.2.21(@angular/compiler@21.2.21)(rxjs@7.8.2)(zone.js@0.16.0))(rxjs@7.8.2)
+      '@angular/core': 21.2.21(@angular/compiler@21.2.21)(rxjs@7.8.2)(zone.js@0.16.0)
+      rxjs: 7.8.2
+      tslib: 2.8.1
 
   '@rolldown/binding-android-arm64@1.0.0-rc.4':
     optional: true

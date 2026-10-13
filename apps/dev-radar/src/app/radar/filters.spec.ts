@@ -10,6 +10,7 @@ function repo(
   over: Partial<RepositoryDto> & { id: number; fullName: string },
 ): RepositoryDto {
   return {
+    followed: true,
     name: over.fullName.split('/')[1],
     owner: over.fullName.split('/')[0],
     htmlUrl: `https://github.com/${over.fullName}`,

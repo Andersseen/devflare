@@ -40,20 +40,32 @@ export function createEventStoreSink(
 
 export type { DomainEvent };
 
+/**
+ * `userId` limits the feed to repositories that user follows (events with no
+ * repository, such as installation changes, are then left out); `repositoryId`
+ * is a single repository's own history and ignores following.
+ */
 export async function listEvents(
   db: SqlDatabase,
-  options: { repositoryId?: number; limit: number },
+  options: { repositoryId?: number; userId?: string; limit: number },
 ): Promise<EventRow[]> {
   const result =
-    options.repositoryId === undefined
+    options.repositoryId !== undefined
       ? await db.sql<
           Rows<EventRow>
         >`SELECT id, repository_id, repository_full_name, type, summary, actor, url, occurred_at
-          FROM repository_events ORDER BY occurred_at DESC, id DESC LIMIT ${options.limit}`
-      : await db.sql<
-          Rows<EventRow>
-        >`SELECT id, repository_id, repository_full_name, type, summary, actor, url, occurred_at
           FROM repository_events WHERE repository_id = ${options.repositoryId}
-          ORDER BY occurred_at DESC, id DESC LIMIT ${options.limit}`;
+          ORDER BY occurred_at DESC, id DESC LIMIT ${options.limit}`
+      : options.userId !== undefined
+        ? await db.sql<
+            Rows<EventRow>
+          >`SELECT id, repository_id, repository_full_name, type, summary, actor, url, occurred_at
+            FROM repository_events
+            WHERE repository_id IN (SELECT repository_id FROM followed_repository WHERE user_id = ${options.userId})
+            ORDER BY occurred_at DESC, id DESC LIMIT ${options.limit}`
+        : await db.sql<
+            Rows<EventRow>
+          >`SELECT id, repository_id, repository_full_name, type, summary, actor, url, occurred_at
+            FROM repository_events ORDER BY occurred_at DESC, id DESC LIMIT ${options.limit}`;
   return result.rows ?? [];
 }

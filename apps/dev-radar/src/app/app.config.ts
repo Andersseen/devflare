@@ -8,6 +8,16 @@ import { withComponentInputBinding } from '@angular/router';
 import { provideFileRouter } from '@analogjs/router';
 import {
   Activity,
+  ArrowDown,
+  ArrowUp,
+  Eye,
+  EyeOff,
+  GripVertical,
+  Pencil,
+  Pin,
+  PinOff,
+  Plus,
+  Trash2,
   CircleCheck,
   CircleDashed,
   CircleMinus,
@@ -46,6 +56,16 @@ export const appConfig: ApplicationConfig = {
     importProvidersFrom(
       LucideAngularModule.pick({
         Activity,
+        ArrowDown,
+        ArrowUp,
+        Eye,
+        EyeOff,
+        GripVertical,
+        Pencil,
+        Pin,
+        PinOff,
+        Plus,
+        Trash2,
         CircleCheck,
         CircleDashed,
         CircleMinus,

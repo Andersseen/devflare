@@ -1,0 +1,18 @@
+{
+  "name": "dashboard-layout",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/shared/dashboard-layout/src",
+  "projectType": "library",
+  "tags": ["scope:shared", "type:ui", "domain:shared"],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "options": {
+        "configFile": "libs/shared/dashboard-layout/vite.config.ts"
+      }
+    }
+  }
+}

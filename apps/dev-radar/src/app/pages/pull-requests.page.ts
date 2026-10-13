@@ -38,7 +38,7 @@ const FIELD =
       <div>
         <h1 class="text-3xl font-bold tracking-tight">Pull Requests</h1>
         <p class="mt-1 text-muted-foreground">
-          Open pull requests across all monitored repositories.
+          Open pull requests across the repositories you follow.
         </p>
       </div>
 
@@ -57,7 +57,8 @@ const FIELD =
             icon="git-pull-request"
             title="No open pull requests"
           >
-            Either nothing is open, or no repository has been synced yet.
+            Either nothing is open in the repositories you follow, or you follow
+            none yet — see Manage repositories.
           </app-page-state>
         } @else {
           <form
