@@ -67,7 +67,7 @@ export class GitHubTransport {
 
       let response: Response;
       try {
-        response = await this.#fetch(target, {
+        response = await this.#fetch.call(globalThis, target, {
           method: init.method ?? 'GET',
           headers: {
             Accept: 'application/vnd.github+json',
