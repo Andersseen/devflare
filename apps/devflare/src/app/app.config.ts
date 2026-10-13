@@ -18,6 +18,13 @@ import {
 import * as Sentry from '@sentry/angular';
 import {
   LucideAngularModule,
+  ArrowDown,
+  ArrowUp,
+  Eye,
+  EyeOff,
+  GripVertical,
+  Pin,
+  PinOff,
   Activity,
   AlertCircle,
   ArrowLeft,
@@ -101,6 +108,13 @@ export const appConfig: ApplicationConfig = {
     },
     importProvidersFrom(
       LucideAngularModule.pick({
+        ArrowDown,
+        ArrowUp,
+        Eye,
+        EyeOff,
+        GripVertical,
+        Pin,
+        PinOff,
         Activity,
         AlertCircle,
         ArrowLeft,

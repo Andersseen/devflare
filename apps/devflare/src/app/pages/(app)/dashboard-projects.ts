@@ -43,7 +43,10 @@ export function buildProjectViews(input: {
   inventory: CloudInventory | null;
   /** Why `inventory` is null — shown on every saved link. */
   unavailable?: string;
+  /** Effective discovery identities; defaults to the built-in list. */
+  identities?: readonly WatchedProject[];
 }): ProjectViews {
+  const identities = input.identities ?? WATCHED_PROJECTS;
   const owned = ownershipIndex(input.saved);
   const unowned = input.inventory
     ? allInventoryRefs(input.inventory).filter(
@@ -60,7 +63,7 @@ export function buildProjectViews(input: {
   );
 
   const projects = byAge.map((project) => {
-    const watched = watchedFor(project.name);
+    const watched = watchedFor(project.name, identities);
     const suggestions = unowned.filter(
       (ref) =>
         !claimed.has(resourceKey(ref.type, ref.resourceId)) &&
@@ -104,10 +107,10 @@ export function buildProjectViews(input: {
   const discovered: ProjectView[] = [];
 
   const savedWatched = new Set(
-    input.saved.map((project) => watchedFor(project.name)?.slug),
+    input.saved.map((project) => watchedFor(project.name, identities)?.slug),
   );
 
-  for (const watched of WATCHED_PROJECTS) {
+  for (const watched of identities) {
     if (savedWatched.has(watched.slug)) continue;
     const refs = remaining.filter(
       (ref) =>
@@ -345,10 +348,13 @@ function uniquePublicUrls(urls: readonly string[]): string[] {
 }
 
 /** The watched entry a saved project *is*, by exact name, slug or alias. */
-function watchedFor(name: string): WatchedProject | null {
+function watchedFor(
+  name: string,
+  identities: readonly WatchedProject[],
+): WatchedProject | null {
   const normalized = normalizeName(name);
   return (
-    WATCHED_PROJECTS.find((watched) =>
+    identities.find((watched) =>
       [watched.name, watched.slug, ...(watched.aliases ?? [])]
         .map(normalizeName)
         .includes(normalized),

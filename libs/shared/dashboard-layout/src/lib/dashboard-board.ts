@@ -363,6 +363,8 @@ export class DashboardBoard {
   readonly itemTemplate = input.required<TemplateRef<BoardItemContext>>();
   /** Display name of an item, or null when it is not available right now. */
   readonly labelOf = input.required<(id: string) => string | null>();
+  /** Name for the hidden tray; defaults to `labelOf` (lets a product show hidden items it does not draw). */
+  readonly hiddenLabelOf = input<((id: string) => string | null) | null>(null);
   readonly ungroupedLabel = input('Uncategorized');
   readonly hideLabel = input('Hide');
   readonly restoreLabel = input('Restore');
@@ -413,7 +415,10 @@ export class DashboardBoard {
 
   protected readonly hiddenItems = computed(() =>
     this.layout()
-      .hiddenIds.map((id) => ({ id, label: this.labelOf()(id) }))
+      .hiddenIds.map((id) => ({
+        id,
+        label: (this.hiddenLabelOf() ?? this.labelOf())(id),
+      }))
       .filter(
         (item): item is { id: string; label: string } => item.label !== null,
       ),

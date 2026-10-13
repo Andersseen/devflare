@@ -47,6 +47,11 @@ export default defineConfig(() => {
               __dirname,
               '../../libs/shared/dev-auth-core/src/index.ts',
             ),
+            // Pure layout logic shared with DevRadar (no Angular in it).
+            '@org/dashboard-layout/logic': resolve(
+              __dirname,
+              '../../libs/shared/dashboard-layout/src/logic.ts',
+            ),
           },
           // Deliberately NOT using `cloudflare.deployConfig`. That makes Nitro
           // emit a merged wrangler.json plus a .wrangler/deploy/config.json

@@ -69,7 +69,10 @@ export class LayoutEditor {
 
   /** Applies a pure layout operation to the draft. No-op outside edit mode. */
   apply(change: (layout: DashboardLayout) => DashboardLayout): void {
-    this.#draft.update((draft) => (draft ? change(draft) : draft));
+    // Reconciled so a draft never holds an item that is not on the board.
+    this.#draft.update((draft) =>
+      draft ? reconcileLayout(change(draft), this.#available()) : draft,
+    );
   }
 
   async save(): Promise<boolean> {
