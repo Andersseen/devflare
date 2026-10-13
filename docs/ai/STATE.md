@@ -22,8 +22,8 @@ writing anything here, run `git log`/`git branch`/`gh pr list` yourself.**
   `main` remains at `1390e00`; the branch contains the production GitHub App
   configuration and the Worker fetch-context fix. The working tree is clean.
 - DevRadar production is configured with the read-only GitHub App and its
-  installation for `Andersseen/devflare`; a live manual sync verified 1
-  installation and 1 repository. Cloudflare has the webhook secret and the
+  installation for all current and future repositories owned by `Andersseen`;
+  a live manual sync verified 1 installation and 88 repositories. Cloudflare has the webhook secret and the
   endpoint now returns 401 for an unsigned request (configured, invalid
   signature), not 503 (missing configuration). GitHub's sudo verification is
   still pending before the same secret can be entered in the App settings.
@@ -812,11 +812,18 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
 
 ## Session log
 
+- **2026-10-13 — Expanded DevRadar's GitHub repository access.** Reused the
+  existing GitHub tab, passed sudo verification, changed the
+  `andersseen-devradar` installation from one selected repository to **All
+  repositories**, and saved it. DevRadar's live manual sync then showed 88
+  repositories, 1 open PR, and no failing or running CI. The App remains
+  read-only.
+
 - **2026-10-13 — Configured DevRadar production GitHub access.** PR #53's
   branch now contains the production App id/slug and the fix that preserves
   Cloudflare Workers' `fetch` receiver (`globalThis`) when calling GitHub. The
-  private key is the only remaining GitHub App key, and the App is installed
-  only for `Andersseen/devflare` with read-only permissions. Loaded a new
+  private key is the only remaining GitHub App key, and the App was initially
+  installed only for `Andersseen/devflare` with read-only permissions. Loaded a new
   webhook secret into the production Worker; a live unsigned webhook request
   returns 401, proving the Worker no longer treats it as missing. A live
   manual sync completed with 1 installation and 1 repository. The GitHub App
