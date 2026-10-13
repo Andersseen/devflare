@@ -142,6 +142,17 @@ async function mockApis(page: Page, options: { r2Forbidden?: boolean } = {}) {
           });
     }
 
+    // Dashboard customization (spec 022): this spec does not customize.
+    if (path === '/api/v1/dashboard') {
+      return json(route, {
+        layout: { groups: [], ungroupedIds: [], hiddenIds: [], pinnedIds: [] },
+        customized: false,
+      });
+    }
+    if (path === '/api/v1/dashboard/identities') {
+      return json(route, { identities: [] });
+    }
+
     if (path === '/api/v1/projects' && method === 'GET') {
       return json(route, { projects });
     }

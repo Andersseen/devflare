@@ -17,7 +17,7 @@ import {
 export default defineEventHandler(async (event) => {
   const user = await requireAllowedUser(event);
   assertSameOriginJson(event, false);
-  await enforceRateLimit(event, 'MUTATION_RATE_LIMITER', user.id);
+  await enforceRateLimit(event, 'PREFERENCES_RATE_LIMITER', user.id);
   await resetDashboardLayout(db, user.id);
   return { layout: await getDashboardLayout(db, user.id) };
 });

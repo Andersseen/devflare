@@ -24,7 +24,7 @@ const MAX_FOLLOWED = 2000;
 export default defineEventHandler(async (event) => {
   const user = await requireAllowedUser(event);
   assertSameOriginJson(event);
-  await enforceRateLimit(event, 'MUTATION_RATE_LIMITER', user.id);
+  await enforceRateLimit(event, 'PREFERENCES_RATE_LIMITER', user.id);
 
   const parsed = parseLayout(await readBody(event), {
     maxItems: MAX_FOLLOWED,

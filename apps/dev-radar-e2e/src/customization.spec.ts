@@ -131,9 +131,12 @@ test('Edit dashboard: reorder, group, move, unfollow and restore with the button
   page,
 }) => {
   await page.goto('/repositories');
-  await expect(page.getByTestId('repository-card')).toHaveCount(4);
+  // The archived repository is filtered out of the normal view…
+  await expect(page.getByTestId('repository-card')).toHaveCount(3);
 
   await page.getByTestId('edit-dashboard').click();
+  // …but is always editable.
+  await expect(page.getByTestId('repository-card')).toHaveCount(4);
   // Cards are not links while editing, so clicking one cannot navigate.
   await expect(
     page
@@ -143,11 +146,13 @@ test('Edit dashboard: reorder, group, move, unfollow and restore with the button
 
   // Reorder: move api down one place.
   await page.getByTestId('item-1001').getByTestId('move-down').click();
-  expect(
-    await page
-      .locator('[data-dnd-item]')
-      .evaluateAll((e) => e.map((x) => x.getAttribute('data-item-id'))),
-  ).toEqual(['1003', '1001', '1004', '1002']);
+  await expect
+    .poll(() =>
+      page
+        .locator('[data-dnd-item]')
+        .evaluateAll((e) => e.map((x) => x.getAttribute('data-item-id'))),
+    )
+    .toEqual(['1003', '1001', '1004', '1002']);
 
   // Create a group and move web into it.
   await page.getByTestId('new-group-name').fill('Production');
@@ -185,26 +190,21 @@ test('Edit dashboard: reorder, group, move, unfollow and restore with the button
   await expect(page.getByTestId('notice')).toContainText('Dashboard saved');
 
   await page.reload();
-  const production = page.getByTestId(
-    'section-' +
-      (await page
-        .locator('[data-testid^="section-"]')
-        .evaluateAll(
-          (s) =>
-            s
-              .map((x) =>
-                x.getAttribute('data-testid')!.replace('section-', ''),
-              )
-              .find((id) => id !== 'ungrouped')!,
-        )),
-  );
+  const production = page
+    .locator('section[data-testid^="section-"]')
+    .filter({ hasText: 'Production' });
   await expect(production).toContainText('Production');
   await expect(production).toContainText('e2e-org/web');
-  const order = await page
-    .getByTestId('zone-ungrouped')
-    .locator('[data-dnd-item]')
-    .evaluateAll((e) => e.map((x) => x.getAttribute('data-item-id')));
-  expect(order).toEqual(['1004', '1003', '1001']); // legacy pinned first, then docs, api
+  // Archived legacy is filtered from the normal view; open the editor to see it.
+  await page.getByTestId('edit-dashboard').click();
+  await expect
+    .poll(() =>
+      page
+        .getByTestId('zone-ungrouped')
+        .locator('[data-dnd-item]')
+        .evaluateAll((e) => e.map((x) => x.getAttribute('data-item-id'))),
+    )
+    .toEqual(['1004', '1003', '1001']); // legacy pinned first, then docs, api
 });
 
 test('Edit dashboard: pointer drag-and-drop moves a card between groups', async ({
@@ -249,7 +249,8 @@ test('Edit dashboard: restoring the default layout drops groups but keeps what i
     'Default layout restored',
   );
   await expect(page.getByTestId('section-g-old')).toHaveCount(0);
-  await expect(page.getByTestId('repository-card')).toHaveCount(4);
+  // Still following all four; the archived one is just filtered from this view.
+  await expect(page.getByTestId('repository-card')).toHaveCount(3);
 });
 
 test('the layout API rejects bad input and unauthenticated requests', async ({
@@ -278,7 +279,10 @@ test('the layout API rejects bad input and unauthenticated requests', async ({
   });
   expect(crossOrigin.status()).toBe(403);
 
-  const anonymous = await playwright.request.newContext({ baseURL });
+  const anonymous = await playwright.request.newContext({
+    baseURL,
+    storageState: { cookies: [], origins: [] },
+  });
   expect((await anonymous.get('/api/v1/dashboard-layout')).status()).toBe(401);
   expect(
     (

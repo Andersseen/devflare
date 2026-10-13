@@ -311,17 +311,19 @@ const FIELD =
               Adjust the search or filters.
             </app-page-state>
           } @else {
-            <dash-board
-              [layout]="editor.layout()"
-              [editing]="editor.editing()"
-              [itemTemplate]="card"
-              [labelOf]="labelOf"
-              [allowPin]="true"
-              hideLabel="Unfollow"
-              restoreLabel="Follow again"
-              gridClass="grid gap-3"
-              (layoutChange)="editor.apply(setLayout($event))"
-            />
+            <div data-testid="repository-list">
+              <dash-board
+                [layout]="editor.layout()"
+                [editing]="editor.editing()"
+                [itemTemplate]="card"
+                [labelOf]="labelOf"
+                [allowPin]="true"
+                hideLabel="Unfollow"
+                restoreLabel="Follow again"
+                gridClass="grid gap-3"
+                (layoutChange)="editor.apply(setLayout($event))"
+              />
+            </div>
             <ng-template #card let-id let-editing="editing">
               @if (repoById().get(+id); as repo) {
                 <div

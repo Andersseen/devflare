@@ -46,6 +46,13 @@ name = "MUTATION_RATE_LIMITER"
 namespace_id = "2102"
 simple = { limit = 10, period = 60 }
 
+# Saving a dashboard layout (spec 022): cheap and frequent, so it has its own
+# more generous bucket instead of sharing the manual-sync one.
+[[ratelimits]]
+name = "PREFERENCES_RATE_LIMITER"
+namespace_id = "2103"
+simple = { limit = 60, period = 60 }
+
 [vars]
 # DevRadar is its own registered OAuth client of DevAuth — never DevFlare's.
 # These three must line up with the `dev-radar-dev` entry in
@@ -107,6 +114,11 @@ simple = { limit = 20, period = 60 }
 name = "MUTATION_RATE_LIMITER"
 namespace_id = "2102"
 simple = { limit = 10, period = 60 }
+
+[[env.production.ratelimits]]
+name = "PREFERENCES_RATE_LIMITER"
+namespace_id = "2103"
+simple = { limit = 60, period = 60 }
 
 [env.production.triggers]
 crons = ["17 */6 * * *"]
