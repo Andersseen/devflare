@@ -55,14 +55,17 @@ export async function listReleasesFor(
   return result.rows ?? [];
 }
 
+/** Newest releases, only of the repositories `userId` follows. */
 export async function listRecentReleases(
   db: SqlDatabase,
   limit: number,
+  userId: string,
 ): Promise<ReleaseRow[]> {
   const result = await db.sql<
     Rows<ReleaseRow>
   >`SELECT r.*, repo.full_name AS repository_full_name
     FROM releases r JOIN repositories repo ON repo.id = r.repository_id
+    WHERE r.repository_id IN (SELECT repository_id FROM followed_repository WHERE user_id = ${userId})
     ORDER BY r.published_at DESC, r.id DESC LIMIT ${limit}`;
   return result.rows ?? [];
 }

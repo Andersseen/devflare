@@ -3,8 +3,8 @@ import { db } from '../../../../db';
 import { requireAllowedUser } from '../../../../lib/http';
 import { listPullRequests } from '../../../../lib/store/queries';
 
-/** GET /api/v1/pull-requests — open pull requests across all repositories. */
+/** GET /api/v1/pull-requests — open pull requests across the followed repositories. */
 export default defineEventHandler(async (event) => {
-  await requireAllowedUser(event);
-  return { pullRequests: await listPullRequests(db) };
+  const user = await requireAllowedUser(event);
+  return { pullRequests: await listPullRequests(db, user.id) };
 });

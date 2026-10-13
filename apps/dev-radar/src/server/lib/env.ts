@@ -29,6 +29,7 @@ export interface DevRadarEnv {
   GITHUB_SYNC_REQUEST_BUDGET?: string;
   AUTH_RATE_LIMITER?: RateLimitBinding;
   MUTATION_RATE_LIMITER?: RateLimitBinding;
+  PREFERENCES_RATE_LIMITER?: RateLimitBinding;
 }
 
 export interface RequestContext {

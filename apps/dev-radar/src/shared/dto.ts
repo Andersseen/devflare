@@ -5,6 +5,8 @@ import type { DomainEventType } from './domain-events';
 
 export interface RepositoryDto {
   id: number;
+  /** The signed-in user follows it (shown on their dashboard, counted in totals). */
+  followed: boolean;
   fullName: string;
   name: string;
   owner: string;
@@ -110,7 +112,10 @@ export interface ConnectionDto {
 export interface OverviewDto {
   connection: ConnectionDto;
   totals: {
+    /** Followed repositories — every other total is over these only. */
     repositories: number;
+    /** Everything the GitHub App installation can read. */
+    availableRepositories: number;
     openPullRequests: number;
     failing: number;
     pending: number;
@@ -133,7 +138,10 @@ export interface RepositoryDetailDto {
 export interface SettingsDto {
   connection: ConnectionDto;
   installations: InstallationDto[];
+  /** Installed: every repository the installations can read. */
   repositories: number;
+  /** Followed by the signed-in user. */
+  followedRepositories: number;
   lastSyncedAt: string | null;
   /** Public, non-secret URLs to paste into the GitHub App settings. */
   setup: { webhookUrl: string; callbackNote: string };
@@ -144,4 +152,14 @@ export interface SyncResultDto {
   repositoriesSynced: number;
   repositoriesRemaining: number;
   errors: string[];
+}
+
+/** Stored layout; item ids are repository ids as strings. */
+export interface DashboardLayoutDto {
+  layout: {
+    groups: { id: string; name: string; itemIds: string[] }[];
+    ungroupedIds: string[];
+    hiddenIds: string[];
+    pinnedIds: string[];
+  };
 }

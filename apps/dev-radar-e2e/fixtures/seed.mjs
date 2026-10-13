@@ -58,6 +58,8 @@ const repo = (over) => ({
 const statements = [
   'PRAGMA foreign_keys = ON;',
   ...[
+    'followed_repository',
+    'dashboard_group',
     'repository_events',
     'webhook_deliveries',
     'releases',
@@ -175,6 +177,19 @@ const statements = [
       description: 'Retired service',
       ci_state: 'success',
       ci_sha: '0000',
+    }),
+  ),
+
+  // The owner follows all four, alphabetical: the dashboard specs read totals
+  // over the followed set. Customization specs change and then restore this.
+  ...[1001, 1003, 1004, 1002].map((repository_id, position) =>
+    insert('followed_repository', {
+      user_id: 'e2e-owner',
+      repository_id,
+      group_id: null,
+      position,
+      pinned: 0,
+      created_at: ago(100),
     }),
   ),
 

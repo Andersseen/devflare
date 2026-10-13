@@ -3,9 +3,12 @@ import { db } from '../../../../db';
 import { requireAllowedUser } from '../../../../lib/http';
 import { getRepositoryDetail } from '../../../../lib/store/queries';
 
-/** GET /api/v1/repositories/:id — `:id` is GitHub's numeric repository id. */
+/**
+ * GET /api/v1/repositories/:id — `:id` is GitHub's numeric repository id.
+ * Works for any synchronized repository, followed or not.
+ */
 export default defineEventHandler(async (event) => {
-  await requireAllowedUser(event);
+  const user = await requireAllowedUser(event);
 
   const raw = getRouterParam(event, 'id') ?? '';
   const id = /^\d{1,15}$/.test(raw) ? Number(raw) : NaN;
@@ -16,7 +19,7 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  const detail = await getRepositoryDetail(db, id);
+  const detail = await getRepositoryDetail(db, user.id, id);
   if (!detail) {
     throw createError({
       statusCode: 404,

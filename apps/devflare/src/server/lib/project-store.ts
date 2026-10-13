@@ -114,6 +114,8 @@ export async function deleteProject(
 
   await db.sql`DELETE FROM deployments WHERE projectId = ${id}`;
   await db.sql`DELETE FROM project_resource WHERE projectId = ${id}`;
+  // Its dashboard placement goes with it (spec 022); this is presentation only.
+  await db.sql`DELETE FROM dashboard_item WHERE userId = ${userId} AND itemKey = ${`saved:${id}`}`;
   await db.sql`DELETE FROM projects WHERE id = ${id} AND userId = ${userId}`;
   return true;
 }

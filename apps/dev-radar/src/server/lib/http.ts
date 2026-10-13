@@ -56,7 +56,7 @@ export async function requireAllowedUser(event: H3Event): Promise<SessionUser> {
 
 type LimiterName = keyof Pick<
   DevRadarEnv,
-  'AUTH_RATE_LIMITER' | 'MUTATION_RATE_LIMITER'
+  'AUTH_RATE_LIMITER' | 'MUTATION_RATE_LIMITER' | 'PREFERENCES_RATE_LIMITER'
 >;
 
 export async function enforceRateLimit(

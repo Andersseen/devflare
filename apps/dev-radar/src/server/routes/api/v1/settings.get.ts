@@ -9,8 +9,8 @@ import { getSettings } from '../../../lib/store/queries';
 
 /** GET /api/v1/settings — connection status and installations. No secrets. */
 export default defineEventHandler(async (event) => {
-  await requireAllowedUser(event);
+  const user = await requireAllowedUser(event);
   const connection = describeConnection(resolveGitHubConfig(event.context));
   const webhookUrl = `${getRequestURL(event).origin}/api/github/webhook`;
-  return getSettings(db, connection, webhookUrl);
+  return getSettings(db, user.id, connection, webhookUrl);
 });

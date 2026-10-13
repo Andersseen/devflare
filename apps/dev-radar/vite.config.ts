@@ -66,6 +66,11 @@ export default defineConfig(() => {
               __dirname,
               '../../libs/shared/dev-auth-core/src/index.ts',
             ),
+            // Pure layout logic shared with DevFlare (no Angular in it).
+            '@org/dashboard-layout/logic': resolve(
+              __dirname,
+              '../../libs/shared/dashboard-layout/src/logic.ts',
+            ),
           },
         },
       }),

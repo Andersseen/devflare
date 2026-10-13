@@ -15,6 +15,9 @@
 
 @import '../../../libs/shared/ui/src/styles/theme.css';
 
+/* Tailwind must see the classes used by the shared dashboard board. */
+@source '../../../libs/shared/dashboard-layout/src';
+
 html,
 body {
   display: block;

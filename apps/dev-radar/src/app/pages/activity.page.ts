@@ -19,8 +19,8 @@ import { Remote } from '../radar/remote';
       <div>
         <h1 class="text-3xl font-bold tracking-tight">Activity</h1>
         <p class="mt-1 text-muted-foreground">
-          Normalized events from GitHub webhooks, newest first. History is kept
-          for 30 days.
+          Normalized events from GitHub webhooks for the repositories you
+          follow, newest first. History is kept for 30 days.
         </p>
       </div>
 

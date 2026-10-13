@@ -57,15 +57,19 @@ export async function replaceOpenPullRequests(
 
 export async function listPullRequestRows(
   db: SqlDatabase,
-  repositoryId?: number,
+  scope: { repositoryId?: number; userId?: string } = {},
 ): Promise<PullRequestRow[]> {
   const result =
-    repositoryId === undefined
+    scope.repositoryId !== undefined
       ? await db.sql<
           Rows<PullRequestRow>
-        >`SELECT * FROM pull_requests ORDER BY updated_at DESC LIMIT 500`
-      : await db.sql<
-          Rows<PullRequestRow>
-        >`SELECT * FROM pull_requests WHERE repository_id = ${repositoryId} ORDER BY updated_at DESC`;
+        >`SELECT * FROM pull_requests WHERE repository_id = ${scope.repositoryId} ORDER BY updated_at DESC`
+      : scope.userId !== undefined
+        ? await db.sql<Rows<PullRequestRow>>`SELECT * FROM pull_requests
+            WHERE repository_id IN (SELECT repository_id FROM followed_repository WHERE user_id = ${scope.userId})
+            ORDER BY updated_at DESC LIMIT 500`
+        : await db.sql<
+            Rows<PullRequestRow>
+          >`SELECT * FROM pull_requests ORDER BY updated_at DESC LIMIT 500`;
   return result.rows ?? [];
 }

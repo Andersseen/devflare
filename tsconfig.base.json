@@ -17,6 +17,10 @@
     "paths": {
       "@org/core": ["libs/shared/core/src/index.ts"],
       "@org/ui": ["libs/shared/ui/src/index.ts"],
+      "@org/dashboard-layout": ["libs/shared/dashboard-layout/src/index.ts"],
+      "@org/dashboard-layout/logic": [
+        "libs/shared/dashboard-layout/src/logic.ts"
+      ],
       "@org/deploy": ["libs/deploy/src/index.ts"],
       "@dev-auth/angular": ["libs/shared/dev-auth-angular/src/index.ts"],
       "@dev-auth/client": ["libs/shared/dev-auth-client/src/index.ts"],

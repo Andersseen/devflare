@@ -132,7 +132,7 @@ import { Remote } from '../radar/remote';
               </p>
             }
 
-            <dl class="grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
+            <dl class="grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
               <div>
                 <dt class="text-xs text-muted-foreground">Installations</dt>
                 <dd class="text-lg font-semibold">
@@ -141,9 +141,15 @@ import { Remote } from '../radar/remote';
               </div>
               <div>
                 <dt class="text-xs text-muted-foreground">
-                  Connected repositories
+                  Installed repositories (all)
                 </dt>
                 <dd class="text-lg font-semibold">{{ data.repositories }}</dd>
+              </div>
+              <div>
+                <dt class="text-xs text-muted-foreground">Followed by you</dt>
+                <dd class="text-lg font-semibold">
+                  {{ data.followedRepositories }}
+                </dd>
               </div>
               <div>
                 <dt class="text-xs text-muted-foreground">

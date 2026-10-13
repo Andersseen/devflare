@@ -18,6 +18,7 @@ import type {
 } from '../../../shared/dto';
 import { releaseHint } from '../../../shared/release-hint';
 import type { Rows, SqlDatabase } from '../../db';
+import { countFollowed } from './dashboard';
 import { listEvents, type EventRow } from './events';
 import { listInstallations } from './installations';
 import { listPullRequestRows, type PullRequestRow } from './pulls';
@@ -35,8 +36,12 @@ import {
 
 /** Dashboard reads. Rows in, wire DTOs out; the dashboard never sees SQL names. */
 
-export function toRepositoryDto(row: RepositoryRow): RepositoryDto {
+export function toRepositoryDto(
+  row: RepositoryRow,
+  followed = false,
+): RepositoryDto {
   return {
+    followed,
     id: row.id,
     fullName: row.full_name,
     name: row.name,
@@ -119,6 +124,7 @@ function parseLabels(raw: string): string[] {
   }
 }
 
+/** Every repository the GitHub App can read ("available"). */
 async function allRepositoryRows(db: SqlDatabase): Promise<RepositoryRow[]> {
   const result = await db.sql<
     Rows<RepositoryRow>
@@ -126,10 +132,47 @@ async function allRepositoryRows(db: SqlDatabase): Promise<RepositoryRow[]> {
   return result.rows ?? [];
 }
 
+/** Only the repositories this user follows — what the dashboard is made of. */
+async function followedRepositoryRows(
+  db: SqlDatabase,
+  userId: string,
+): Promise<RepositoryRow[]> {
+  const result = await db.sql<
+    Rows<RepositoryRow>
+  >`SELECT r.* FROM repositories r
+    WHERE r.id IN (SELECT repository_id FROM followed_repository WHERE user_id = ${userId})
+    ORDER BY r.full_name COLLATE NOCASE`;
+  return result.rows ?? [];
+}
+
+async function followedIds(
+  db: SqlDatabase,
+  userId: string,
+): Promise<Set<number>> {
+  const result = await db.sql<
+    Rows<{ repository_id: number }>
+  >`SELECT repository_id FROM followed_repository WHERE user_id = ${userId}`;
+  return new Set((result.rows ?? []).map((row) => row.repository_id));
+}
+
+/**
+ * `followed` (default) is the personal dashboard; `available` is the full
+ * installed inventory for Manage repositories, each flagged with `followed`.
+ */
 export async function listRepositories(
   db: SqlDatabase,
+  userId: string,
+  scope: 'followed' | 'available' = 'followed',
 ): Promise<RepositoryDto[]> {
-  return (await allRepositoryRows(db)).map(toRepositoryDto);
+  if (scope === 'followed') {
+    return (await followedRepositoryRows(db, userId)).map((row) =>
+      toRepositoryDto(row, true),
+    );
+  }
+  const followed = await followedIds(db, userId);
+  return (await allRepositoryRows(db)).map((row) =>
+    toRepositoryDto(row, followed.has(row.id)),
+  );
 }
 
 async function toPullRequestDtos(
@@ -166,21 +209,28 @@ async function toPullRequestDtos(
 
 export async function listPullRequests(
   db: SqlDatabase,
+  userId: string,
 ): Promise<PullRequestDto[]> {
-  const repositories = await allRepositoryRows(db);
+  const repositories = await followedRepositoryRows(db, userId);
   const names = new Map(repositories.map((r) => [r.id, r.full_name]));
-  return toPullRequestDtos(db, await listPullRequestRows(db), names);
+  return toPullRequestDtos(
+    db,
+    await listPullRequestRows(db, { userId }),
+    names,
+  );
 }
 
 export async function listActivity(
   db: SqlDatabase,
+  userId: string,
   limit = 100,
 ): Promise<ActivityDto[]> {
-  return (await listEvents(db, { limit })).map(toActivityDto);
+  return (await listEvents(db, { userId, limit })).map(toActivityDto);
 }
 
 export async function getRepositoryDetail(
   db: SqlDatabase,
+  userId: string,
   id: number,
 ): Promise<RepositoryDetailDto | null> {
   const result = await db.sql<
@@ -191,10 +241,11 @@ export async function getRepositoryDetail(
 
   const names = new Map([[row.id, row.full_name]]);
   return {
-    repository: toRepositoryDto(row),
+    // Reachable whether or not it is followed: a direct link keeps working.
+    repository: toRepositoryDto(row, (await followedIds(db, userId)).has(id)),
     pullRequests: await toPullRequestDtos(
       db,
-      await listPullRequestRows(db, id),
+      await listPullRequestRows(db, { repositoryId: id }),
       names,
     ),
     workflowRuns: (await listWorkflowRunRows(db, id)).map(toRunDto),
@@ -209,9 +260,15 @@ export async function getRepositoryDetail(
 
 export async function getOverview(
   db: SqlDatabase,
+  userId: string,
   connection: ConnectionDto,
 ): Promise<OverviewDto> {
-  const repositories = (await allRepositoryRows(db)).map(toRepositoryDto);
+  const available = await db.sql<
+    Rows<{ total: number }>
+  >`SELECT COUNT(*) AS total FROM repositories`;
+  const repositories = (await followedRepositoryRows(db, userId)).map((row) =>
+    toRepositoryDto(row, true),
+  );
   const synced = repositories
     .map((r) => r.lastSyncedAt)
     .filter((v): v is string => v !== null)
@@ -230,6 +287,7 @@ export async function getOverview(
     connection,
     totals: {
       repositories: repositories.length,
+      availableRepositories: available.rows?.[0]?.total ?? 0,
       openPullRequests: repositories.reduce(
         (n, r) => n + r.openPullRequests,
         0,
@@ -239,16 +297,19 @@ export async function getOverview(
       noCi: repositories.filter((r) => r.ci.state === 'none').length,
     },
     attention,
-    recentReleases: (await listRecentReleases(db, 5)).map((r) =>
+    recentReleases: (await listRecentReleases(db, 5, userId)).map((r) =>
       toReleaseDto(r, r.repository_full_name ?? 'unknown'),
     ),
-    recentActivity: (await listEvents(db, { limit: 8 })).map(toActivityDto),
+    recentActivity: (await listEvents(db, { userId, limit: 8 })).map(
+      toActivityDto,
+    ),
     lastSyncedAt: synced.at(-1) ?? null,
   };
 }
 
 export async function getSettings(
   db: SqlDatabase,
+  userId: string,
   connection: ConnectionDto,
   webhookUrl: string,
 ): Promise<SettingsDto> {
@@ -279,7 +340,9 @@ export async function getSettings(
   return {
     connection,
     installations: dtos,
+    /** Everything the installations can read — not what this user follows. */
     repositories: dtos.reduce((n, i) => n + i.repositories, 0),
+    followedRepositories: await countFollowed(db, userId),
     lastSyncedAt: stamps.at(-1) ?? null,
     setup: {
       webhookUrl,

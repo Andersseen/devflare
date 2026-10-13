@@ -10,6 +10,9 @@
 /* Shared ecosystem tokens (typography, surfaces, borders, dark mode). */
 @import '../../../libs/shared/ui/src/styles/theme.css';
 
+/* Tailwind must see the classes used by the shared dashboard board. */
+@source '../../../libs/shared/dashboard-layout/src';
+
 /*
  * DevRadar identity. Same foundation as DevFlare, different accent: sky
  * blue instead of indigo, so the two products are recognisably related but never
