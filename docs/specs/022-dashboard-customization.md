@@ -1,11 +1,11 @@
 # 022 — Persistent dashboard customization (DevFlare + DevRadar)
 
-| Field   | Value                             |
-| ------- | --------------------------------- |
-| Status  | In progress                       |
-| Branch  | `feature/dashboard-customization` |
-| Created | 2026-10-13                        |
-| Updated | 2026-10-13                        |
+| Field   | Value                                                      |
+| ------- | ---------------------------------------------------------- |
+| Status  | Done (verified locally; migrations to apply in production) |
+| Branch  | `feature/dashboard-customization`                          |
+| Created | 2026-10-13                                                 |
+| Updated | 2026-10-13                                                 |
 
 > Authorization note: the owner asked for direct implementation, so this spec
 > was written and implemented in one pass without a separate approval stop.
@@ -117,16 +117,38 @@ hide/restore, save/refresh, follow filtering.
 ## 7. Tasks
 
 - [x] 1. Spec
-- [ ] 2. `@org/dashboard-layout` logic + specs
-- [ ] 3. Board component + editor
-- [ ] 4. DevRadar migration/store/API/UI/tests
-- [ ] 5. DevFlare migration/store/API/UI/tests
-- [ ] 6. E2E, docs, gates, PR
+- [x] 2. `@org/dashboard-layout` logic + specs
+- [x] 3. Board component + editor
+- [x] 4. DevRadar migration/store/API/UI/tests
+- [x] 5. DevFlare migration/store/API/UI/tests
+- [x] 6. E2E, docs, gates, PR
 
 ## 8. Verification results
 
-(filled at completion)
+- `pnpm format:check`, `nx run-many -t lint`, `typecheck`, `test --coverage`,
+  `build` (all projects): green. New unit tests: 31 (layout lib), 8 + store
+  changes (DevRadar `dashboard.spec.ts`), 11 (DevFlare `dashboard-store.spec.ts`
+  and identities).
+- Playwright on Chromium, Firefox and WebKit: `dev-radar-e2e` 114/114 (incl.
+  pointer drag-and-drop between groups), `devflare-e2e` 63/63, `devtools-e2e`
+  114 passed / 6 skipped. One cold-start flake each in the first full runs;
+  re-runs clean.
+- Local migrations applied (`pnpm db:migrate:local`); `pnpm install
+--frozen-lockfile` accepts the lockfile.
+- Not verified: real touch devices, production D1, a real many-repository
+  GitHub App installation.
 
 ## 9. Completion notes
 
-(filled at completion)
+- Quartz 0.6.0 findings that shaped the design are in section 4. The drag
+  handle is visual; the whole card is the drag source.
+- DevRadar's "hide" is _unfollow_ (row deleted), so the shared layout's
+  `hiddenIds` is a session-only tray there and must be empty on save.
+- DevRadar saves use a new `PREFERENCES_RATE_LIMITER` (60/min) so layout saves
+  do not share the 10/min manual-sync bucket.
+- Limitations: concurrent saves from two tabs are last-writer-wins; discovered
+  cards can be hidden but not grouped or reordered; user-entered domains are
+  deliberately not offered (nothing user-typed is "verified"); a layout is not
+  shared between users.
+- Deferred: grouping/ordering of discovered cards, per-group collapse, and a
+  keyboard drag mode (waiting on a Quartz primitive).
