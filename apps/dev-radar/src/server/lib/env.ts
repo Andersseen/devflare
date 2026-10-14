@@ -32,6 +32,8 @@ export interface DevRadarEnv {
   AUTH_RATE_LIMITER?: RateLimitBinding;
   MUTATION_RATE_LIMITER?: RateLimitBinding;
   PREFERENCES_RATE_LIMITER?: RateLimitBinding;
+  /** Automation rules and prompt status changes (spec 023). */
+  AUTOMATION_RATE_LIMITER?: RateLimitBinding;
 }
 
 export interface RequestContext {

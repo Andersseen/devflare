@@ -15,7 +15,12 @@ import {
   VoltCardTitle,
 } from '@voltui/components';
 import { DOMAIN_EVENT_LABEL } from '../../../shared/domain-events';
-import type { RepositoryDetailDto } from '../../../shared/dto';
+import type {
+  AutomationDetailDto,
+  RepositoryDetailDto,
+} from '../../../shared/dto';
+import { AutomationStateComponent } from '../../components/automation-state.component';
+import { PreparePromptComponent } from '../../components/prepare-prompt.component';
 import { CiBadgeComponent } from '../../components/ci-badge.component';
 import { PageStateComponent } from '../../components/page-state.component';
 import { shortSha, timeAgo } from '../../radar/format';
@@ -34,6 +39,8 @@ import { Remote } from '../../radar/remote';
     VoltCardTitle,
     CiBadgeComponent,
     PageStateComponent,
+    AutomationStateComponent,
+    PreparePromptComponent,
   ],
   template: `
     <div class="space-y-6">
@@ -91,6 +98,52 @@ import { Remote } from '../../radar/remote';
         </div>
 
         <div class="grid gap-6 lg:grid-cols-2">
+          <volt-card class="lg:col-span-2" data-testid="automation-card">
+            <volt-card-header>
+              <volt-card-title>Automation</volt-card-title>
+            </volt-card-header>
+            <volt-card-content class="space-y-3">
+              @if (automation.data(); as auto) {
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                  <div class="flex flex-wrap items-center gap-2 text-sm">
+                    @if (auto.rule; as rule) {
+                      <app-automation-state [state]="rule.state" />
+                      <span class="text-muted-foreground">
+                        {{
+                          rule.enabled
+                            ? 'Prepares a prompt when ' +
+                              auto.repository.defaultBranch +
+                              ' changes and CI passes.'
+                            : 'The automation is disabled.'
+                        }}
+                      </span>
+                    } @else {
+                      <span class="text-muted-foreground"
+                        >No automation is set up for this repository.</span
+                      >
+                    }
+                  </div>
+                  <a
+                    routerLink="/automations"
+                    [queryParams]="{ repo: data.repository.id }"
+                    class="text-sm font-medium text-primary hover:underline"
+                    data-testid="configure-automation"
+                    >Configure automation</a
+                  >
+                </div>
+                @if (auto.githubConfigured) {
+                  <app-prepare-prompt [repositoryId]="data.repository.id" />
+                }
+              } @else if (automation.status() === 'error') {
+                <p class="text-sm text-muted-foreground">
+                  Automation status is unavailable right now.
+                </p>
+              } @else {
+                <p class="text-sm text-muted-foreground">Loading…</p>
+              }
+            </volt-card-content>
+          </volt-card>
+
           <volt-card>
             <volt-card-header>
               <volt-card-title
@@ -258,6 +311,10 @@ export default class RepositoryDetailPage {
     this.#api.repository(Number(this.id())),
   );
 
+  protected readonly automation = new Remote<AutomationDetailDto>(() =>
+    this.#api.automation(Number(this.id())),
+  );
+
   protected readonly sha = shortSha;
   protected readonly ago = (iso: string | null) => timeAgo(iso);
   protected readonly label = (type: keyof typeof DOMAIN_EVENT_LABEL) =>
@@ -266,7 +323,10 @@ export default class RepositoryDetailPage {
 
   constructor() {
     effect(() => {
-      if (this.valid()) void this.detail.load();
+      if (this.valid()) {
+        void this.detail.load();
+        void this.automation.load();
+      }
     });
   }
 

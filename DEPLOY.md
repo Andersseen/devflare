@@ -307,8 +307,9 @@ DevAuth sign-in; after signing in as an allowed user a link can be created and
 ## DevRadar
 
 DevRadar (`apps/dev-radar`, spec 021) is a Worker with Static Assets, like
-DevTools, plus a GitHub App integration and a 6-hourly Cron Trigger that
-reconciles missed webhooks. The production workflow deploys it after `verify`
+DevTools, plus a GitHub App integration and two Cron Triggers: a 6-hourly one
+that reconciles missed webhooks and (spec 023) a 5-minute one that advances
+automation runs. The production workflow deploys it after `verify`
 and `deploy-auth`; the first run still needs the prerequisites below. Nothing
 below creates DNS records until step 6. The long form, including every GitHub
 App setting, is in [apps/dev-radar/README.md](apps/dev-radar/README.md).
@@ -335,6 +336,13 @@ App setting, is in [apps/dev-radar/README.md](apps/dev-radar/README.md).
    `pnpm deploy:radar`.
 7. **DevFlare link (optional)** — build DevFlare with
    `VITE_DEVRADAR_URL=https://devradar.andersseen.dev`; without it no link renders.
+
+Spec 023 (automation + Prompt Inbox) adds D1 migration `0002_automation.sql` —
+the `deploy-radar` job applies it on merge (`pnpm db:migrate:radar` by hand) — and
+the `*/5 * * * *` cron, which `wrangler deploy` creates; confirm it under
+Workers → dev-radar → Triggers. One new rate-limit binding (`AUTOMATION_RATE_LIMITER`, namespace 2104, declared in `wrangler.toml`); no new secret or GitHub permission.
+It has been verified against a fake GitHub only: after the first deploy, push to a
+followed repository with an automation enabled and check Automations → history.
 
 Verify: `/` shows the DevAuth sign-in when signed out and `/api/v1/overview`
 answers 401; after signing in as an allowed user, Settings reports the App as

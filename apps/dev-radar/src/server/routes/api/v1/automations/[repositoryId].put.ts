@@ -19,7 +19,7 @@ import {
 export default defineEventHandler(async (event) => {
   const user = await requireAllowedUser(event);
   assertSameOriginJson(event);
-  await enforceRateLimit(event, 'PREFERENCES_RATE_LIMITER', user.id);
+  await enforceRateLimit(event, 'AUTOMATION_RATE_LIMITER', user.id);
 
   const body = await readBody(event);
   return guarded(async () => {

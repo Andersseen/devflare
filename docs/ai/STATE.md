@@ -8,7 +8,7 @@
 > to the last ~5 entries, newest first. Update the date. Facts only; no plans
 > you didn't verify.
 
-_Last updated: 2026-10-13 (spec 022)_
+_Last updated: 2026-10-14 (spec 023)_
 
 ## Branch & repo status
 
@@ -18,8 +18,9 @@ the 2026-08-10 / 2026-09-03 / 2026-09-11 lessons) from carrying forward a
 previous write-up's claim instead of re-checking. **Standing rule: before
 writing anything here, run `git log`/`git branch`/`gh pr list` yourself.**
 
-- Work branch **`feature/dashboard-customization`** (spec 022), cut from
-  `main` at `5fd4d99` (PR #53 merged). PR open against `main`; not merged.
+- Work branch **`feature/devradar-automation-foundation`** (spec 023), cut from
+  `main` at `5dfdfee` (PR #54, spec 022, merged 2026-10-13). PR open against
+  `main`; not merged.
 - DevRadar production is configured with the read-only GitHub App and its
   installation for all current and future repositories owned by `Andersseen`;
   a live manual sync verified 1 installation and 88 repositories. Cloudflare has the webhook secret and the
@@ -811,6 +812,23 @@ failure only appears when the app is actually run. Hence`project-rows.ts`.
 
 ## Session log
 
+- **2026-10-14 — DevRadar v0.2.0: automation + Prompt Inbox (spec 023).**
+  Opt-in per-user/per-repository rule ("when the default branch changes and CI
+  passes for that exact commit, prepare a development prompt"), durable
+  `automation_run`s bound to repository id + branch + SHA, a strict CI gate
+  (`shared/automation.ts › evaluateCiGate`; required workflows, strict about
+  cancelled/skipped, grace for not-yet-started, no CI ≠ success), a
+  `radar:automation` Nitro task on cron `*/5 * * * *` (claim with lease token,
+  ≤3 runs/tick, backoff ≤5 attempts, 48 h expiry, bounded GitHub reads),
+  a deterministic prompt builder over a bounded read-only context snapshot,
+  manual preparation with an explicit, recorded CI bypass, and a Prompt Inbox
+  (list/filter/view/copy/read/dismiss, optional ChatGPT link that only
+  navigates). **No AI model is called.** New: migration DevRadar `0002`
+  (**apply to production D1**; also `0001` if still pending), the second cron
+  trigger (created on next deploy), a new `AUTOMATION_RATE_LIMITER` binding (namespace 2104), 6 read-only GitHub endpoints in `GitHubApi`
+  (no new App permission), optional `GITHUB_API_BASE_URL` for fakes/E2E only.
+  Verified locally with fake GitHub only — **not** verified against real GitHub or
+  a real webhook delivery (webhook secret entry on the App was still pending).
 - **2026-10-13 — Dashboard customization (spec 022).** Persistent, per-user
   Edit dashboard in DevFlare (saved-project cards: groups, order, hide/restore;
   discovery identities editable, `WATCHED_PROJECTS` kept as the bootstrap seed;

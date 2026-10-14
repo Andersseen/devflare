@@ -1,11 +1,11 @@
 # 023 — DevRadar v0.2.0: repository automation + Prompt Inbox
 
-| Field   | Value                                    |
-| ------- | ---------------------------------------- |
-| Status  | In progress                              |
-| Branch  | `feature/devradar-automation-foundation` |
-| Created | 2026-10-14                               |
-| Updated | 2026-10-14                               |
+| Field   | Value                                                         |
+| ------- | ------------------------------------------------------------- |
+| Status  | Done (verified locally with a fake GitHub; needs owner setup) |
+| Branch  | `feature/devradar-automation-foundation`                      |
+| Created | 2026-10-14                                                    |
+| Updated | 2026-10-14                                                    |
 
 > Authorization note: the owner asked for direct, autonomous implementation, so
 > this spec was written and implemented in one pass without an approval stop.
@@ -175,16 +175,46 @@ over a seeded local D1 with a local fake GitHub server. See §8.
 ## 7. Tasks
 
 - [x] 1. Spec
-- [ ] 2. Shared types + CI gate + state derivation (+ specs)
-- [ ] 3. Migration + stores
-- [ ] 4. GitHub read additions + fake
-- [ ] 5. Context builder + prompt builder (+ specs)
-- [ ] 6. Engine: sink, processor, manual preparation (+ specs)
-- [ ] 7. Routes, task, cron, webhook wiring
-- [ ] 8. UI: Automations, Prompt Inbox, detail, repository card
-- [ ] 9. E2E
-- [ ] 10. Docs; gates; PR
+- [x] 2. Shared types + CI gate + state derivation (+ specs)
+- [x] 3. Migration `0002` + stores
+- [x] 4. GitHub read additions + fake
+- [x] 5. Context builder + prompt builder (+ specs)
+- [x] 6. Engine: sink, processor, manual preparation (+ specs)
+- [x] 7. Routes, task, cron, webhook wiring
+- [x] 8. UI: Automations, Prompt Inbox, prompt detail, repository card
+- [x] 9. E2E (fake GitHub server + seeded D1)
+- [x] 10. Docs (dev-radar README, root README, ARCHITECTURE, STATE, DEPLOY, specs index)
+- [ ] 11. Production verification by the owner (see §8)
 
 ## 8. Verification results
 
-_Filled in at the end of the milestone._
+Verified locally (2026-10-14), against a **fake GitHub only**:
+
+- `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test` (dev-radar: 351
+  tests, 72 of them the engine/rules/manual/security spec, 33 prompt/context,
+  39 shared gate/state/URL), `pnpm nx build dev-radar` (Worker bundle builds;
+  `radar:automation` is registered in the Nitro scheduled-task map next to
+  `radar:reconcile`), `wrangler deploy --env production --dry-run` (bundle
+  compiles; one new rate-limit binding).
+- Playwright `dev-radar-e2e` on chromium, firefox and webkit: the existing suites
+  plus `automation.spec.ts` (configure / enable / disable / persist, manual
+  preparation, copy, CI-blocked + explicit bypass, no-CI repository, inbox
+  filters + dismiss/restore, optional ChatGPT link, signed push → Waiting for CI
+  and idempotent redelivery, phone width) and the 401/403 checks of every new
+  endpoint and mutation in `access.spec.ts`.
+
+**Not verified (needs the owner / real credentials):**
+
+- Real GitHub: a real push → CI → prompt cycle; the real webhook delivery path
+  (the webhook secret entry in the GitHub App was still pending per STATE.md).
+- Production D1: apply migration `0002_automation.sql` (and `0001` if pending).
+- The new `*/5 * * * *` cron trigger exists in Cloudflare after the next deploy.
+- Real rate-limit behaviour of the Workers rate-limit bindings (unit-tested with
+  absent/failing bindings only).
+
+## 9. Completion note
+
+Divergences from the first draft: manual preparation checks CI with the rule's
+policy (or `all_workflows` without a rule) after refreshing that commit's runs
+from GitHub; target branches other than the default are rejected by the API
+(column kept for later); rule and prompt-status mutations use a dedicated `AUTOMATION_RATE_LIMITER` binding (namespace 2104) after the shared preferences limiter produced 429s in E2E; the search box on Automations narrows all three lists.

@@ -58,6 +58,9 @@ const repo = (over) => ({
 const statements = [
   'PRAGMA foreign_keys = ON;',
   ...[
+    'development_prompt',
+    'automation_run',
+    'automation_rule',
     'followed_repository',
     'dashboard_group',
     'repository_events',

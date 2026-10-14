@@ -17,6 +17,8 @@ const PROTECTED_PAGES = [
   '/pull-requests',
   '/activity',
   '/settings',
+  '/automations',
+  '/prompts',
 ];
 const PROTECTED_API = [
   '/api/v1/access',
@@ -26,6 +28,25 @@ const PROTECTED_API = [
   '/api/v1/pull-requests',
   '/api/v1/activity',
   '/api/v1/settings',
+  '/api/v1/automations',
+  '/api/v1/automations/1001',
+  '/api/v1/prompts',
+  '/api/v1/prompts/00000000-0000-4000-8000-000000000000',
+];
+
+/** Mutations added by the automation feature: [method, path, body]. */
+const PROTECTED_MUTATIONS: [string, string, unknown][] = [
+  [
+    'PUT',
+    '/api/v1/automations/1001',
+    { enabled: false, ciPolicy: 'all_workflows' },
+  ],
+  ['POST', '/api/v1/automations/1001/prepare', { bypassCi: true }],
+  [
+    'PATCH',
+    '/api/v1/prompts/00000000-0000-4000-8000-000000000000',
+    { status: 'read' },
+  ],
 ];
 
 test.describe('anonymous visitors', () => {
@@ -45,6 +66,17 @@ test.describe('anonymous visitors', () => {
   test('every dashboard API answers 401', async ({ request }) => {
     for (const path of PROTECTED_API) {
       expect((await request.get(path)).status(), path).toBe(401);
+    }
+  });
+
+  test('automation and prompt mutations are refused', async ({ request }) => {
+    for (const [method, path, data] of PROTECTED_MUTATIONS) {
+      const response = await request.fetch(path, {
+        method,
+        data,
+        headers: { origin: 'http://localhost:4400' },
+      });
+      expect(response.status(), `${method} ${path}`).toBe(401);
     }
   });
 
@@ -128,6 +160,14 @@ test.describe('a signed-in account that is not on the allowlist', () => {
     );
     for (const path of PROTECTED_API.filter((p) => p !== '/api/v1/access')) {
       expect((await context.request.get(path)).status(), path).toBe(403);
+    }
+    for (const [method, path, data] of PROTECTED_MUTATIONS) {
+      const response = await context.request.fetch(path, {
+        method,
+        data,
+        headers: { origin: 'http://localhost:4400' },
+      });
+      expect(response.status(), `${method} ${path}`).toBe(403);
     }
   });
 });
