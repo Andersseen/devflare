@@ -17,6 +17,8 @@ export interface GitHubConfig {
   privateKey: string | undefined;
   webhookSecret: string | undefined;
   requestBudget: number;
+  /** Only honored for a local fake (`http://localhost`/`127.0.0.1`) or https. */
+  apiBaseUrl: string | undefined;
 }
 
 export function resolveGitHubConfig(context: RequestContext): GitHubConfig {
@@ -28,7 +30,23 @@ export function resolveGitHubConfig(context: RequestContext): GitHubConfig {
     webhookSecret: envVar(context, 'GITHUB_WEBHOOK_SECRET'),
     requestBudget:
       Number.isInteger(budget) && budget > 0 ? budget : DEFAULT_REQUEST_BUDGET,
+    apiBaseUrl: safeBaseUrl(envVar(context, 'GITHUB_API_BASE_URL')),
   };
+}
+
+/** https, or plain http to the local machine; anything else is ignored. */
+export function safeBaseUrl(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  try {
+    const url = new URL(raw);
+    const local = ['localhost', '127.0.0.1'].includes(url.hostname);
+    if (url.protocol === 'https:' || (url.protocol === 'http:' && local)) {
+      return url.origin;
+    }
+  } catch {
+    // fall through
+  }
+  return undefined;
 }
 
 /** What the dashboard may know about the setup — names only. */
@@ -69,6 +87,7 @@ export function createRuntimeGitHub(
       privateKey: config.privateKey,
       fetch: fetchImpl,
       budget,
+      baseUrl: config.apiBaseUrl,
     }),
   };
 }

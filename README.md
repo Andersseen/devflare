@@ -27,13 +27,13 @@ service.
 "DevFlare repo" is this monorepo. "DevFlare" on its own means the project-hub
 app. They are not the same thing.
 
-| Product                | Path                      | Purpose                                                  | Status                                                       |
-| ---------------------- | ------------------------- | -------------------------------------------------------- | ------------------------------------------------------------ |
-| **DevFlare**           | `apps/devflare`           | Personal project hub — projects, where they run, deploys | Live at `devflare.andersseen.dev`                            |
-| **DevTools**           | `apps/devtools`           | Curated developer tools: local (in-browser) + connected  | Builds and runs locally; not deployed yet                    |
-| **DevAuth**            | `apps/dev-auth` + SDK     | OAuth 2.1 / OIDC identity provider + `@dev-auth/*` SDK   | Live at `auth-devflare.andersseen.dev`                       |
-| **DevRadar**           | `apps/dev-radar`          | GitHub monitoring: repos, PRs, CI, releases, activity    | v0.1.0 foundation; builds and runs locally; not deployed yet |
-| **Cloudflare Connect** | `apps/cloudflare-connect` | Future delegated Cloudflare authorization broker         | Placeholder only — health endpoint, no OAuth                 |
+| Product                | Path                      | Purpose                                                     | Status                                                            |
+| ---------------------- | ------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------- |
+| **DevFlare**           | `apps/devflare`           | Personal project hub — projects, where they run, deploys    | Live at `devflare.andersseen.dev`                                 |
+| **DevTools**           | `apps/devtools`           | Curated developer tools: local (in-browser) + connected     | Builds and runs locally; not deployed yet                         |
+| **DevAuth**            | `apps/dev-auth` + SDK     | OAuth 2.1 / OIDC identity provider + `@dev-auth/*` SDK      | Live at `auth-devflare.andersseen.dev`                            |
+| **DevRadar**           | `apps/dev-radar`          | GitHub monitoring + prompt automation (rules, Prompt Inbox) | v0.2.0 (spec 023): monitoring + prompt automation; deploys via CI |
+| **Cloudflare Connect** | `apps/cloudflare-connect` | Future delegated Cloudflare authorization broker            | Placeholder only — health endpoint, no OAuth                      |
 
 Each app has its own README defining what it is and is not.
 
@@ -96,7 +96,13 @@ App**, keeps a mirror in its own D1 (webhooks + scheduled reconcile) and signs
 you in through DevAuth, with an owner allowlist on top. No sample data, ever —
 it says when GitHub is not connected. → [apps/dev-radar/README.md](apps/dev-radar/README.md)
 
-Not yet: the automation engine (v0.2.0), notifications, other Git hosts.
+**Automations (v0.2.0):** opt in per followed repository — when the default
+branch changes and CI passes for that exact commit, DevRadar prepares a
+contextual _development prompt_ in a Prompt Inbox (also available on demand,
+with an explicit CI bypass). It is a deterministic template filled from a
+bounded read-only snapshot: **no AI model is called**.
+
+Not yet: AI-generated recommendations, notifications, other Git hosts.
 
 ### Cloudflare Connect — not built yet
 

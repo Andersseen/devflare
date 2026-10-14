@@ -13,13 +13,13 @@ Worker, its own D1 database and its own DevAuth OAuth client, and it never
 imports another app (Nx tag `domain:dev-radar`). Design and rationale:
 [spec 021](../../docs/specs/021-dev-radar-foundation.md).
 
-| Product            | Role                                               |
-| ------------------ | -------------------------------------------------- |
-| DevFlare           | Project hub + Cloudflare deployments               |
-| DevTools           | Developer utilities                                |
-| DevAuth            | Identity (OAuth 2.1 / OIDC)                        |
-| **DevRadar**       | **GitHub monitoring (and, later, dev automation)** |
-| Cloudflare Connect | Placeholder                                        |
+| Product            | Role                                      |
+| ------------------ | ----------------------------------------- |
+| DevFlare           | Project hub + Cloudflare deployments      |
+| DevTools           | Developer utilities                       |
+| DevAuth            | Identity (OAuth 2.1 / OIDC)               |
+| **DevRadar**       | **GitHub monitoring + prompt automation** |
+| Cloudflare Connect | Placeholder                               |
 
 ## What v0.1.0 does
 
@@ -40,6 +40,151 @@ imports another app (Nx tag `domain:dev-radar`). Design and rationale:
 - **Honest states** — loading, error (with retry), empty, and an explicit
   _disconnected_ notice. There is no sample data anywhere in the app. A
   repository without workflows reads **No CI**, never _Passing_.
+
+## Automations and the Prompt Inbox (v0.2.0, spec 023)
+
+DevRadar can now act on what it monitors, in one deliberately small recipe:
+
+> When this repository's **default branch changes** and **CI passes for that exact
+> commit**, **prepare a development prompt** in my Prompt Inbox.
+
+**What it is — and is not.** Three different things are easy to confuse:
+
+|     | What                                                      | v0.2.0                                                                                    |
+| --- | --------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| A   | **Contextual prompt generation without a model**          | ✅ Implemented. A fixed template filled from a bounded, read-only snapshot of the repo.   |
+| B   | AI-generated next-development recommendations             | ❌ Not implemented. Reserved for a later AI-integration milestone (provider, keys, cost). |
+| C   | Submitting a prompt into an existing ChatGPT conversation | ❌ Not implemented and not planned as automation. The optional link only _opens_ a chat.  |
+
+The prompt asks _another_ assistant to inspect the repository and pick the next
+increment; DevRadar itself prioritises and recommends nothing, and says so in the
+prompt. No external AI call is made, so preparing prompts costs no tokens.
+
+### Using it
+
+1. **Follow** the repository (Repositories → Manage repositories). Following alone
+   never starts an automation.
+2. **Automations** → _Set up_ (or _Configure_) the repository, tick _Prepare a
+   development prompt automatically_ and choose:
+   - **CI requirement** — _every workflow that runs for the commit must succeed_
+     (default), or _only the workflows I select_ (recommended: it is the only
+     way to guarantee a slow or late-starting workflow is waited for);
+   - **Settling time** (default 120 s, 0–3600) — a debounce after the push so a
+     delayed webhook is not mistaken for success;
+   - **Cooldown** (default 0, up to 1440 min) — minimum gap between two automatic
+     preparations;
+   - an optional **ChatGPT conversation link** (`https://chatgpt.com/c/…` only).
+3. Prompts appear in the **Prompt Inbox** (view, copy, filter by repository /
+   status, mark read, dismiss). Opening one marks it read.
+4. **Prepare prompt** (Automations panel or a repository's page) builds a prompt
+   for the current head on demand — no rule needed. If CI is not passing it
+   explains why and offers **Prepare anyway (bypass CI)**; that explicit choice is
+   recorded on the prompt ("CI bypassed"). A repository without CI always needs
+   it.
+
+Derived states shown per automation: _Disabled · Waiting for update · Waiting for
+CI · Preparing · Ready · Blocked · Failed · Skipped_. Unfollowing a repository
+stops its automatic runs (state _Disabled_); the rule and all prompts are kept.
+
+### Lifecycle and CI gating
+
+```
+push to default branch ─▶ repository.main.updated ─▶ automation_run (pending, exact SHA)
+workflow_run webhooks ───▶ only wake the run         (older pending runs: superseded)
+cron */5 + post-webhook ─▶ claim ─▶ gate on D1 runs of THAT SHA ─▶ GitHub reads ─▶ prompt
+```
+
+- The gate is **stricter than the dashboard's CI badge**: every required workflow's
+  latest attempt for the exact SHA must be `success`; failed, cancelled, skipped,
+  neutral, stale, action-required, running or missing workflows do not pass. A
+  rerun that succeeds unblocks a blocked run (blocked runs are re-checked until
+  they expire after 48 h). No CI at all is _Blocked_, never success.
+- Out-of-order webhooks are harmless: the gate reads stored runs for the SHA, and
+  the processor re-checks the branch head on GitHub immediately before preparing;
+  if the branch moved the run is _Skipped (superseded)_.
+- A run that is still unresolved after 10 minutes triggers one bounded GitHub read
+  of that commit's workflow runs, healing a lost `workflow_run` delivery.
+- Idempotent by database constraint: one automatic run per rule+SHA and one
+  automatic prompt per user+repository+SHA. Webhook redelivery, replays and
+  retries cannot duplicate. Reconcile still emits no historical events, so old
+  commits never become requests.
+- Transient GitHub failures retry with exponential backoff (2→30 min), at most 5
+  attempts, then _Failed_ with the reason. Revoked access fails immediately.
+  A processor that dies mid-run loses nothing: its 150 s lease expires and the next
+  tick recovers it.
+
+### Scheduled processor
+
+`radar:automation` (`src/server/tasks/radar/automation.ts`) runs on cron
+`*/5 * * * *` (declared in `wrangler.toml`, both top level and
+`[env.production.triggers]`, and in `scheduledTasks` in `vite.config.ts` — the
+three must stay in sync). Each tick: recover dead leases → expire stale waits →
+claim at most **3** due runs → advance each → prune finished runs (30 days) and
+prompts (100 per user). After a `push`/`workflow_run` webhook the same processor
+is nudged through `waitUntil`, never inside the response; the cron guarantees
+progress even if that nudge is lost. D1 is the only source of truth; no in-memory
+timer matters.
+
+### What a prompt contains
+
+Built by `lib/automation/prompt.ts` from a structured `RepositoryContext`
+(stored as JSON with the prompt): repository identity (name, URL, stable id),
+branch and full SHA, CI result and trigger (automatic / manual / bypassed),
+latest merged PR, ≤10 recent commits, ≤30 changed paths, and excerpts of
+`AGENTS.md`, the README, a `ROADMAP` and a `docs/specs` index when present
+(≤4 files, ≤6 000 characters each; files over 256 KB are not downloaded). Sections
+are separated: **verified facts**, **inferred context**, **missing information**,
+**untrusted repository excerpts** (fenced with a fence the content cannot close,
+control characters stripped) and finally the eleven **instructions to the
+assistant**. Repository text is data, never instructions to DevRadar.
+
+### API
+
+| Method + path                                    | Purpose                                              |
+| ------------------------------------------------ | ---------------------------------------------------- |
+| `GET /api/v1/automations`                        | your rules (derived state) + eligible repos          |
+| `GET` / `PUT /api/v1/automations/:repositoryId`  | rule + known workflows + history / upsert rule       |
+| `POST /api/v1/automations/:repositoryId/prepare` | manual preparation `{ "bypassCi": false }`           |
+| `GET /api/v1/prompts?repositoryId=&status=`      | inbox list (`active`, `unread`, `read`, `dismissed`) |
+| `GET` / `PATCH /api/v1/prompts/:id`              | full prompt + context / `{ "status": … }`            |
+
+All require an allowlisted DevAuth session; mutations are same-origin JSON,
+rate-limited (rule/status changes use the new `AUTOMATION_RATE_LIMITER`,
+namespace 2104, 60/min; manual preparation uses `MUTATION_RATE_LIMITER`), and scoped to the caller in SQL. Error bodies are
+fixed strings.
+
+### Production setup for v0.2.0
+
+- **Apply migration `0002_automation.sql`** (and `0001` if dashboard customization
+  is still unapplied): `pnpm db:migrate:radar` (remote). The deploy workflow does
+  this on merge; nothing in this milestone touches production resources
+  automatically.
+- **GitHub App permissions: unchanged** — Contents, Pull requests, Actions, all
+  read-only (the context builder uses contents, commits, commit→PR and the
+  actions-runs endpoints). **Webhook events: unchanged** — Push, Pull request,
+  Workflow run, Release. Without a working webhook the cron still prepares prompts,
+  but only after the 10-minute CI re-read, so finish webhook verification (see
+  _Known limitations_) first.
+- **Cron**: the second trigger (`*/5 * * * *`) is created by the next
+  `wrangler deploy`; confirm it in the Cloudflare dashboard (Workers → dev-radar →
+  Triggers).
+- `GITHUB_API_BASE_URL` is for local fakes and E2E only; leave it unset in
+  production (only `https://` or `http://localhost` is honoured).
+- Not verified against real GitHub yet (no credentials in CI): the first real
+  prompt should be checked end to end — push to a followed repository, watch the
+  run in Automations, open the prompt.
+
+### Limitations of v0.2.0
+
+- One recipe; **default branch only** (the rule's `branch` column exists for the
+  future, the API rejects anything but the default).
+- `all_workflows` cannot see a workflow that has not started; use required workflows.
+- Context is a bounded snapshot: no code search, no dependency analysis, no diff
+  content; at most 4 documents and 10 commits.
+- Prompts are plain text; no notifications (email, Telegram, push) and no model.
+- Manual preparation reads GitHub inside the request (≈12 calls, within the 45-call
+  budget); a rate-limited or failing GitHub shows an error and can be retried.
+- Prompt history is capped (100 per user, newest kept).
 
 ## Following repositories and customizing the dashboard (spec 022)
 
@@ -311,7 +456,7 @@ requires the following one-time setup:
 
 See also [DEPLOY.md › DevRadar](../../DEPLOY.md).
 
-## Known limitations (v0.1.0)
+## Known limitations (carried over from v0.1.0)
 
 - **CI = GitHub Actions workflow runs only.** Third-party commit statuses and
   non-Actions check runs are not read.
@@ -333,20 +478,14 @@ See also [DEPLOY.md › DevRadar](../../DEPLOY.md).
 - Webhook ordering is guarded for PRs, runs and the head commit; a missed
   `release` or `installation` event is repaired by the next reconcile.
 
-## Toward v0.2.0 — the automation engine (not built)
+## Next: AI-generated recommendations (not built)
 
-The goal is to generate a **next-development prompt** when a default branch
-changes and its CI has finished green. v0.1.0 deliberately only prepares the
-ground:
+v0.2.0 stops at the prompt. A later milestone can add a provider abstraction
+(model, key storage, cost limits) that _sends_ a prepared prompt and stores the
+model's recommendation next to it, plus notifications. Both reuse the pieces that
+exist now: the `development_prompt` row, the context snapshot, and the
+`automation_run` lifecycle. Submitting into an existing ChatGPT conversation is
+not part of that plan — it has no supported, safe API.
 
-- The trigger is already a typed contract: `repository.main.updated` followed by
-  `repository.ci.passed` for the same commit (`DomainEvent`, `DomainEventSink`).
-  A second sink beside the Activity writer is where an engine subscribes.
-- Per-repository **rules** (branch, "wait for CI", cool-down) and a repository
-  **context** document are new tables keyed by the GitHub repository id.
-- **Prompt history**, a **provider** abstraction and **notifications** build on
-  those; nothing here is wired, and no table, route, UI or dependency exists for
-  them yet.
-
-Recommended next minor: per-repository rules + context with prompt generation
-behind an explicit, read-only "preview prompt" action before any provider call.
+Recommended next minor: a read-only AI recommendation preview behind an explicit
+user action and a spend cap, before any automatic model call.

@@ -19,6 +19,7 @@ import {
   setInstallationSuspended,
   upsertInstallation,
 } from '../store/installations';
+import { wakeRuns } from '../store/automation';
 import { deletePullRequest, upsertPullRequest } from '../store/pulls';
 import {
   deleteRelease,
@@ -363,6 +364,8 @@ async function handleWorkflowRun(
   const run = mapWorkflowRun(payload.workflow_run, row.id);
   await upsertWorkflowRun(deps.db, run);
   await pruneWorkflowRuns(deps.db, row.id);
+  // A pending automation run for this commit can re-check its CI now.
+  await wakeRuns(deps.db, row.id, run.headSha, now());
 
   const ci = computeCiState(
     await listDefaultBranchRuns(deps.db, row.id, row.default_branch),

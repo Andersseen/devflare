@@ -9,6 +9,8 @@
 import { generateKeyPairSync } from 'node:crypto';
 import type {
   GhCommit,
+  GhCommitListItem,
+  GhCommitPull,
   GhInstallation,
   GhPullRequest,
   GhRelease,
@@ -25,6 +27,16 @@ export interface FakeRepoState {
   runs: GhWorkflowRun[] | null;
   releases: GhRelease[];
   tags: string[];
+  /** Repository files by path; directory listings are derived from them. */
+  files?: Record<string, string>;
+  /** Paths whose reported size is forced (to exercise the size limits). */
+  fileSizes?: Record<string, number>;
+  /** Newest-first history for `GET /commits?sha=`. */
+  history?: GhCommitListItem[];
+  /** Changed paths of the head commit (`GET /commits/{sha}` -> files). */
+  changedFiles?: string[];
+  /** `GET /commits/{sha}/pulls`. */
+  commitPulls?: GhCommitPull[];
 }
 
 export interface FakeWorld {
@@ -130,15 +142,38 @@ export function createFakeGitHub(world: FakeWorld): FakeGitHub {
       if (!state) return json({ message: 'Not Found' }, { status: 404 });
       const rest = repoRoute[2];
 
+      if (rest === 'commits') {
+        return json(state.history ?? (state.commit ? [state.commit] : []));
+      }
+      if (/^commits\/[^/]+\/pulls$/.test(rest)) {
+        return json(state.commitPulls ?? []);
+      }
+      if (rest.startsWith('contents')) {
+        return contents(
+          state,
+          decodeURIComponent(rest.slice('contents'.length)),
+        );
+      }
       if (rest.startsWith('commits/')) {
         return state.commit
-          ? json(state.commit)
+          ? json({
+              ...state.commit,
+              files: (state.changedFiles ?? []).map((filename) => ({
+                filename,
+                status: 'modified',
+              })),
+            })
           : json({ message: 'Git Repository is empty.' }, { status: 409 });
       }
       if (rest === 'pulls') {
         return json(state.pulls[page - 1] ?? [], {}, link(state.pulls.length));
       }
       if (rest === 'actions/runs') {
+        const headSha = url.searchParams.get('head_sha');
+        if (state.runs && headSha) {
+          const runs = state.runs.filter((r) => r.head_sha === headSha);
+          return json({ total_count: runs.length, workflow_runs: runs });
+        }
         return state.runs === null
           ? json(
               { message: 'Resource not accessible by integration' },
@@ -154,6 +189,44 @@ export function createFakeGitHub(world: FakeWorld): FakeGitHub {
   };
 
   return { fetch: fake, calls, authorizations };
+}
+
+/** GitHub's contents API over `state.files`. */
+function contents(state: FakeRepoState, rawPath: string): Response {
+  const files = state.files ?? {};
+  const path = rawPath.replace(/^\/+|\/+$/g, '');
+  if (path in files) {
+    const size = state.fileSizes?.[path] ?? Buffer.byteLength(files[path]);
+    return json({
+      type: 'file',
+      size,
+      encoding: 'base64',
+      content: Buffer.from(files[path]).toString('base64'),
+    });
+  }
+  const prefix = path === '' ? '' : `${path}/`;
+  const children = new Map<string, 'file' | 'dir'>();
+  for (const file of Object.keys(files)) {
+    if (!file.startsWith(prefix)) continue;
+    const rest = file.slice(prefix.length);
+    const head = rest.split('/')[0];
+    children.set(head, rest.includes('/') ? 'dir' : 'file');
+  }
+  if (children.size === 0) {
+    return json({ message: 'Not Found' }, { status: 404 });
+  }
+  return json(
+    [...children].map(([name, type]) => ({
+      name,
+      path: `${prefix}${name}`,
+      type,
+      size:
+        type === 'file'
+          ? (state.fileSizes?.[`${prefix}${name}`] ??
+            Buffer.byteLength(files[`${prefix}${name}`]))
+          : 0,
+    })),
+  );
 }
 
 let cachedKey: string | null = null;

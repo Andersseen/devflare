@@ -87,3 +87,46 @@ export interface GhRelease {
 export interface GhTag {
   name: string;
 }
+
+/** One entry of a repository directory listing. */
+export interface GhContentEntry {
+  name: string;
+  path: string;
+  type: 'file' | 'dir' | 'symlink' | 'submodule';
+  size: number;
+}
+
+/** A file from the contents API; `content` is base64 (with newlines). */
+export interface GhFileContent {
+  type: 'file';
+  size: number;
+  encoding: string;
+  content: string;
+}
+
+export interface GhCommitListItem {
+  sha: string;
+  html_url?: string;
+  commit: {
+    message: string;
+    author: { name: string; date: string } | null;
+  };
+  author: { login: string } | null;
+}
+
+export interface GhCommitDetail extends GhCommitListItem {
+  /** GitHub lists at most 300 files here. */
+  files?: { filename: string; status: string }[];
+}
+
+/** A pull request as the "pulls associated with a commit" endpoint returns it. */
+export interface GhCommitPull {
+  number: number;
+  title: string;
+  state: 'open' | 'closed';
+  html_url: string;
+  body: string | null;
+  merged_at: string | null;
+  user: { login: string } | null;
+  base: { ref: string };
+}

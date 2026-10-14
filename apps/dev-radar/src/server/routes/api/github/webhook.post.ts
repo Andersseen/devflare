@@ -8,6 +8,11 @@ import {
 import { db } from '../../../db';
 import { runInBackground } from '../../../lib/background';
 import { envVar } from '../../../lib/env';
+import { runAutomation } from '../../../lib/automation/run';
+import {
+  combineSinks,
+  createAutomationSink,
+} from '../../../lib/automation/engine';
 import { createEventStoreSink } from '../../../lib/store/events';
 import { runSync } from '../../../lib/sync/run';
 import { verifyWebhookSignature } from '../../../lib/webhooks/signature';
@@ -67,7 +72,7 @@ export default defineEventHandler(async (event) => {
     const outcome = await processWebhook(
       {
         db,
-        sink: createEventStoreSink(db),
+        sink: combineSinks(createEventStoreSink(db), createAutomationSink(db)),
         scheduleSync: (installationId) =>
           runInBackground(event, () =>
             runSync(event.context, { installationId }),
@@ -78,6 +83,14 @@ export default defineEventHandler(async (event) => {
     // 202 for a delivery another worker is still handling; 200 otherwise —
     // duplicates and ignored events are successes, so GitHub stops retrying.
     if (outcome.result === 'in_progress') setResponseStatus(event, 202);
+    // Preparing a prompt reads GitHub, so it never runs inside the response:
+    // the cron picks it up regardless; this just makes the common case prompt.
+    if (
+      outcome.result === 'processed' &&
+      (name === 'push' || name === 'workflow_run')
+    ) {
+      runInBackground(event, () => runAutomation(event.context));
+    }
     return outcome;
   } catch (error) {
     if (error instanceof WebhookProcessingError) {

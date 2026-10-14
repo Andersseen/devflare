@@ -3,6 +3,11 @@ import { GitHubTransport, type RequestBudget } from './client';
 import { GitHubApiError } from './errors';
 import type {
   GhCommit,
+  GhCommitDetail,
+  GhCommitListItem,
+  GhCommitPull,
+  GhContentEntry,
+  GhFileContent,
   GhInstallation,
   GhPullRequest,
   GhRelease,
@@ -41,6 +46,47 @@ export interface GitHubApi {
   ): Promise<GhWorkflowRun[] | null>;
   listReleases(token: string, fullName: string): Promise<GhRelease[]>;
   latestTag(token: string, fullName: string): Promise<string | null>;
+
+  // ---- Automation context (spec 023): bounded, read-only ------------------
+
+  /** Workflow runs of exactly this commit (any branch/event); null = unreadable. */
+  listWorkflowRunsForSha(
+    token: string,
+    fullName: string,
+    sha: string,
+  ): Promise<GhWorkflowRun[] | null>;
+  /** Directory listing at `ref`; null when the path does not exist. */
+  listDirectory(
+    token: string,
+    fullName: string,
+    path: string,
+    ref: string,
+  ): Promise<GhContentEntry[] | null>;
+  /** A file at `ref`; null when missing or not a regular file. */
+  getFile(
+    token: string,
+    fullName: string,
+    path: string,
+    ref: string,
+  ): Promise<GhFileContent | null>;
+  /** Newest-first commits reachable from `sha`. */
+  listCommits(
+    token: string,
+    fullName: string,
+    sha: string,
+    count: number,
+  ): Promise<GhCommitListItem[]>;
+  getCommit(
+    token: string,
+    fullName: string,
+    sha: string,
+  ): Promise<GhCommitDetail | null>;
+  /** Pull requests GitHub associates with a commit; [] when none. */
+  listCommitPullRequests(
+    token: string,
+    fullName: string,
+    sha: string,
+  ): Promise<GhCommitPull[]>;
 }
 
 export interface GitHubApiOptions {
@@ -60,6 +106,10 @@ const PER_PAGE = 100;
 
 /** Statuses meaning "this resource is not there / not allowed", not "broken". */
 const ABSENT = new Set([403, 404, 409, 410, 451]);
+
+/** `docs/a b` -> `docs/a%20b`; each segment encoded, slashes kept. */
+const encodePath = (path: string): string =>
+  path.split('/').map(encodeURIComponent).join('/');
 
 export function createGitHubApi(options: GitHubApiOptions): GitHubApi {
   const http = new GitHubTransport(options);
@@ -145,6 +195,90 @@ export function createGitHubApi(options: GitHubApiOptions): GitHubApi {
         if (error instanceof GitHubApiError && ABSENT.has(error.status)) {
           // A rate limit is a GitHubRateLimitError (status 429) and rethrown.
           return null;
+        }
+        throw error;
+      }
+    },
+
+    async listWorkflowRunsForSha(token, fullName, sha) {
+      try {
+        const page = await http.request<{ workflow_runs: GhWorkflowRun[] }>(
+          `/repos/${fullName}/actions/runs?head_sha=${encodeURIComponent(sha)}&per_page=50`,
+          { token },
+        );
+        return page.data.workflow_runs;
+      } catch (error) {
+        if (error instanceof GitHubApiError && ABSENT.has(error.status)) {
+          return null;
+        }
+        throw error;
+      }
+    },
+
+    async listDirectory(token, fullName, path, ref) {
+      try {
+        const page = await http.request<GhContentEntry[] | GhFileContent>(
+          `/repos/${fullName}/contents/${encodePath(path)}?ref=${encodeURIComponent(ref)}`,
+          { token },
+        );
+        return Array.isArray(page.data) ? page.data : null;
+      } catch (error) {
+        if (error instanceof GitHubApiError && ABSENT.has(error.status)) {
+          return null;
+        }
+        throw error;
+      }
+    },
+
+    async getFile(token, fullName, path, ref) {
+      try {
+        const page = await http.request<GhFileContent | GhContentEntry[]>(
+          `/repos/${fullName}/contents/${encodePath(path)}?ref=${encodeURIComponent(ref)}`,
+          { token },
+        );
+        const data = page.data;
+        return !Array.isArray(data) && data.type === 'file' ? data : null;
+      } catch (error) {
+        if (error instanceof GitHubApiError && ABSENT.has(error.status)) {
+          return null;
+        }
+        throw error;
+      }
+    },
+
+    async listCommits(token, fullName, sha, count) {
+      const page = await http.request<GhCommitListItem[]>(
+        `/repos/${fullName}/commits?sha=${encodeURIComponent(sha)}&per_page=${count}`,
+        { token },
+      );
+      return page.data;
+    },
+
+    async getCommit(token, fullName, sha) {
+      try {
+        const page = await http.request<GhCommitDetail>(
+          `/repos/${fullName}/commits/${encodeURIComponent(sha)}`,
+          { token },
+        );
+        return page.data;
+      } catch (error) {
+        if (error instanceof GitHubApiError && ABSENT.has(error.status)) {
+          return null;
+        }
+        throw error;
+      }
+    },
+
+    async listCommitPullRequests(token, fullName, sha) {
+      try {
+        const page = await http.request<GhCommitPull[]>(
+          `/repos/${fullName}/commits/${encodeURIComponent(sha)}/pulls?per_page=10`,
+          { token },
+        );
+        return page.data;
+      } catch (error) {
+        if (error instanceof GitHubApiError && ABSENT.has(error.status)) {
+          return [];
         }
         throw error;
       }

@@ -38,6 +38,8 @@ export const NAV: readonly NavItem[] = [
     exact: false,
   },
   { label: 'Activity', path: '/activity', icon: 'activity', exact: false },
+  { label: 'Automations', path: '/automations', icon: 'bot', exact: false },
+  { label: 'Prompt Inbox', path: '/prompts', icon: 'inbox', exact: false },
   { label: 'Settings', path: '/settings', icon: 'settings', exact: false },
 ];
 

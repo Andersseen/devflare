@@ -316,10 +316,11 @@ Spec: [021](../specs/021-dev-radar-foundation.md). Operator docs:
 [apps/dev-radar/README.md](../../apps/dev-radar/README.md).
 
 - **Build**: same shape as DevTools — Analog + Nitro `cloudflare-module`;
-  `/`, `/repositories`, `/pull-requests`, `/activity`, `/settings` are
-  prerendered shells, `/repositories/:id` is server-rendered by the Worker. The
-  Nitro task `radar:reconcile` (`src/server/tasks`) is wired to the wrangler
-  cron through `scheduledTasks` in `vite.config.ts` (keep both schedules equal).
+  `/`, `/repositories`, `/pull-requests`, `/activity`, `/automations`,
+  `/prompts`, `/settings` are prerendered shells, `/repositories/:id` is server-rendered by the Worker. The
+  Nitro tasks `radar:reconcile` (every 6 h) and `radar:automation` (every 5 min)
+  (`src/server/tasks`) are wired to the wrangler crons through `scheduledTasks`
+  in `vite.config.ts` (keep both schedule lists equal).
 - **Access**: DevAuth identity (own OAuth client, `dr_session` cookie hashed in
   D1) **and** `DEVRADAR_ALLOWED_USERS` (fail closed). `lib/http.ts`:
   `requireAllowedUser` (401/403), same-origin CSRF check, rate limiting. The
@@ -335,13 +336,27 @@ Spec: [021](../specs/021-dev-radar-foundation.md). Operator docs:
   never trigger GitHub calls. Webhook state changes are guarded by GitHub's
   `updated_at` so out-of-order deliveries cannot regress newer state.
 - **Events**: webhooks normalize into `DomainEvent`s published to a
-  `DomainEventSink`; the v0.1.0 sink writes `repository_events`. The v0.2.0
-  automation engine subscribes there. Sync/reconcile publishes nothing.
+  `DomainEventSink`; the webhook route combines the feed sink
+  (`repository_events`) with the **automation sink** (spec 023). Sync/reconcile
+  attaches only the feed sink and publishes no historical events — so old commits
+  can never become automation runs.
+- **Automation (v0.2.0, spec 023)**: `server/lib/automation/` — `engine.ts`
+  (trigger sink, `processDueRuns`, `prepareManually`), `context.ts` (bounded
+  read-only snapshot via `GitHubApi`), `prompt.ts` (deterministic template),
+  `service.ts` / `validate.ts` (read models + request validation behind thin
+  routes under `routes/api/v1/{automations,prompts}`), SQL in
+  `store/{automation,prompts}.ts`. `shared/automation.ts` holds the strict CI gate
+  (`evaluateCiGate`, deliberately separate from the monitoring `computeCiState`)
+  and the derived UI state. Durable by D1: `automation_run` rows are claimed with
+  a lease token by the `radar:automation` Nitro task (cron `*/5 * * * *`, ≤3 runs
+  per tick, retries with backoff ≤5, expiry 48 h) and nudged through `waitUntil`
+  after push/workflow_run webhooks. No model or queue; one extra rate-limit binding (`AUTOMATION_RATE_LIMITER`).
 - **DB**: `dev-radar-db` (binding `DB`), migrations in
   `src/server/db/migrations/`: `app_user`, `app_session`,
   `github_installations`, `repositories`, `pull_requests`, `workflow_runs`,
   `releases`, `webhook_deliveries`, `repository_events`, plus the per-user
-  `dashboard_group` and `followed_repository` (spec 022). GitHub numeric ids are
+  `dashboard_group` and `followed_repository` (spec 022) and, from spec 023,
+  `automation_rule`, `automation_run`, `development_prompt` (migration `0002`). GitHub numeric ids are
   the keys. Tests run the real migrations on `node:sqlite`.
 - **Testing**: Vitest specs beside the code (fake GitHub over `fetch` in
   `server/testing/`); Playwright in `apps/dev-radar-e2e` on a seeded local D1.
