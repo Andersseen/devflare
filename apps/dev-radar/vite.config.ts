@@ -58,7 +58,10 @@ export default defineConfig(() => {
           // emits the Worker's `scheduled` handler for it. The schedule here
           // must match wrangler.toml.
           experimental: { tasks: true },
-          scheduledTasks: { '17 */6 * * *': ['radar:reconcile'] },
+          scheduledTasks: {
+            '17 */6 * * *': ['radar:reconcile'],
+            '*/5 * * * *': ['radar:automation'],
+          },
           alias: {
             // Nitro's server bundle does not go through nxViteTsPaths(), so
             // the one SDK package the server imports needs an explicit alias.

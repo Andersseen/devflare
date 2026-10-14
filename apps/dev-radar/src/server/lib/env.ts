@@ -27,6 +27,8 @@ export interface DevRadarEnv {
   /** Secret. */
   GITHUB_WEBHOOK_SECRET?: string;
   GITHUB_SYNC_REQUEST_BUDGET?: string;
+  /** Development/E2E only: a local fake of api.github.com. Unset in production. */
+  GITHUB_API_BASE_URL?: string;
   AUTH_RATE_LIMITER?: RateLimitBinding;
   MUTATION_RATE_LIMITER?: RateLimitBinding;
   PREFERENCES_RATE_LIMITER?: RateLimitBinding;

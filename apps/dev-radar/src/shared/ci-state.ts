@@ -43,8 +43,8 @@ function runRank(run: RunSummary): [number, number] {
 }
 
 /** The newest attempt of each workflow, keyed by workflow id. */
-function latestPerWorkflow(runs: RunSummary[]): RunSummary[] {
-  const latest = new Map<number, RunSummary>();
+export function latestPerWorkflow<T extends RunSummary>(runs: T[]): T[] {
+  const latest = new Map<number, T>();
   for (const run of runs) {
     const current = latest.get(run.workflowId);
     if (!current) {

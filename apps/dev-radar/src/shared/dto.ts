@@ -1,5 +1,14 @@
 import type { CiState } from './ci-state';
 import type { DomainEventType } from './domain-events';
+import type {
+  AutomationState,
+  CiPolicy,
+  PromptStatus,
+  RunReason,
+  RunStatus,
+  RunTrigger,
+} from './automation';
+import type { RepositoryContext } from './prompt-context';
 
 /** Wire shapes between DevRadar's API and its dashboard. */
 
@@ -163,3 +172,107 @@ export interface DashboardLayoutDto {
     pinnedIds: string[];
   };
 }
+
+// ---- Automation + Prompt Inbox (spec 023) --------------------------------------
+
+export interface AutomationRunDto {
+  id: string;
+  sha: string;
+  branch: string;
+  trigger: RunTrigger;
+  ciBypassed: boolean;
+  status: RunStatus;
+  reason: RunReason | null;
+  detail: string | null;
+  attempts: number;
+  /** When a waiting run will be looked at next. */
+  nextCheckAt: string | null;
+  promptId: string | null;
+  createdAt: string;
+  finishedAt: string | null;
+}
+
+export interface AutomationRuleDto {
+  repositoryId: number;
+  repositoryFullName: string;
+  /** The repository is still mirrored (the installation can read it). */
+  repositoryAvailable: boolean;
+  followed: boolean;
+  enabled: boolean;
+  state: AutomationState;
+  /** The branch the rule watches: always the repository's default branch. */
+  branch: string;
+  ciPolicy: CiPolicy;
+  requiredWorkflowIds: number[];
+  settleSeconds: number;
+  cooldownMinutes: number;
+  chatgptUrl: string | null;
+  lastTriggeredSha: string | null;
+  lastTriggeredAt: string | null;
+  lastPreparedSha: string | null;
+  lastPreparedAt: string | null;
+  latestRun: AutomationRunDto | null;
+}
+
+export interface AutomationsDto {
+  /** The GitHub App is configured, so preparation can read repositories. */
+  githubConfigured: boolean;
+  rules: AutomationRuleDto[];
+  /** Followed repositories without a rule yet. */
+  eligible: {
+    id: number;
+    fullName: string;
+    defaultBranch: string;
+    ciState: string;
+  }[];
+  unreadPrompts: number;
+}
+
+export interface AutomationDetailDto {
+  githubConfigured: boolean;
+  repository: {
+    id: number;
+    fullName: string;
+    htmlUrl: string;
+    defaultBranch: string;
+    followed: boolean;
+  };
+  /** null until the user saves a rule for this repository. */
+  rule: AutomationRuleDto | null;
+  /** Workflows DevRadar has seen, to pick required ones from. */
+  workflows: { id: number; name: string }[];
+  runs: AutomationRunDto[];
+}
+
+export interface PromptSummaryDto {
+  id: string;
+  repositoryId: number;
+  repositoryFullName: string;
+  branch: string;
+  sha: string;
+  trigger: RunTrigger;
+  ciBypassed: boolean;
+  revision: number;
+  ciState: string;
+  summary: string;
+  status: PromptStatus;
+  createdAt: string;
+}
+
+export interface PromptDetailDto extends PromptSummaryDto {
+  prompt: string;
+  context: RepositoryContext;
+  repositoryUrl: string | null;
+  commitUrl: string | null;
+  chatgptUrl: string | null;
+  run: AutomationRunDto | null;
+}
+
+export interface PromptListDto {
+  prompts: PromptSummaryDto[];
+  unread: number;
+}
+
+export type ManualPrepareDto =
+  | { ok: true; promptId: string }
+  | { ok: false; code: string; message: string };

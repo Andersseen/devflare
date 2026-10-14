@@ -80,8 +80,10 @@ DEVRADAR_ALLOWED_USERS = "test@devflare.com,andriipap01@gmail.com"
 GITHUB_SYNC_REQUEST_BUDGET = "45"
 
 # Reconcile missed webhooks: re-sync stale repositories every six hours.
+# Automation (spec 023): advance pending automation runs every five minutes.
+# These must match `scheduledTasks` in vite.config.ts.
 [triggers]
-crons = ["17 */6 * * *"]
+crons = ["17 */6 * * *", "*/5 * * * *"]
 
 [observability]
 enabled = true
@@ -121,7 +123,7 @@ namespace_id = "2103"
 simple = { limit = 60, period = 60 }
 
 [env.production.triggers]
-crons = ["17 */6 * * *"]
+crons = ["17 */6 * * *", "*/5 * * * *"]
 
 [env.production.vars]
 DEV_AUTH_URL = "https://auth-devflare.andersseen.dev"
